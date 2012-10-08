@@ -17,8 +17,8 @@ def copy_files(srcGlob, targetDir, taskSymbol)
 end
 
 def download_from_url(url, target_file, task_symbol)
-  file target_file do
-    directory File.dirname(target_file)
+  directory File.dirname(target_file)
+  file target_file => File.dirname(target_file) do
     puts "Downloading from url: #{url}"
     open("#{target_file}.tmp", 'wb') do |file|
       file << open(url).read
