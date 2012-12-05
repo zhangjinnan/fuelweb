@@ -1,5 +1,5 @@
 #
-# This class is intended to make cobbler distro centos63-x86_64. It will 
+# This class is intended to make cobbler distro centos63-x86_64. It will
 # download and mount centos ISO image.
 #
 # [http_iso] This is the url from where to download centos 6.3 ISO image.
@@ -20,12 +20,19 @@ class cobbler::distro::centos63-x86_64(
 
   Exec {path => '/usr/bin:/bin:/usr/sbin:/sbin'}
 
-  $ks_mirror = '/var/www/cobbler/ks_mirror'
+  case $operatingsystem {
+    /(?i)(centos|redhat)/:  {
+      $ks_mirror = '/var/www/cobbler/ks_mirror'
+    }
+    /(?i)(debian|ubuntu)/:  {
+      $ks_mirror = '/usr/share/cobbler/webroot/cobbler/ks_mirror'
+    }
+  }
 
   # CentOS-6.3-x86_64-minimal
   $iso_name = extension_basename($http_iso, "true")
   # CentOS-6.3-x86_64-minimal.iso
-  $iso_basename = extension_basename($http_iso) 
+  $iso_basename = extension_basename($http_iso)
   # /var/www/cobbler/ks_mirror/CentOS-6.3-x86_64-minimal.iso
   $iso = "${ks_mirror}/${iso_basename}"
   # /var/www/cobbler/ks_mirror/CentOS-6.3-x86_64-minimal
@@ -39,7 +46,7 @@ class cobbler::distro::centos63-x86_64(
   else {
     $tree = $ks_url
   }
-  
+
   file { $iso_mnt:
     ensure => directory,
     owner => root,
@@ -62,7 +69,7 @@ class cobbler::distro::centos63-x86_64(
       onlyif => "test ! -s ${iso}",
     }
   }
-  
+
   mount { $iso_mnt:
     device => $iso,
     options => "loop",
@@ -76,7 +83,6 @@ class cobbler::distro::centos63-x86_64(
     target => $iso_mnt,
   }
 
-  
   cobbler_distro { "centos63-x86_64":
     kernel => "${iso_mnt}/isolinux/vmlinuz",
     initrd => "${iso_mnt}/isolinux/initrd.img",

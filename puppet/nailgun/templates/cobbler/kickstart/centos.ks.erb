@@ -5,25 +5,24 @@ install
 url --url=$tree
 
 # ALTERNATIVE REPOSITORIES
-<% ks_repo.each do |repo| %>
+<% @ks_repo.each do |repo| -%>
 repo --name=<%= repo['name'] %> --baseurl=<%= repo['url'] %>
-<% end %>
+<% end -%>
 
 # KEYBOARD AND LANGUAGE CUSTOMIZATION
 lang en_US.UTF-8
 keyboard us
 
 # WHICH TIMEZONE TO USE ON INSTALLED SYSTEM
-timezone --utc <%= ks_system_timezone %>
+timezone --utc <%= @ks_system_timezone %>
 
-# REBOOT AFTER INSTALLATION 
+# REBOOT AFTER INSTALLATION
 reboot
 
-network --onboot yes --device eth0 --bootproto=dhcp
 firewall --disable
 
 # SET ROOT PASSWORD DEFAULT IS r00tme
-rootpw --iscrypted <%= ks_encrypted_root_password %>
+rootpw --iscrypted <%= @ks_encrypted_root_password %>
 
 # AUTHENTICATION CUSTOMIZATION
 authconfig --enableshadow --passalgo=sha512
@@ -40,7 +39,7 @@ skipx
 # BOOTLOADER CUSTOMIZATION
 # INSTALL BOOTLOADER INTO MASTER BOOT RECORD
 # --location=mbr
-# WHICH ORDER OF DRIVES TO USE DURING TRYING TO INSTALL BOOTLOADER 
+# WHICH ORDER OF DRIVES TO USE DURING TRYING TO INSTALL BOOTLOADER
 # --driveorder=sda,hda
 # APPEND STRING TO KERNEL BOOT COMMAND
 # --append=""
@@ -57,7 +56,7 @@ clearpart --all --initlabel
 autopart
 
 # COBBLER EMBEDDED SNIPPET: 'network_config'
-# CONFIGURES NETWORK INTERFACES DEPENDING ON 
+# CONFIGURES NETWORK INTERFACES DEPENDING ON
 # COBBLER SYSTEM PARAMETERS
 $SNIPPET('network_config')
 
@@ -67,17 +66,26 @@ $SNIPPET('network_config')
 %pre
 
 # COBBLER EMBEDDED SNIPPET: 'log_ks_pre'
-# CONFIGURES %pre LOGGING 
+# CONFIGURES %pre LOGGING
 $SNIPPET('log_ks_pre')
+
+# DOWNLOADS send2syslog.py AND LAUNCHES IT
+# IN ORDER TO MONITOR LOG FILES AND SEND
+# LINES FROM THOSE FILES TO SYSLOG
+$SNIPPET('send2syslog')
+
+# SNIPPET: 'kickstart_ntp'
+# SYNC LOCAL TIME VIA NTP
+$SNIPPET('kickstart_ntp')
 
 # COBBLER EMBEDDED SNIPPET: 'kickstart_start'
 # LAUNCHES %pre TRIGGERS IF THOSE INSTALLED
 $SNIPPET('kickstart_start')
 
 # COBBLER EMBEDDED SNIPPET: 'pre_install_network_config'
-# PRECONFIGURES NETWORK INTERFACES DEPENDING ON 
+# PRECONFIGURES NETWORK INTERFACES DEPENDING ON
 # COBBLER SYSTEM PARAMETERS
-# IN PARTICULAR IT WRITES KICKSTART NETWORK CONFIGURATION 
+# IN PARTICULAR IT WRITES KICKSTART NETWORK CONFIGURATION
 # INTO /tmp/pre_install_network_config WHICH IS INCLUDED
 # INTO KICKSTART BY 'network_config' SNIPPET
 $SNIPPET('pre_install_network_config')
@@ -86,7 +94,7 @@ $SNIPPET('pre_install_network_config')
 # PACKAGES SECTION
 # HERE ARE LIST OF PACKAGES THAT WILL BE INSTALLED
 # FIXME --ignoremissing
-%packages --nobase --ignoremissing 
+%packages --nobase --ignoremissing
 @Core
 yum
 openssh-server
@@ -97,21 +105,32 @@ wget
 crontabs
 cronie
 ruby-augeas
+ntp
+ruby-devel
+make
+gcc
+nailgun-agent
+nailgun-mcagents
+
 # COBBLER EMBEDDED SNIPPET: 'puppet_install_if_enabled'
 # LISTS puppet PACKAGE IF puppet_auto_setup VARIABLE IS SET TO 1
 $SNIPPET('puppet_install_if_enabled')
 
 # COBBLER EMBEDDED SNIPPET: 'mcollective_install_if_enabled'
-# LISTS mcollective PACKAGE IF mcollective_auto_setup VARIABLE IS SET TO 1
+# LISTS mcollective PACKAGE IF mco_auto_setup VARIABLE IS SET TO 1
 $SNIPPET('mcollective_install_if_enabled')
 
 # POSTINSTALL SECTION
-# HERE ARE COMMANDS THAT WILL BE LAUNCHED JUST AFTER 
+# HERE ARE COMMANDS THAT WILL BE LAUNCHED JUST AFTER
 # INSTALLATION ITSELF COMPLETED
 %post
 
+# COBBLER EMBEDDED SNIPPET: 'nailgun_agent'
+# INSTALLS (via gem) AND CONFIGURES nailgun_agent
+$SNIPPET('nailgun_agent')
+
 # COBBLER EMBEDDED SNIPPET: 'log_ks_post'
-# CONFIGURES %post LOGGING 
+# CONFIGURES %post LOGGING
 $SNIPPET('log_ks_post')
 
 # COBBLER EMBEDDED SNIPPET: 'post_install_kernel_options'
@@ -119,7 +138,7 @@ $SNIPPET('log_ks_post')
 $SNIPPET('post_install_kernel_options')
 
 # COBBLER EMBEDDED SNIPPET: 'post_install_network_config'
-# CONFIGURES NETWORK INTERFACES DEPENDING ON 
+# CONFIGURES NETWORK INTERFACES DEPENDING ON
 # COBBLER SYSTEM PARAMETERS
 $SNIPPET('post_install_network_config_fuel')
 
@@ -134,6 +153,38 @@ $SNIPPET('puppet_register_if_enabled_fuel')
 # COBBLER EMBEDDED SNIPPET: 'mcollective_conf'
 # CONFIGURES MCOLLECTIVE AGENT
 $SNIPPET('mcollective_conf')
+
+# SNIPPET: 'ntp_to_masternode'
+# CONFIGURES NTPD POOL TO MASTER NODE
+$SNIPPET('ntp_to_masternode')
+
+# TODO
+# GET RID /etc/nailgun_systemtype AND MAKE MCOLLECTIVE AGENT
+# ABLE TO FIND OUT SYSTEM TYPE VIA FACTS
+# It is for the internal nailgun using
+echo target > /etc/nailgun_systemtype
+
+# COBBLER EMBEDDED SNIPPET: 'authorized_keys'
+# PUTS authorized_keys file into /root/.ssh/authorized_keys
+$SNIPPET('authorized_keys')
+
+# COBBLER EMBEDDED SNIPPET: 'nailgun_repo'
+# REMOVES ALL *.repo FILES FROM /etc/yum.repos.d AND
+# CREATES /etc/yum.repos.d/nailgun.repo FILE AND
+# PUTS IN IT ALL THE REPOSITORIES DEFINED IN ks_repo VARIABLE
+$SNIPPET('nailgun_repo')
+
+# COBBLER EMBEDDED SNIPPET: 'ssh_disable_gssapi'
+# REMOVES "GSSAPICleanupCredentials yes" AND "GSSAPIAuthentication yes" LINES
+# FROM /etc/ssh/sshd_config
+$SNIPPET('ssh_disable_gssapi')
+
+# COBBLER EMBEDDED SNIPPET: 'ssh_disable_dns'
+# ADDS 'UseDNS no' TO /etc/ssh/sshd_config
+$SNIPPET('ssh_disable_dns')
+
+# Copying default bash settings to the root directory
+cp -f /etc/skel/.bash* /root/ 
 
 # COBBLER EMBEDDED SNIPPET: 'kickstart_done'
 # DISABLES PXE BOOTING

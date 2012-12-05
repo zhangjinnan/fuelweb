@@ -4,6 +4,7 @@ class puppetmaster::nginx(
   $key = "auto",
   $puppet_ca = "/var/lib/puppet/ssl/certs/ca.pem",
   $puppet_crl = "/var/lib/puppet/ssl/crl.pem",
+  $puppet_master_ports,
   ) {
 
   if $crt == "auto" {
@@ -19,7 +20,7 @@ class puppetmaster::nginx(
   else{
     $puppet_master_key = $key
   }
-  
+
   file { "/etc/nginx/conf.d/puppet.conf":
     content => template("puppetmaster/nginx_puppet.erb"),
     owner => 'root',

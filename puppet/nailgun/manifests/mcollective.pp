@@ -1,9 +1,12 @@
 class nailgun::mcollective(
-  $mco_pskey = "unset",
-  $mco_stompuser = "mcollective",
-  $mco_stomppassword = "marionette",
-  $rabbitmq_plugins_repo = "file:///var/www/rabbitmq-plugins",
-  ){
+  $mco_pskey = $nailgun::params::mco_pskey,
+  $mco_stomphost = $nailgun::params::mco_stomphost,
+  $mco_stompuser = $nailgun::params::mco_stompuser,
+  $mco_stomppassword = $nailgun::params::mco_stomppassword,
+
+  $rabbitmq_plugins_repo = "file:///var/www/nailgun/rabbitmq-plugins",
+
+  ) inherits nailgun::params {
 
   class { "mcollective::rabbitmq":
     stompuser => $mco_stompuser,
@@ -15,7 +18,7 @@ class nailgun::mcollective(
     pskey => $mco_pskey,
     stompuser => $mco_stompuser,
     stomppassword => $mco_stomppassword,
-    stomphost => $ipaddress,
+    stomphost => $mco_stomphost,
     stompport => "61613"
   }
 

@@ -6,7 +6,7 @@ define nailgun::sshkeygen (
   $keytype = "rsa",
   ){
 
-  Exec  {path => '/usr/bin:/bin:/usr/sbin:/sbin'}
+  Exec {path => '/usr/bin:/bin:/usr/sbin:/sbin'}
 
   if ! $keytype =~ /^(rsa|dsa)$/ {
     fail("Wrong keytype parameter: ${keytype}")

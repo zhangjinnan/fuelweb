@@ -1,14 +1,24 @@
 class nailgun::naily(
-  $rabbitmq_naily_user = 'naily',
-  $rabbitmq_naily_password = 'naily',
-  $version,
-  $gem_source = "http://rubygems.org/",
-  ){
+  $package = $nailgun::params::naily_package,
+  $version = $nailgun::params::naily_version,
 
-  package { "naily":
+  $rabbitmq_naily_user = $nailgun::params::rabbitmq_naily_user,
+  $rabbitmq_naily_password = $nailgun::params::rabbitmq_naily_password,
+
+  $gem_source = $nailgun::params::gem_source,
+
+  ) inherits nailgun::params {
+
+  # here we use patched version of gem provider in order
+  # to be able to set gem repository excplicitly
+  package { $package :
     provider => "gem",
     ensure => $version,
     source => $gem_source,
+    require => [
+                Package["ruby-devel"],
+                Package["gcc"],
+                ]
   }
 
   file {"/etc/naily":

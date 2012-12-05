@@ -18,11 +18,12 @@ class cobbler::profile::rhel63-x86_64(
               "name" => "Puppet",
               "url"  => "http://yum.puppetlabs.com/el/6/products/x86_64",
               }],
-              
+
   $ks_system_timezone         = "America/Los_Angeles",
 
   # default password is 'r00tme'
   $ks_encrypted_root_password = "\$6\$tCD3X7ji\$1urw6qEMDkVxOkD33b4TpQAjRiCeDZx0jmgMhDYhfB9KuGfqO9OcMaKyUxnGGWslEDQ4HxTw7vcAMP85NxQe61",
+  $kopts = "",
   ) {
 
   Exec {path => '/usr/bin:/bin:/usr/sbin:/sbin'}
@@ -32,9 +33,9 @@ class cobbler::profile::rhel63-x86_64(
       $ks_dir = "/var/lib/cobbler/kickstarts"
     }
   }
-  
+
   file { "${ks_dir}/rhel63-x86_64.ks":
-    content => template("cobbler/rhel.ks.erb"),
+    content => template("cobbler/kickstart/rhel.ks.erb"),
     owner => root,
     group => root,
     mode => 0644,
@@ -47,6 +48,6 @@ class cobbler::profile::rhel63-x86_64(
     ksmeta => "",
     menu => true,
   }
-  
+
 }
 

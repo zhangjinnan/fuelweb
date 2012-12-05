@@ -1,9 +1,9 @@
 LISTEN_ADDRESS: "127.0.0.1"
 LISTEN_PORT: "8001"
 DEVELOPMENT: "0"
-DATABASE_ENGINE: "<%= database_engine %>"
-STATIC_DIR: "<%= staticdir %>"
-TEMPLATE_DIR: "<%= templatedir %>"
+DATABASE_ENGINE: "<%= @database_engine %>"
+STATIC_DIR: "<%= @staticdir %>"
+TEMPLATE_DIR: "<%= @templatedir %>"
 NETWORK_POOLS:
   public:
     - "240.0.0.0/16"
@@ -24,8 +24,8 @@ RABBITMQ:
   fake: "0"
   hostname: "127.0.0.1"
   port: 5672
-  userid: "<%= rabbitmq_naily_user %>"
-  password: "<%= rabbitmq_naily_password %>"
+  userid: "<%= @rabbitmq_naily_user %>"
+  password: "<%= @rabbitmq_naily_password %>"
   virtual_host: "/"
 
 CUSTOM_LOG: "/var/log/nailgun.log"
@@ -34,20 +34,20 @@ ACCESS_LOG: "/var/log/nailgun_access.log"
 PATH_TO_SSH_KEY: "/root/.ssh/id_rsa"
 PATH_TO_BOOTSTRAP_SSH_KEY: "/root/.ssh/bootstrap.rsa"
 
-COBBLER_URL: "<%= cobbler_url %>"
-COBBLER_USER: "<%= cobbler_user %>"
-COBBLER_PASSWORD: "<%= cobbler_password %>"
+COBBLER_URL: "<%= @cobbler_url %>"
+COBBLER_USER: "<%= @cobbler_user %>"
+COBBLER_PASSWORD: "<%= @cobbler_password %>"
 COBBLER_PROFILE: "centos63-x86_64"
 
-MCO_PSKEY: "<%= mco_pskey %>"
-MCO_STOMPHOST: <%= mco_stomphost %>
+MCO_PSKEY: "<%= @mco_pskey %>"
+MCO_STOMPHOST: <%= @mco_stomphost %>
 MCO_STOMPPORT: "61613"
-MCO_STOMPUSER: "<%= mco_stompuser %>"
-MCO_STOMPPASSWORD: "<%= mco_stomppassword %>"
+MCO_STOMPUSER: "<%= @mco_stompuser %>"
+MCO_STOMPPASSWORD: "<%= @mco_stomppassword %>"
 
-PUPPET_MASTER_HOST: "<%= puppet_master_hostname %>"
-PUPPET_VERSION: "2.7.19"
+PUPPET_MASTER_HOST: "<%= @puppet_master_hostname %>"
+PUPPET_VERSION: "<%= @puppet_version %>"
 
-DNS_DOMAIN: "<%= domain %>"
-DNS_SERVERS: "<%= puppet_master_ip %>"
-DNS_SEARCH: "<%= domain %>"
+DNS_DOMAIN: "<%= @domain %>"
+DNS_SERVERS: "<%= @ipaddress %>"
+DNS_SEARCH: "<%= @domain %>"

@@ -1,5 +1,7 @@
 class nailgun::iptables {
 
+  Exec {path => '/usr/bin:/bin:/usr/sbin:/sbin'}
+
   define access_to_nailgun_port($port, $protocol='tcp') {
     $rule = "-p $protocol -m state --state NEW -m $protocol --dport $port -j ACCEPT"
     exec { "access_to_cobbler_${protocol}_port: $port":
@@ -11,5 +13,5 @@ class nailgun::iptables {
 
   access_to_nailgun_port { "nailgun_web":    port => '8000' }
   access_to_nailgun_port { "nailgun_repo":    port => '8080' }
-  
+
 }

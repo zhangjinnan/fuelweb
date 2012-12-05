@@ -1,19 +1,33 @@
 class nailgun::venv(
-  $venv,
-  $venv_opts = "",
-  $package,
-  $version,
-  $pip_opts = "",
+  $venv = $nailgun::params::venv,
+  $venv_opts = $nailgun::params::venv_opts,
+  $pip_opts = $nailgun::params::pip_opts,
 
-  $nailgun_user,
-  $nailgun_group,
-  $databasefile,
-  $staticdir,
-  $templatedir,
+  $package = $nailgun::params::package,
+  $version = $nailgun::params::version,
 
-  $rabbitmq_naily_user,
-  $rabbitmq_naily_password,
-  ) {
+  $databasefile = $nailgun::params::databasefile,
+  $staticdir = $nailgun::params::staticdir,
+  $templatedir = $nailgun::params::templatedir,
+
+  $rabbitmq_naily_user = $nailgun::params::rabbitmq_naily_user,
+  $rabbitmq_naily_password = $nailgun::params::rabbitmq_naily_password,
+
+  $cobbler_url = $nailgun::params::cobbler_url,
+  $cobbler_user = $nailgun::params::cobbler_user,
+  $cobbler_password = $nailgun::params::cobbler_password,
+
+  $mco_pskey = $nailgun::params::mco_pskey,
+  $mco_stomphost = $nailgun::params::mco_stomphost,
+  $mco_stompuser = $nailgun::params::mco_stompuser,
+  $mco_stomppassword = $nailgun::params::mco_stomppassword,
+
+  $puppet_master_hostname = $nailgun::params::puppet_master_hostname,
+  $puppet_version = $nailgun::params::puppet_version,
+
+  ) inherits nailgun::params {
+
+  Exec {path => '/usr/bin:/bin:/usr/sbin:/sbin'}
 
   nailgun::venv::venv { $venv:
     ensure => "present",
@@ -23,7 +37,7 @@ class nailgun::venv(
     pip_opts => $pip_opts,
   }
 
-  nailgun::venv::pip { "$venv_$package":
+  nailgun::venv::pip { "${venv}_${package}":
     package => "$package==$version",
     opts => $pip_opts,
     venv => $venv,
@@ -69,7 +83,7 @@ class nailgun::venv(
     require => [
                 File["/etc/nailgun/settings.yaml"],
                 File[$databasefiledir],
-                Nailgun::Venv::Pip["$venv_$package"],
+                Nailgun::Venv::Pip["${venv}_${package}"],
                 ],
   }
 

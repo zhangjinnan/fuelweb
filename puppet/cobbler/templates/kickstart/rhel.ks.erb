@@ -1,11 +1,11 @@
 # WHAT TO DO (install fresh system rather than upgrade)
 install
 
-# INSTALLATION SOURCE (centos repository)
+# INSTALLATION SOURCE (rhel repository)
 url --url=$tree
 
 # ALTERNATIVE REPOSITORIES
-<% ks_repo.each do |repo| %>
+<% @ks_repo.each do |repo| %>
 repo --name=<%= repo['name'] %> --baseurl=<%= repo['url'] %>
 <% end %>
 
@@ -14,15 +14,16 @@ lang en_US.UTF-8
 keyboard us
 
 # WHICH TIMEZONE TO USE ON INSTALLED SYSTEM
-timezone --utc <%= ks_system_timezone %>
+timezone --utc <%= @ks_system_timezone %>
 
 # REBOOT AFTER INSTALLATION
 reboot
 
+network --onboot yes --device eth0 --bootproto=dhcp
 firewall --disable
 
 # SET ROOT PASSWORD DEFAULT IS r00tme
-rootpw --iscrypted <%= ks_encrypted_root_password %>
+rootpw --iscrypted <%= @ks_encrypted_root_password %>
 
 # AUTHENTICATION CUSTOMIZATION
 authconfig --enableshadow --passalgo=sha512
@@ -69,15 +70,6 @@ $SNIPPET('network_config')
 # CONFIGURES %pre LOGGING
 $SNIPPET('log_ks_pre')
 
-# DOWNLOADS send2syslog.py AND LAUNCHES IT
-# IN ORDER TO MONITOR LOG FILES AND SEND
-# LINES FROM THOSE FILES TO SYSLOG
-$SNIPPET('send2syslog')
-
-# SNIPPET: 'kickstart_ntp'
-# SYNC LOCAL TIME VIA NTP
-$SNIPPET('kickstart_ntp')
-
 # COBBLER EMBEDDED SNIPPET: 'kickstart_start'
 # LAUNCHES %pre TRIGGERS IF THOSE INSTALLED
 $SNIPPET('kickstart_start')
@@ -105,32 +97,18 @@ wget
 crontabs
 cronie
 ruby-augeas
-ntp
-ruby-devel
-make
-gcc
-nailgun-agent
-nailgun-mcagents
-
 # COBBLER EMBEDDED SNIPPET: 'puppet_install_if_enabled'
 # LISTS puppet PACKAGE IF puppet_auto_setup VARIABLE IS SET TO 1
 $SNIPPET('puppet_install_if_enabled')
 
 # COBBLER EMBEDDED SNIPPET: 'mcollective_install_if_enabled'
-# LISTS mcollective PACKAGE IF mco_auto_setup VARIABLE IS SET TO 1
+# LISTS mcollective PACKAGE IF mcollective_auto_setup VARIABLE IS SET TO 1
 $SNIPPET('mcollective_install_if_enabled')
 
 # POSTINSTALL SECTION
 # HERE ARE COMMANDS THAT WILL BE LAUNCHED JUST AFTER
 # INSTALLATION ITSELF COMPLETED
 %post
-
-gem install ohai httpclient json --source <%= gem_source %> --no-ri --no-rdoc
-mkdir -p /etc/nailgun-agent/
-cat > /etc/nailgun-agent/config.yaml << EOA
----
-url: '<%= nailgun_api_url %>'
-EOA
 
 # COBBLER EMBEDDED SNIPPET: 'log_ks_post'
 # CONFIGURES %post LOGGING
@@ -143,7 +121,7 @@ $SNIPPET('post_install_kernel_options')
 # COBBLER EMBEDDED SNIPPET: 'post_install_network_config'
 # CONFIGURES NETWORK INTERFACES DEPENDING ON
 # COBBLER SYSTEM PARAMETERS
-$SNIPPET('post_install_network_config_fuel')
+$SNIPPET('post_install_network_config')
 
 # COBBLER EMBEDDED SNIPPET: 'puppet_conf'
 # CONFIGURES PUPPET AGENT
@@ -151,43 +129,17 @@ $SNIPPET('puppet_conf')
 
 # COBBLER EMBEDDED SNIPPET: 'puppet_register_if_enabled'
 # CREATES CERTIFICATE REQUEST AND SENDS IT TO PUPPET MASTER
-$SNIPPET('puppet_register_if_enabled_fuel')
+$SNIPPET('puppet_register_if_enabled')
 
 # COBBLER EMBEDDED SNIPPET: 'mcollective_conf'
 # CONFIGURES MCOLLECTIVE AGENT
 $SNIPPET('mcollective_conf')
 
-# SNIPPET: 'ntp_to_masternode'
-# CONFIGURES NTPD POOL TO MASTER NODE
-$SNIPPET('ntp_to_masternode')
-
-# Let's not to use separate snippet for just one line of code. Complexity eats my time.
-echo 'flock -w 0 -o /var/lock/agent.lock -c "/opt/nailgun/bin/agent > /var/log/nailgun-agent.log 2>&1"' >> /etc/rc.local
-
-# It is for the internal nailgun using
-echo target > /etc/nailgun_systemtype
-
-# COBBLER EMBEDDED SNIPPET: 'authorized_keys'
-# PUTS authorized_keys file into /root/.ssh/authorized_keys
-$SNIPPET('authorized_keys')
-
-# COBBLER EMBEDDED SNIPPET: 'nailgun_repo'
-# REMOVES ALL *.repo FILES FROM /etc/yum.repos.d AND
-# CREATES /etc/yum.repos.d/nailgun.repo FILE AND
-# PUTS IN IT ALL THE REPOSITORIES DEFINED IN ks_repo VARIABLE
-$SNIPPET('nailgun_repo')
-
-# COBBLER EMBEDDED SNIPPET: 'ssh_disable_gssapi'
-# REMOVES "GSSAPICleanupCredentials yes" AND "GSSAPIAuthentication yes" LINES
-# FROM /etc/ssh/sshd_config
-$SNIPPET('ssh_disable_gssapi')
-
-# COBBLER EMBEDDED SNIPPET: 'ssh_disable_dns'
-# ADDS 'UseDNS no' TO /etc/ssh/sshd_config
-$SNIPPET('ssh_disable_dns')
-
-# Copying default bash settings to the root directory
-cp -f /etc/skel/.bash* /root/ 
+# COBBLER EMBEDDED SNIPPET: 'redhat_register'
+# REGISTER AT REDHAT WITH ACTIVATION KEY
+$SNIPPET('redhat_register')
+# REGISTER AT REDHAT WITH lOGIN/PASSWORD
+$SNIPPET('rhn_certificate_based_register')
 
 # COBBLER EMBEDDED SNIPPET: 'kickstart_done'
 # DISABLES PXE BOOTING

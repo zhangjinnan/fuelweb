@@ -1,147 +1,97 @@
 class nailgun(
-  $package,
-  $version,
-  $nailgun_group = "nailgun",
-  $nailgun_user = "nailgun",
-  $venv = "/opt/nailgun",
 
-  $repo_root = "/var/www/nailgun",
-  $pip_index = "",
-  $pip_find_links = "",
-  $gem_source = "http://localhost/gems/",
+  $rabbitmq_naily_user = $nailgun::params::rabbitmq_naily_user,
+  $rabbitmq_naily_password = $nailgun::params::rabbitmq_naily_password,
 
-  $databasefile = "/var/tmp/nailgun.sqlite",
-  $staticdir = "/opt/nailgun/usr/share/nailgun/static",
-  $templatedir = "/opt/nailgun/usr/share/nailgun/static",
+  ) inherits nailgun::params {
 
-  $cobbler_url = "http://localhost/cobbler_api",
-  $cobbler_user = "cobbler",
-  $cobbler_password = "cobbler",
 
-  $mco_pskey = "unset",
-  $mco_stomphost = $ipaddress,
-  $mco_stompuser = "mcollective",
-  $mco_stomppassword = "marionette",
+  #######################
+  # PUPPET FLOW
+  #######################
 
-  $naily_version,
-  $nailgun_api_url = "http://$ipaddress:8000/api",
-  $rabbitmq_naily_user = "naily",
-  $rabbitmq_naily_password = "naily",
-  $rabbitmq_plugins_repo = "file:///var/www/nailgun/rabbitmq-plugins",
-  $puppet_master_hostname = "${hostname}.${domain}",
-  $puppet_master_ip = $ipaddress,
-
-  ) {
-
-  Exec  {path => '/usr/bin:/bin:/usr/sbin:/sbin'}
-
-  anchor { "nailgun-begin": }
-  anchor { "nailgun-end": }
-
-  Anchor<| title == "nailgun-begin" |> ->
+  Anchor["nailgun-begin"] ->
   Class["nailgun::packages"] ->
+  Anchor["nginx-clean"] ->
   Class["nailgun::iptables"] ->
+  Class["nailgun::rsyslog"] ->
+
+  # Preparing repository (gem, pip, rpm)
   Class["nailgun::nginx-repo"] ->
   Exec["start_nginx_repo"] ->
-  Class["nailgun::user"] ->
+
+  # Installing nailgun components
   Class["nailgun::venv"] ->
   Class["nailgun::naily"] ->
-  Class["nailgun::nginx-nailgun"] ->
-  Class["nailgun::cobbler"] ->
-  Class["nailgun::pm"] ->
-  Class["nailgun::rsyslog"] ->
   Class["nailgun::supervisor"] ->
-  Anchor<| title == "nailgun-end" |>
+  Class["nailgun::nginx-nailgun"] ->
+  Anchor["nailgun-end"]
 
-  class { "nailgun::packages":
-    gem_source => $gem_source,
-  }
+  # Installing cobbler
+  Anchor["nailgun-begin"] ->
+  Class["nailgun::cobbler"] ->
+  Anchor["nailgun-end"]
 
-  class { "nailgun::iptables": }
+  # Installing mcollective
+  Anchor["nailgun-begin"] ->
+  Class["nailgun::mcollective"] ->
+  Anchor["nailgun-end"]
 
+  # Installing mcollective
+  Anchor["nailgun-begin"] ->
+  Class["nailgun::puppetmaster"] ->
+  Anchor["nailgun-end"]
+
+  ##########################
+  # PUPPET DECLARATIONS
+  ##########################
+
+  Exec {path => '/usr/bin:/bin:/usr/sbin:/sbin'}
+
+  anchor { "nailgun-begin" : }
+
+  class { nailgun::packages : }
+
+  # Removing all unnecessary nginx config files
   file { ["/etc/nginx/conf.d/default.conf",
           "/etc/nginx/conf.d/virtual.conf",
           "/etc/nginx/conf.d/ssl.conf"]:
     ensure => "absent",
     notify => Service["nginx"],
-    before => [
-               Class["nailgun::nginx-repo"],
-               Class["nailgun::nginx-nailgun"],
-               Class["nailgun::pm"],
-               ],
-  }
+  } ->
 
-  class { "nailgun::rsyslog": }
+  anchor { "nginx-clean" : }
 
-  class { "nailgun::user":
-    nailgun_group => $nailgun_group,
-    nailgun_user => $nailgun_user,
-  }
-
-  class { "nailgun::venv":
-    venv => $venv,
-    venv_opts => "--system-site-packages",
-    package => $package,
-    version => $version,
-    pip_opts => "${pip_index} ${pip_find_links}",
-    nailgun_user => $nailgun_user,
-    nailgun_group => $nailgun_group,
-    databasefile => $databasefile,
-    staticdir => $staticdir,
-    templatedir => $templatedir,
-    rabbitmq_naily_user => $rabbitmq_naily_user,
-    rabbitmq_naily_password => $rabbitmq_naily_password,
-  }
-
-  class {"nailgun::naily":
-    rabbitmq_naily_user => $naily_user,
-    rabbitmq_naily_password => $naily_password,
-    version => $naily_version,
-    gem_source => $gem_source,
-  }
-
-  class { "nailgun::supervisor":
-    venv => $venv,
-  }
-
-  class { "nailgun::nginx-repo":
-    repo_root => $repo_root,
+  class { nailgun::iptables : }
+  class { nailgun::rsyslog : }
+  class { nailgun::nginx-repo :
     notify => Service["nginx"],
   }
 
+  # This resource is required in order to make repository working before
+  # installing gem packages. It is because you cannot use file system
+  # directories as gem repositories.
   exec { "start_nginx_repo":
     command => "/etc/init.d/nginx start",
     unless => "/etc/init.d/nginx status | grep -q running",
   }
 
-  class { "nailgun::nginx-nailgun":
-    staticdir => $staticdir,
+  class { nailgun::venv : }
+  class { nailgun::naily : }
+  class { nailgun::supervisor : }
+  class { nailgun::nginx-nailgun :
     notify => Service["nginx"],
   }
 
-  class { "nailgun::cobbler":
-    cobbler_user => "cobbler",
-    cobbler_password => "cobbler",
-    centos_repos => $centos_repos,
-    gem_source => $gem_source,
-  }
-
-  class { "nailgun::pm":
-    puppet_master_hostname => $puppet_master_hostname,
-    gem_source => $gem_source,
-  }
-
-  class { "nailgun::mcollective":
-    mco_pskey => $mco_pskey,
-    mco_stompuser => $mco_stompuser,
-    mco_stomppassword => $mco_stomppassword,
-    rabbitmq_plugins_repo => $rabbitmq_plugins_repo,
-  }
+  class { nailgun::cobbler :  }
+  class { nailgun::mcollective : }
+  class { nailgun::puppetmaster : }
 
   rabbitmq_user { $rabbitmq_naily_user:
     admin     => true,
     password  => $rabbitmq_naily_password,
     provider  => 'rabbitmqctl',
+    # Class[rabbitmq::server] is declared inside mcollective::rabbitmq
     require   => Class['rabbitmq::server'],
   }
 
@@ -150,11 +100,14 @@ class nailgun(
     write_permission     => '.*',
     read_permission      => '.*',
     provider             => 'rabbitmqctl',
+    # Class[rabbitmq::server] is declared inside mcollective::rabbitmq
     require              => Class['rabbitmq::server'],
   }
 
-  class { "nailgun::nginx-service": }
+  class { nailgun::nginx-service : }
 
+  # Generating rsa key. It will be used to get ssh access from
+  # admin node to target nodes.
   nailgun::sshkeygen { "/root/.ssh/id_rsa":
     homedir => "/root",
     username => "root",
@@ -162,10 +115,14 @@ class nailgun(
     keytype => "rsa",
   } ->
 
+  # The file /etc/cobbler/authorized_keys is used inside authorized_keys
+  # snippet. This snippet just puts it on target node during OS installation.
   exec { "cp /root/.ssh/id_rsa.pub /etc/cobbler/authorized_keys":
     command => "cp /root/.ssh/id_rsa.pub /etc/cobbler/authorized_keys",
     creates => "/etc/cobbler/authorized_keys",
     require => Class["nailgun::cobbler"],
   }
+
+  anchor { "nailgun-end" : }
 
 }

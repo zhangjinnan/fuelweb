@@ -39,12 +39,14 @@ openstack-nova-novncproxy
 patch
 policycoreutils
 puppet-2.7.19
+puppet-3.0.1
 puppet-server-2.7.19
+puppet-server-3.0.1
 python-amqp
 python-cinder
 python-devel
 python-virtualenv
-rabbitmq-server
+rabbitmq-server-2.8.7
 rsyslog
 ruby
 ruby-augeas

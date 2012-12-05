@@ -1,6 +1,7 @@
 class nailgun::supervisor(
-  $venv,
-  ) {
+  $venv = $nailgun::params::venv,
+
+  ) inherits nailgun::params {
 
   file { "/etc/rc.d/init.d/supervisord":
     source => 'puppet:///modules/nailgun/supervisord',

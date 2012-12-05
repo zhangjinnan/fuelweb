@@ -19,6 +19,7 @@ define nailgun::venv::venv(
     }
 
     Exec {
+      path => '/usr/bin:/bin:/usr/sbin:/sbin',
       user => $owner,
       group => $group,
       cwd => "/tmp",

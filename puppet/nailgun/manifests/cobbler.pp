@@ -1,25 +1,26 @@
 class nailgun::cobbler(
-  $cobbler_user = "cobbler",
-  $cobbler_password = "cobbler",
+  $cobbler_user = $nailgun::params::cobbler_user,
+  $cobbler_password = $nailgun::params::cobbler_password,
 
-  $centos_repos,
-  $gem_source,
+  $ks_repo = $nailgun::params::ks_repo,
+  $ks_system_timezone = $nailgun::params::ks_system_timezone,
+  $ks_encrypted_root_password = $nailgun::params::ks_encrypted_root_password,
 
-  $ks_system_timezone         = "America/Los_Angeles",
+  # those variables are needed to nailgun_agent snippet
+  $gem_source = $nailgun::params::gem_source,
+  $nailgun_api_url = $nailgun::params::nailgun_api_url,
 
-  # default password is 'r00tme'
-  $ks_encrypted_root_password = "\$6\$tCD3X7ji\$1urw6qEMDkVxOkD33b4TpQAjRiCeDZx0jmgMhDYhfB9KuGfqO9OcMaKyUxnGGWslEDQ4HxTw7vcAMP85NxQe61",
+  ) inherits nailgun::params {
 
-  ){
+  Anchor["nailgun-cobbler-begin"] ->
+  Class[::cobbler] ->
+  Anchor["nailgun-cobbler-end"]
+
+  Exec {path => '/usr/bin:/bin:/usr/sbin:/sbin'}
 
   anchor { "nailgun-cobbler-begin": }
-  anchor { "nailgun-cobbler-end": }
 
-  Anchor<| title == "nailgun-cobbler-begin" |> ->
-  Class["cobbler::server"] ->
-  Anchor<| title == "nailgun-cobbler-end" |>
-
-  class { "cobbler::server":
+  class { ::cobbler :
     server              => $ipaddress,
 
     domain_name         => $domain,
@@ -38,49 +39,53 @@ class nailgun::cobbler(
     pxetimeout          => '50'
   }
 
-  # ADDING send2syslog.py SCRIPT AND CORRESPONDING SNIPPET
+  #######################
+  # ADDITIONAL SNIPPETS
+  #######################
 
-  file { "/var/www/cobbler/aux/send2syslog.py":
-    content => template("nailgun/cobbler/send2syslog.py"),
-    owner => "root",
-    group => "root",
-    mode => 0644,
-    require => Class["cobbler::server"],
+  cobbler::snippets::cobbler_snippet {"send2syslog":
+    source => "nailgun/cobbler/snippets/send2syslog.erb",
   }
 
-  file {"/var/lib/cobbler/snippets/send2syslog":
-    content => template("nailgun/cobbler/send2syslog.snippet.erb"),
-    owner => root,
-    group => root,
-    mode => 0644,
-    require => Class["cobbler::server"],
+  cobbler::snippets::cobbler_snippet {"kickstart_ntp":
+    source => "nailgun/cobbler/snippets/kickstart_ntp.erb",
   }
 
-  file {"/var/lib/cobbler/snippets/kickstart_ntp":
-    content => template("nailgun/cobbler/kickstart_ntp.snippet.erb"),
-    owner => root,
-    group => root,
-    mode => 0644,
-    require => Class["cobbler::server"],
+  cobbler::snippets::cobbler_snippet {"ntp_to_masternode":
+    source => "nailgun/cobbler/snippets/ntp_to_masternode.erb",
   }
 
-  file {"/var/lib/cobbler/snippets/ntp_to_masternode":
-    content => template("nailgun/cobbler/ntp_to_masternode.snippet.erb"),
-    owner => root,
-    group => root,
-    mode => 0644,
-    require => Class["cobbler::server"],
+  cobbler::snippets::cobbler_snippet {"pre_install_network_config":
+    source => "nailgun/cobbler/snippets/pre_install_network_config.erb",
   }
 
-  # THIS VARIABLE IS NEEDED FOR TEMPLATING centos63-x86_64.ks
-  $ks_repo = $centos_repos
+  cobbler::snippets::cobbler_snippet {"nailgun_repo":
+    source => "nailgun/cobbler/snippets/nailgun_repo.erb",
+  }
+
+  cobbler::snippets::cobbler_snippet {"ssh_disable_gssapi":
+    source => "nailgun/cobbler/snippets/ssh_disable_gssapi.erb",
+  }
+
+  cobbler::snippets::cobbler_snippet {"authorized_keys":
+    source => "nailgun/cobbler/snippets/authorized_keys.erb",
+  }
+
+  cobbler::snippets::cobbler_snippet {"nailgun_agent":
+    source => "nailgun/cobbler/snippets/nailgun_agent.erb",
+  }
+
+  #############
+  # CENTOS
+  #############
+
 
   file { "/var/lib/cobbler/kickstarts/centos63-x86_64.ks":
-    content => template("nailgun/cobbler/centos.ks.erb"),
+    content => template("nailgun/cobbler/kickstart/centos.ks.erb"),
     owner => root,
     group => root,
     mode => 0644,
-    require => Class["cobbler::server"],
+    require => Class[::cobbler],
   } ->
 
   cobbler_distro { "centos63-x86_64":
@@ -90,7 +95,7 @@ class nailgun::cobbler(
     breed => "redhat",
     osversion => "rhel6",
     ksmeta => "tree=http://@@server@@:8080/centos/6.3/nailgun/x86_64",
-    require => Class["cobbler::server"],
+    require => Class[::cobbler],
   }
 
   cobbler_profile { "centos63-x86_64":
@@ -102,6 +107,10 @@ class nailgun::cobbler(
     require => Cobbler_distro["centos63-x86_64"],
   }
 
+  #############
+  # BOOTSTRAP
+  #############
+
   cobbler_distro { "bootstrap":
     kernel => "${repo_root}/bootstrap/linux",
     initrd => "${repo_root}/bootstrap/initramfs.img",
@@ -109,7 +118,7 @@ class nailgun::cobbler(
     breed => "redhat",
     osversion => "rhel6",
     ksmeta => "",
-    require => Class["cobbler::server"],
+    require => Class[::cobbler],
   }
 
   cobbler_profile { "bootstrap":
@@ -135,12 +144,16 @@ class nailgun::cobbler(
     require => Cobbler_profile["bootstrap"],
   }
 
+  #################
+  # FENCE SCRIPTS
+  #################
+
   file { "/etc/cobbler/power/fence_ssh.template":
     content => template("nailgun/cobbler/fence_ssh.template.erb"),
     owner => 'root',
     group => 'root',
     mode => 0644,
-    require => Class["cobbler::server"],
+    require => Class[::cobbler],
   }
 
   file { "/usr/sbin/fence_ssh":
@@ -148,41 +161,26 @@ class nailgun::cobbler(
     owner => 'root',
     group => 'root',
     mode => 0755,
-    require => Class["cobbler::server"],
-  }
-
-  file {"/var/lib/cobbler/snippets/authorized_keys":
-    content => template("nailgun/cobbler/authorized_keys.snippet.erb"),
-    owner => root,
-    group => root,
-    mode => 0644,
-    require => Class["cobbler::server"],
-  }
-
-  file {"/var/lib/cobbler/snippets/pre_install_network_config":
-    content => template("nailgun/cobbler/pre_install_network_config.snippet.erb"),
-    owner => root,
-    group => root,
-    mode => 0644,
-    require => Class["cobbler::server"],
-  }
-
-  file { "/var/lib/cobbler/snippets/nailgun_repo":
-    content => template("nailgun/cobbler/nailgun_repo.snippet.erb"),
-    owner => root,
-    group => root,
-    mode => 0644,
-    require => Class["cobbler::server"],
-  }
-
-  file { "/var/lib/cobbler/snippets/ssh_disable_gssapi":
-    content => template("nailgun/cobbler/ssh_disable_gssapi.snippet.erb"),
-    owner => root,
-    group => root,
-    mode => 0644,
-    require => Class["cobbler::server"],
+    require => Class[::cobbler],
   }
 
   Package<| title == "cman" |>
   Package<| title == "fence-agents"|>
-}
+
+  ##################
+  # OTHER FILES
+  ##################
+
+  # ADDING send2syslog.py SCRIPT AND CORRESPONDING SNIPPET
+
+  file { "/var/www/cobbler/aux/send2syslog.py":
+    content => template("nailgun/cobbler/send2syslog.py"),
+    owner => "root",
+    group => "root",
+    mode => 0644,
+    require => Class[::cobbler],
+  }
+
+  anchor { "nailgun-cobbler-end": }
+
+  }

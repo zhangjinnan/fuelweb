@@ -1,6 +1,8 @@
 class puppetmaster::packages(
   $puppet_package_version = "2.7.19-1.el6",
   $gem_source="http://rubygems.org/",
+
+  $unicorn=true,
   ){
 
   define puppetmaster_safe_package($version = ""){
@@ -62,4 +64,17 @@ class puppetmaster::packages(
     ensure => "2.8.1",
     source => $gem_source,
   }
-}
+
+  @package { "unicorn":
+    provider => "gem",
+    ensure => "4.4.0",
+    source => $gem_source,
+  }
+
+  @package { "god":
+    provider => "gem",
+    ensure => "0.13.1",
+    source => $gem_source,
+  }
+
+  }
