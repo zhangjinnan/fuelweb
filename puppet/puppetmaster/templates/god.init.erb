@@ -6,30 +6,68 @@
 # description: start, stop, restart God
 #
 
+export PATH=/bin:/usr/bin:/sbin:/usr/sbin
+export HOME=/
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+god=/usr/bin/god
+prog=god
+lockfile=/var/lock/subsys/$prog
+
 RETVAL=0
+
+start(){
+    echo -n $"Starting $prog: "
+    $god -P /var/run/god.pid -l /var/log/god.log -c '/etc/god/*.god'
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && touch $lockfile
+    echo
+    return $RETVAL
+}
+
+stop(){
+    echo -n $"Stopping $prog: "
+    kill `cat /var/run/god.pid` >/dev/null 2>&1
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && rm -f $lockfile
+    echo
+    return $RETVAL
+}
+
+restart(){
+    stop
+    start
+}
+
+rh_status() {
+    $god status
+    RETVAL=$?
+    return $RETVAL
+}
+
+rh_status_q() {
+    rh_status >/dev/null 2>&1
+}
 
 case "$1" in
     start)
-      /usr/bin/god -P /var/run/god.pid -l /var/log/god.log -c '/etc/god/*.god'
-      RETVAL=$?
-      ;;
+        start
+        ;;
     stop)
-      kill `cat /var/run/god.pid`
-      RETVAL=$?
-      ;;
+        stop
+        ;;
     restart)
-      kill `cat /var/run/god.pid`
-      /usr/bin/god -P /var/run/god.pid -l /var/log/god.log -c '/etc/god/*.god'
-      RETVAL=$?
-      ;;
+        restart
+        ;;
     status)
-      /usr/bin/god status
-      RETVAL=$?
-      ;;
+        rh_status
+        ;;
     *)
-      echo "Usage: god {start|stop|restart|status}"
-      exit 1
-  ;;
+        echo "Usage: god {start|stop|restart|status}"
+        exit 1
+        ;;
 esac
 
 exit $RETVAL

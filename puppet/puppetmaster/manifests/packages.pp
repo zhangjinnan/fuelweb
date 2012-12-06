@@ -65,15 +65,21 @@ class puppetmaster::packages(
     source => $gem_source,
   }
 
-  @package { "unicorn":
+  package { "unicorn":
     provider => "gem",
     ensure => "4.4.0",
     source => $gem_source,
   }
 
-  @package { "god":
+  package { "god":
     provider => "gem",
     ensure => "0.13.1",
+    source => $gem_source,
+  }
+
+  package { "rack":
+    provider => "gem",
+    ensure => "1.2.5",
     source => $gem_source,
   }
 

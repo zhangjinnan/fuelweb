@@ -16,7 +16,6 @@ server {
     ssl_certificate         <%= puppet_master_crt %>;
     ssl_certificate_key     <%= puppet_master_key %>;
     ssl_client_certificate  <%= puppet_ca %>;
-    ssl_crl <%= puppet_crl %>;
 
     ssl_ciphers             SSLv2:-LOW:-EXPORT:RC4+RSA;
     ssl_session_cache       shared:SSL:8m;

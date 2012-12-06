@@ -27,8 +27,8 @@ class nailgun::params {
   # THIS IS FULL PACKAGE VESRION OF PUPPET ON ADMIN NODE
   # THIS VARIABLE IS USED TO SET ensure PARAMETER
   # OF package RESOURCE DURING PUPPET MASTER DEPLOYMENT
-  # $puppet_master_package_version = "2.7.19-1.el6"
-  $puppet_master_package_version = "3.0.1-1.el6"
+  $puppet_master_package_version = "2.7.19-1.el6"
+  # $puppet_master_package_version = "3.0.1-1.el6"
 
   $rabbitmq_naily_user = "naily"
   $rabbitmq_naily_password = "naily"

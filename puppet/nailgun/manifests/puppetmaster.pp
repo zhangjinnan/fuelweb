@@ -1,5 +1,3 @@
-# TODO
-# THIS MANIFEST WORKS ONLY ON puppet-2.7.19
 class nailgun::puppetmaster(
   $puppet_master_hostname = $nailgun::params::puppet_master_hostname,
   $puppet_master_package_version = $nailgun::params::puppet_master_package_version,

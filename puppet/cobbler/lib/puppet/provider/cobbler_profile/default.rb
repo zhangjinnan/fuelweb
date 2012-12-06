@@ -1,7 +1,7 @@
 require 'puppet'
 Puppet::Type.type(:cobbler_profile).provide(:default) do
   defaultfor :operatingsystem => [:centos, :redhat, :debian, :ubuntu]
-  
+
   def exists?
     Puppet.info "cobbler_profile: checking if profile exists: #{@resource[:name]}"
     if find_profile_full
@@ -27,9 +27,9 @@ Puppet::Type.type(:cobbler_profile).provide(:default) do
 
   def enable_menu
     if @resource[:menu] == :true
-      "True" 
+      "True"
     else
-      "False"  
+      "False"
     end
   end
 

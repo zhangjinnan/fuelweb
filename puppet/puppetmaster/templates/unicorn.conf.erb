@@ -1,6 +1,6 @@
 worker_processes 4
 working_directory "/etc/puppet"
-listen '0.0.0.0:<%= @puppet_master_ports %>', :backlog => 2048
+listen '127.0.0.1:<%= @puppet_master_ports %>', :backlog => 2048
 preload_app true
 timeout 120
 pid "/var/run/puppet/unicorn.pid"
