@@ -27,7 +27,11 @@ test-integration: test-integration-env
 test-integration-env: | $(iso.path)
 	@mkdir -p $(@D)
 	python test/integration_test.py -l $(LEVEL) destroy
-	python test/integration_test.py -l $(LEVEL) $(NOFORWARD_CLI_ARG) --iso $(abspath $(iso.path)) setup
+	python test/integration_test.py -l $(LEVEL) $(NOFORWARD_CLI_ARG) \
+	--iso $(abspath $(iso.path)) \
+	--method=img \
+	--uuid=$(shell cat $(BUILD_DIR)/iso/img_loop_uuid) \
+	setup
 
 .PHONY: clean-integration-test
 clean-integration-test: /:=$/

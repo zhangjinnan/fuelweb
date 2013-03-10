@@ -4,7 +4,7 @@ from ipaddr import IPv4Network
 from devops import xml
 from devops.model import Network, Node, Disk, Cdrom
 from devops.network import IPv4Address, IPv4Network
-from devops.driver.libvirt import Libvirt, LibvirtXMLBuilder, DeploymentSpec
+from devops.driver.nailgun_libvirt import Libvirt, LibvirtXMLBuilder, DeploymentSpec
 
 
 class TestLibvirtXMLBuilder(unittest.TestCase):

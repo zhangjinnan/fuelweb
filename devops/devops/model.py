@@ -127,6 +127,14 @@ class Node(ManagedObject):
             pass
         return self.driver.create_snapshot(self, name=name)
 
+    def delete_disk_by_source(self, source_path):
+        "Removes node disk by source path"
+        self.driver.delete_disk_by_source(self.id, source_path)
+
+    def status(self):
+        "Returns node state (running | shutdown | ...)"
+        return self.driver.node_status(self.id)
+
     def save_snapshot(self, name=None, force=False):
         "Create node state snapshot. Returns snapshot name"
         if name and force and self.has_snapshot(name):

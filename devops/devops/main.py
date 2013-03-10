@@ -1,7 +1,7 @@
 import logging
 from error import DevopsError
 from controller import Controller
-from driver.libvirt import Libvirt
+from driver.nailgun_libvirt import Libvirt
 import yaml_config_loader
 
 __all__ = ['logger', 'getController', 'build', 'destroy', 'load', 'save']

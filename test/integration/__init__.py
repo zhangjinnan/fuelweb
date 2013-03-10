@@ -20,8 +20,11 @@ class Ci(object):
     deployment_timeout = 1800
     puppet_timeout = 1000
 
-    def __init__(self, iso=None, forward='nat'):
+    def __init__(self, iso=None, forward='nat', method='iso', uuid=None):
         self.iso = iso
+        self.uuid = uuid
+        # method can be any of 'iso' or 'img'
+        self.method = method
         self.environment = None
         self.forward = forward
         try:
@@ -40,7 +43,7 @@ class Ci(object):
 
         if not self.iso:
             logger.critical(
-                "ISO path missing while trying "
+                "ISO or IMG file path is not set correctly "
                 "to build integration environment"
             )
             return False
@@ -56,11 +59,19 @@ class Ci(object):
             node = Node('admin')
             node.memory = 1024
             node.vnc = True
+            # img disk
+            if self.method == 'img':
+                node.disks.append(
+                    Disk(format='raw', path=self.iso, bus='virtio')
+                )
+            elif self.method == 'iso':
+                node.cdrom = Cdrom(isopath=self.iso)
+
+            # target disk
             node.disks.append(
-                Disk(size=30 * 1024 ** 3)
+                Disk(size=30 * 1024 ** 3, bus='virtio')
             )
             node.interfaces.append(Interface(network))
-            node.cdrom = Cdrom(isopath=self.iso)
             node.boot = ['disk', 'cdrom']
             environment.nodes.append(node)
 
@@ -103,21 +114,48 @@ class Ci(object):
             'gw': network.ip_addresses[1],
             'hostname': '.'.join((self.hostname, self.domain))
         }
+        if self.method == 'img':
+            params['ks'] = "repo=hd:UUID=%(uuid)s:/ ks=hd:UUID=%(uuid)s:/test.cfg" % {
+                'uuid': self.uuid
+            }
+        elif self.method == 'iso':
+            params['ks'] = "cdrom:/test.cfg"
+
         keys = """<Esc><Enter>
 <Wait>
-vmlinuz initrd=initrd.img ks=cdrom:/ks.cfg
+vmlinuz initrd=initrd.img
+ %(ks)s
  ip=%(ip)s
  netmask=%(mask)s
  gw=%(gw)s
  dns1=%(gw)s
  hostname=%(hostname)s
+ tgtdrive=vdb
  <Enter>
 """ % params
         node.send_keys(keys)
 
         logger.info(
-            "Waiting for completion of admin node software installation"
+            "Waiting for completion of admin node software installation."
         )
+
+        wait(
+            lambda : node.status() == 'shutoff',
+            timeout=self.installation_timeout
+        )
+
+        logger.info("Node installation completed and node was shut down")
+        if self.method == 'img':
+            logger.info("Removing img disk: %s" % self.iso)
+            node.delete_disk_by_source(source_path=self.iso)
+
+        logger.info("Starting master node")
+        node.start()
+
+        logger.info(
+            "Waiting for sshd is up and working on master node"
+        )
+
         wait(
             lambda: tcp_ping(node.ip_address, 22),
             timeout=self.installation_timeout

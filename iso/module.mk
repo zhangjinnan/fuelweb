@@ -5,6 +5,7 @@ ISOROOT:=$(BUILD_DIR)/iso/isoroot
 ISOBASENAME:=nailgun-centos-6.3-amd64
 ISONAME:=$(BUILD_DIR)/iso/$(ISOBASENAME).iso
 IMGNAME:=$(BUILD_DIR)/iso/$(ISOBASENAME).img
+KICKSTARTS:=$(addprefix $(ISOROOT)/,ks.cfg test.cfg)
 
 iso: $(ISONAME)
 img: $(BUILD_DIR)/iso/image.done
@@ -43,10 +44,11 @@ $(BUILD_DIR)/iso/isoroot-dotfiles.done: \
 		$(ISOROOT)/.treeinfo
 	$(ACTION.TOUCH)
 
+KICKSTARTS:=$(addprefix $(ISOROOT)/,ks.cfg test.cfg)
 $(BUILD_DIR)/iso/isoroot-files.done: \
 		$(BUILD_DIR)/iso/isoroot-dotfiles.done \
 		$(ISOROOT)/isolinux/isolinux.cfg \
-		$(ISOROOT)/ks.cfg \
+		$(KICKSTARTS) \
 		$(ISOROOT)/bootstrap_admin_node.sh \
 		$(ISOROOT)/bootstrap_admin_node.conf \
 		$(ISOROOT)/version.yaml \
@@ -57,7 +59,10 @@ $(BUILD_DIR)/iso/isoroot-files.done: \
 $(ISOROOT)/.discinfo: $(SOURCE_DIR)/iso/.discinfo ; $(ACTION.COPY)
 $(ISOROOT)/.treeinfo: $(SOURCE_DIR)/iso/.treeinfo ; $(ACTION.COPY)
 $(ISOROOT)/isolinux/isolinux.cfg: $(SOURCE_DIR)/iso/isolinux/isolinux.cfg ; $(ACTION.COPY)
-$(ISOROOT)/ks.cfg: $(SOURCE_DIR)/iso/ks.cfg ; $(ACTION.COPY)
+$(KICKSTARTS): $(SOURCE_DIR)/iso/ks.cfg.jinja2 $(SOURCE_DIR)/iso/ks.py
+$(KICKSTARTS): YAML=$(SOURCE_DIR)/iso/$(basename $(notdir $@)).yaml
+$(KICKSTARTS): $(YAML)
+	python $(SOURCE_DIR)/iso/ks.py -t $(SOURCE_DIR)/iso/ks.cfg.jinja2 -c $(YAML) -o $@
 $(ISOROOT)/bootstrap_admin_node.sh: $(SOURCE_DIR)/iso/bootstrap_admin_node.sh ; $(ACTION.COPY)
 $(ISOROOT)/bootstrap_admin_node.conf: $(SOURCE_DIR)/iso/bootstrap_admin_node.conf ; $(ACTION.COPY)
 $(ISOROOT)/version.yaml: $(call depv,COMMIT_SHA)
@@ -139,7 +144,7 @@ $(ISONAME): $(BUILD_DIR)/iso/isoroot.done
 # +300M seems reasonable
 IMGSIZE = $(shell echo "$(shell ls -s $(ISONAME) | awk '{print $$1}') / 1024 + 300" | bc)
 
-$(BUILD_DIR)/iso/image.done: $(ISONAME) iso/module.mk
+$(BUILD_DIR)/iso/image.done: $(ISONAME) $(SOURCE_DIR)/iso/module.mk
 	rm -f $(BUILD_DIR)/iso/img_loop_device
 	rm -f $(BUILD_DIR)/iso/img_loop_partition
 	rm -f $(BUILD_DIR)/iso/img_loop_uuid
@@ -170,8 +175,10 @@ $(BUILD_DIR)/iso/image.done: $(ISONAME) iso/module.mk
 	sudo rm $(BUILD_DIR)/iso/imgroot/syslinux/isolinux.cfg
 	sudo cp $(SOURCE_DIR)/iso/syslinux/syslinux.cfg $(BUILD_DIR)/iso/imgroot/syslinux
 	sudo sed -i -e "s/will_be_substituted_with_actual_uuid/`cat $(BUILD_DIR)/iso/img_loop_uuid`/g" $(BUILD_DIR)/iso/imgroot/syslinux/syslinux.cfg
-	sudo cp $(SOURCE_DIR)/iso/ks.cfg $(BUILD_DIR)/iso/imgroot/ks.cfg
-	sudo sed -i -e "s/will_be_substituted_with_actual_uuid/`cat $(BUILD_DIR)/iso/img_loop_uuid`/g" $(BUILD_DIR)/iso/imgroot/ks.cfg
+	sudo cp $(KICKSTARTS) $(BUILD_DIR)/iso/imgroot/
+	for ks in $(addprefix $(BUILD_DIR)/iso/imgroot/,$(notdir $(KICKSTARTS))); do \
+		sudo sed -i -e "s/will_be_substituted_with_actual_uuid/`cat $(BUILD_DIR)/iso/img_loop_uuid`/g" $${ks}; \
+	done
 	sudo cp $(ISONAME) $(BUILD_DIR)/iso/imgroot/nailgun.iso
 	sudo sync
 	sudo umount `cat $(BUILD_DIR)/iso/img_loop_partition`

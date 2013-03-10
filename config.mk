@@ -35,4 +35,5 @@ YUM_REPOS:=centos epel fuel_folsom puppetlabs rpmforge
 
 # INTEGRATION TEST CONFIG
 NOFORWARD:=1
-iso.path:=$(BUILD_DIR)/iso/nailgun-centos-6.3-amd64.iso
+iso.path:=$(BUILD_DIR)/iso/nailgun-centos-6.3-amd64.img
+

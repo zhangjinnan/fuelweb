@@ -10,6 +10,8 @@ from xmlbuilder import XMLBuilder
 import ipaddr
 import re
 
+from xml.etree import ElementTree
+import libvirt
 import logging
 from devops.helpers import retry
 
@@ -91,6 +93,10 @@ class LibvirtXMLBuilder:
         node_xml = XMLBuilder("domain", type=spec.hypervisor)
         node_xml.name(node.id)
         node_xml.vcpu(str(node.cpu))
+        with node_xml.features:
+            node_xml.acpi()
+            node_xml.apic()
+            node_xml.pae()
         node_xml.memory(str(node.memory * 1024), unit='KiB')
 
         with node_xml.os:
@@ -157,6 +163,7 @@ class Libvirt:
         self.xml_builder = xml_builder
         self._virsh_cmd = virsh_cmd
         self._init_capabilities()
+        self.conn = None
 
     @property
     def virsh_cmd(self):
@@ -296,6 +303,22 @@ class Libvirt:
                 "Node %s is running at the moment. Stopping." % node.id)
             self._virsh(['destroy', node.id])
 
+    def node_status(self, domain_name):
+        if not self.conn:
+            self.conn = libvirt.open("qemu:///system")
+        domain = self.conn.lookupByName(domain_name)
+        state = domain.state(0)
+        return {
+            0: 'unknown',
+            1: 'running',
+            2: 'blocked',
+            3: 'paused',
+            4: 'shutdown',
+            5: 'shutoff',
+            6: 'crashed',
+            7: 'suspended',
+        }.get(state[0], 'unknown')
+
     def reset_node(self, node):
         self._virsh(['reset', node.id])
 
@@ -402,6 +425,22 @@ class Libvirt:
             return
         if self.disk_exists(disk.path):
             self._virsh(['vol-delete',disk.path])
+
+    def delete_disk_by_source(self, domain_name, source_path):
+        if not self.conn:
+            self.conn = libvirt.open("qemu:///system")
+
+        domain = self.conn.lookupByName(domain_name)
+        domain_xml=ElementTree.fromstring(domain.XMLDesc(0))
+
+        devices_xml = domain_xml.findall("devices")[0]
+        for disk_xml in devices_xml.findall("disk/[@device='disk']"):
+            print ElementTree.tostring(disk_xml)
+            if disk_xml.findall("source/[@file='%s']" % source_path):
+                devices_xml.remove(disk_xml)
+
+        domain_str = ElementTree.tostring(domain_xml)
+        self.conn.defineXML(domain_str)
 
     def get_disk_path(self, name, pool='default'):
         command = self.virsh_cmd + ['vol-path', name, '--pool', pool]

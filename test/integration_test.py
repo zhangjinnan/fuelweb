@@ -18,6 +18,13 @@ def main():
     parser = argparse.ArgumentParser(description="Integration test suite")
     parser.add_argument("-i", "--iso", dest="iso",
                         help="iso image path or http://url")
+    parser.add_argument("-m", "--method", dest="method",
+                        help="method to install master node",
+                        choices=['iso', 'img'],
+                        default='img')
+    parser.add_argument("--uuid", dest="uuid",
+                        help="uuid of img loop filesystem",
+                        default=None)
     parser.add_argument("-l", "--level", dest="log_level", type=str,
                         help="log level", choices=[
                             "DEBUG",
@@ -53,11 +60,28 @@ def main():
 
     suite = integration
 
+    img_uuid = None
+    if params.method == 'img':
+        if not params.uuid and params.command == 'setup':
+            print("You need to specify img loop filesystem uuid")
+            sys.exit(1)
+        else:
+            img_uuid = params.uuid
+
 #   todo fix default values
     if params.no_forward_network:
-        ci = suite.Ci(params.iso, forward=None)
+        ci = suite.Ci(
+            params.iso,
+            forward=None,
+            method=params.method,
+            uuid=img_uuid
+        )
     else:
-        ci = suite.Ci(params.iso)
+        ci = suite.Ci(
+            params.iso,
+            method=params.method,
+            uuid=img_uuid
+        )
 
     if not params.deployment_timeout is None:
         ci.deployment_timeout = params.deployment_timeout

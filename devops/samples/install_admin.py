@@ -10,7 +10,7 @@ from optparse import OptionParser
 from devops.model import Environment, Network, Node, Disk, Cdrom, Interface
 from devops.controller import Controller
 from devops.network import IpNetworksPool
-from devops.driver.libvirt import Libvirt
+from devops.driver.nailgun_libvirt import Libvirt
 from devops.helpers import tcp_ping, wait
 
 ADMIN_ISO_NAME = 'nailgun-ubuntu-12.04-amd64.last.iso'

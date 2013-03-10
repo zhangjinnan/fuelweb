@@ -1,7 +1,7 @@
+# PERMANENT KICKSTART OPTIONS
+# Those are the same for all kickstarts.
 install
 text
-%include /tmp/source.ks
-reboot --eject
 lang en_US.UTF-8
 keyboard us
 rootpw r00tme
@@ -9,64 +9,96 @@ timezone --utc Etc/UTC
 zerombr
 firewall --disabled
 selinux --disabled
-%include /tmp/bootloader.ks
 clearpart --all --initlabel
+
+# TEMPLATED KICKSTART OPTIONS
+# Those options are evaluated during build process.
+{{reboot}}
+
+# DYNAMIC KICKSTART OPTIONS
+# Those options are evaluated in %pre section
+# depending on kernel command line parameters
+# and based on system discovery.
+%include /tmp/source.ks
 %include /tmp/partition.ks
+%include /tmp/bootloader.ks
+
+# %PRE SECTION
+# It will run before actual kickstart file building.
+# It can be used to dynamically customize anaconda
+# calculating some of the kickstart options.
+# Be aware that not all kickstart options can be
+# customized here because some of them must be set
+# before kickstart parsing.
 
 %pre
 #!/bin/sh
 
-# hard drives
+# Evaluating kernel command line parameters.
+# Here we assume the following parameters can be specified:
+#
+# tgtdrive
+#
+for I in `cat /proc/cmdline`; do case "$I" in *=*) eval $I;; esac ; done
+
+# Discovering system hard drives.
 drives=""
-for drv in `ls -1 /sys/block | grep "sd\|hd"`; do
+for drv in `ls -1 /sys/block | grep "sd\|hd\|vd"`; do
     if (grep -q 0 /sys/block/${drv}/removable); then
         drives="${drives} ${drv}"
     fi
 done
 
+# If more than one hard drive found user user would
+# be able to choose which hard drive to use as the
+# installation target. To get more detailed information
 set ${drives}
 numdrives=`echo $#`
-tgtdrive="undefined"
-if [ ${numdrives} -gt 1 ]; then
-    exec < /dev/tty3 > /dev/tty3 2>&1
-    chvt 3
-    while [ "${tgtdrive}" = "undefined" ]; do
+if test -z $tgtdrive; then
+    if test ${numdrives} -gt 1; then
+        exec < /dev/tty3 > /dev/tty3 2>&1
+        chvt 3
+        while [ "${tgtdrive}" = "undefined" ]; do
+            clear
+            echo
+            echo '***********************************************************************'
+            echo '*                        W A R N I N G                                *'
+            echo '*                                                                     *'
+            echo '*  Which of the detected hard drives do you want to be used as        *'
+            echo '*  installation target? To get more detailed information about        *'
+            echo '*  detected drives use fdisk or other available tool.                 *'
+            echo '***********************************************************************'
+            echo
+            echo "Possible choices: ${drives}"
+            echo
+            read -p "Choose hard drive: " tgtdrive
+        done
         clear
-        echo
-        echo '********************************************************************************'
-        echo '*                                 W A R N I N G                                *'
-        echo '*                                                                              *'
-        echo '*  Which of the detected hard drives do you want to be used as                 *'
-        echo '*  installation target?                                                        *'
-        echo '*                                                                              *'
-        echo '********************************************************************************'
-        echo
-        echo "Possible choices: ${drives}"
-        echo
-        read -p "Choose hard drive: " tgtdrive
-    done
-    clear
-    chvt 1
-else
-    tgtdrive=`echo ${drives} | sed -e "s/^\s*//" -e "s/\s*$//"`
+        chvt 1
+    else
+        tgtdrive=`echo ${drives} | sed -e "s/^\s*//" -e "s/\s*$//"`
+    fi
 fi
 
-# source
+# Defining installation source.
 if test -e /dev/disk/by-uuid/will_be_substituted_with_actual_uuid; then
     echo "harddrive --partition=UUID=will_be_substituted_with_actual_uuid --dir=/" > /tmp/source.ks
 else
     echo "cdrom" > /tmp/source.ks
 fi
 
-# bootloader
+# Where to install bootloader.
 echo "bootloader --location=mbr --driveorder=${tgtdrive}" > /tmp/bootloader.ks
 
-# partition
+# How to partition target hard drive.
 echo "partition / --fstype=ext4 --ondisk=${tgtdrive} --size=1 --grow --asprimary" > /tmp/partition.ks
 echo "partition swap --recommended --ondisk=${tgtdrive}" >> /tmp/partition.ks
 
+%end # %PRE
 
-%end
+# %PACKAGES SECTION
+# Here we specify which packages need
+# to be installed on master node.
 
 %packages --nobase --excludedocs
 wget
@@ -83,6 +115,15 @@ authconfig
 system-config-firewall-base
 policycoreutils
 selinux-policy-targeted
+
+
+# %POST SECTION
+# Here we perform final customization of master node.
+# To make it possible to launch puppet just after OS
+# installation we need to configure some of the installed
+# packages. We perform copying of rpm, gem, eggs repositories from
+# the installation media to the target file system.
+# Here user can customize system network configuration.
 
 %post --log=/root/anaconda-post.log
 #!/bin/sh
@@ -153,6 +194,7 @@ function save_cfg {
 # Default FQDN
 hostname="nailgun.mirantis.com"
 
+# Evaluating kernel command line parameters.
 for I in `cat /proc/cmdline`; do case "$I" in *=*) eval $I;; esac ; done
 hostname=$hostname
 ip=$ip
@@ -197,11 +239,10 @@ exec 1>&4 4>&-
 exec 2>&5 5>&-
 set -x
 
-# Mounting installation source
+# Mounting installation source (cdrom or flash stick)
 SOURCE=/tmp/source
 FS=/tmp/fs
 
-echo
 mkdir -p ${SOURCE}
 mkdir -p ${FS}
 
@@ -212,8 +253,12 @@ else
     mount /dev/cdrom ${SOURCE}
 fi
 
-# Copying Repo to the nailgun /var/www directory
+# Defining repodir. We use it as the base directory to place
+# rpm, eggs, gems repositories.
 repodir="/var/www/nailgun"
+mkdir -p ${repodir}
+
+# Copying rpms and images to the repodir
 mkdir -p ${repodir}/centos/6.3/nailgun/x86_64
 cp -r ${SOURCE}/images ${repodir}/centos/6.3/nailgun/x86_64
 cp -r ${SOURCE}/isolinux ${repodir}/centos/6.3/nailgun/x86_64
@@ -221,42 +266,52 @@ cp -r ${SOURCE}/repodata ${repodir}/centos/6.3/nailgun/x86_64
 cp -r ${SOURCE}/Packages ${repodir}/centos/6.3/nailgun/x86_64
 cp ${SOURCE}/.treeinfo ${repodir}/centos/6.3/nailgun/x86_64
 
-# Copying eggs/gems to the nailgun directory
+# Copying eggs/gems to the repodir
 cp -r ${SOURCE}/eggs ${repodir}
 cp -r ${SOURCE}/gems ${repodir}
 
-# Copying bootstrap image
+# Copying bootstrap image to the repodir. This bootstrap image
+# will be used as default discovery image for slave nodes.
+# It is bootable via PXE.
 mkdir -p ${repodir}/bootstrap
 cp -r ${SOURCE}/bootstrap/initramfs.img ${repodir}/bootstrap
 cp -r ${SOURCE}/bootstrap/linux ${repodir}/bootstrap
 
+# Copying bootstrap ssh secret key. It is used to get access from
+# master node to slaves booted in bootstrap (discovery) mode.
+# Corresponding public key is already inside bootstrap image.
+# It is placed there during bootstrap image building.
 mkdir -p /root/.ssh
 chmod 700 /root/.ssh
 cp ${SOURCE}/bootstrap/bootstrap.rsa /root/.ssh
 chmod 600 /root/.ssh/bootstrap.rsa
 
-# Unpacking puppet manifests for master and slave
-cp ${SOURCE}/puppet-slave.tgz ${repodir}/
+# Copying puppet modules used to install master node itself.
 mkdir -p /opt/nailgun_puppet
 tar zxf ${SOURCE}/puppet-nailgun.tgz -C /opt/nailgun_puppet
-tar zxf ${SOURCE}/puppet-slave.tgz -C /etc/puppet/modules
+
+# Copying puppet modules used to install slave nodes.
 mkdir -p /etc/puppet/manifests/
+cp ${SOURCE}/puppet-slave.tgz ${repodir}/
+tar zxf ${SOURCE}/puppet-slave.tgz -C /etc/puppet/modules
 cp /etc/puppet/modules/osnailyfacter/examples/site.pp /etc/puppet/manifests/site.pp
 ln -s /etc/puppet/modules/puppetdb/ /etc/puppet/modules/postgresql/ /etc/puppet/modules/inifile/ /opt/nailgun_puppet/
 
-# Prepare local repository specification
+# Prepare local repository specification. It is needed to
+# make master node possible to install rpm packages without alive
+# internet connection.
 rm /etc/yum.repos.d/CentOS*.repo
 cat > /etc/yum.repos.d/nailgun.repo << EOF
 [nailgun]
 name=Nailgun Local Repo
-baseurl=file:/var/www/nailgun/centos/6.3/nailgun/x86_64
+baseurl=file:${repodir}/centos/6.3/nailgun/x86_64
 gpgcheck=0
 EOF
 
 # Disable GSSAPI in ssh server config
 sed -i -e "/^\s*GSSAPICleanupCredentials yes/d" -e "/^\s*GSSAPIAuthentication yes/d" /etc/ssh/sshd_config
 
-# Copying bootstrap_admin_node.sh, chmod it and
+# Copying bootstrap_admin_node.sh, chmod-ing it and
 # adding /etc/init/bootstrap_admin_node.conf
 cp ${SOURCE}/bootstrap_admin_node.sh /usr/local/sbin/bootstrap_admin_node.sh
 chmod 0777 /usr/local/sbin/bootstrap_admin_node.sh
@@ -264,6 +319,7 @@ cp ${SOURCE}/bootstrap_admin_node.conf /etc/init/bootstrap_admin_node.conf
 echo "ENABLED=1" > /etc/sysconfig/bootstrap_admin_node
 
 # Copying version.yaml file. It contains COMMIT_SHA of last commit.
+# It is used to display actual version on web interface.
 mkdir -p /etc/nailgun
 cp ${SOURCE}/version.yaml /etc/nailgun/version.yaml
 
@@ -286,7 +342,7 @@ EOF
 
 echo "sed -i \"s%\(^.*able on:\).*$%\1 http://\`ip address show eth0 | awk '/inet / {print \$2}' | cut -d/ -f1 -\`:8000%\" /etc/issue" >>/etc/rc.local
 
-# Unmounting source
+# Unmounting installation source
 umount -f ${SOURCE}
 rm -rf ${SOURCE}
 
@@ -305,7 +361,8 @@ chkconfig ntpdate on
 # if admin node does not have access to the internet time servers.
 sed -i /etc/rc.d/init.d/ntpdate -e 's/\([ $RETVAL -eq 0 ] && success || \)failure/\1success/'
 
-# Disabling splash
+# Disabling splash. User will see system messages during boot process
+# instead of blue rule.
 sed -i --follow-symlinks -e '/^\skernel/ s/rhgb//' /etc/grub.conf
 sed -i --follow-symlinks -e '/^\skernel/ s/quiet//' /etc/grub.conf
 
@@ -318,4 +375,4 @@ sed -i --follow-symlinks -e 's/ACTIVE_CONSOLES=.*/ACTIVE_CONSOLES=\/dev\/tty\[2-
 # Copying default bash settings to the root directory
 cp -f /etc/skel/.bash* /root/
 
-%end
+%end # %POST
