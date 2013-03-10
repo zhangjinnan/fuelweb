@@ -115,9 +115,10 @@ class Ci(object):
             'hostname': '.'.join((self.hostname, self.domain))
         }
         if self.method == 'img':
-            params['ks'] = "repo=hd:UUID=%(uuid)s:/ ks=hd:UUID=%(uuid)s:/test.cfg" % {
+            params['ks'] = \
+                "repo=hd:UUID=%(uuid)s:/ ks=hd:UUID=%(uuid)s:/test.cfg" % {
                 'uuid': self.uuid
-            }
+                }
         elif self.method == 'iso':
             params['ks'] = "cdrom:/test.cfg"
 
@@ -140,7 +141,7 @@ vmlinuz initrd=initrd.img
         )
 
         wait(
-            lambda : node.status() == 'shutoff',
+            lambda: node.status() == 'shutoff',
             timeout=self.installation_timeout
         )
 
