@@ -15,14 +15,16 @@
             "meta": {
               "disks": [
                 {
+                  "id": "123456",
                   "size": 100000022933376,
                   "model": "TOSHIBA MK3259GS",
-                  "name": "sda1",
-                  "volume_groups":{
-                    "base": 10002293337600,
-                    "vm": 25002293337600,
-                    "cinder": 0
-                  }
+                  "name": "sda1"
+                },
+                {
+                  "id": "234567",
+                  "size": 100000022933376,
+                  "model": "TOSHIBA MK3259GS",
+                  "name": "sda2"
                 }
               ],
               "interfaces": [
