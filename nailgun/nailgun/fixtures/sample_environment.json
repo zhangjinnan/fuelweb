@@ -23,16 +23,6 @@
                     "vm": 25002293337600,
                     "cinder": 0
                   }
-                },
-                {
-                  "size": 80000022933376,
-                  "model": "TOSHIBA MK3259GS",
-                  "name": "sda2",
-                  "volume_groups":{
-                    "base": 8002293337600,
-                    "vm": 5002293337600,
-                    "cinder": 45002293337600
-                  }
                 }
               ],
               "interfaces": [
