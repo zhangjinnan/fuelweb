@@ -9,7 +9,7 @@ from nailgun.keepalive import keep_alive
 from nailgun.db import orm
 from nailgun.notifier import notifier
 from nailgun.logger import logger
-from nailgun.api.models import Node
+from nailgun.api.models import Node, NodeAttributes
 from nailgun.api.handlers.base import JSONHandler
 
 
@@ -86,6 +86,7 @@ class NodeCollectionHandler(JSONHandler):
             setattr(node, key, value)
         node.name = "Untitled (%s)" % data['mac'][-5:]
         node.timestamp = datetime.now()
+        node.generate_volumes_info()
         orm().add(node)
         orm().commit()
         try:
@@ -145,3 +146,43 @@ class NodeCollectionHandler(JSONHandler):
         return json.dumps(map(
             NodeHandler.render,
             nodes_updated), indent=4)
+
+
+class NodeAttributesHandler(JSONHandler):
+    fields = ('node_id', 'volumes')
+
+    def GET(self, node_id):
+        web.header('Content-Type', 'application/json')
+        node_attrs = orm().query(Node).get(node_id).attributes
+        if not node_attrs:
+            return web.notfound()
+        return json.dumps(
+            self.render(node_attrs),
+            indent=4
+        )
+
+    def PUT(self):
+        web.header('Content-Type', 'application/json')
+        node_attrs = orm().query(Node).get(node_id).attributes
+        if not node_attrs:
+            return web.notfound()
+        for key, value in web.data().iteritems():
+            setattr(node_attrs, key, value)
+        orm().commit()
+        return json.dumps(
+            self.render(node_attrs),
+            indent=4
+        )
+
+
+class NodeAttributesByNameHandler(JSONHandler):
+
+    def GET(self, node_id, attr_name):
+        web.header('Content-Type', 'application/json')
+        node_attrs = orm().query(Node).get(node_id).attributes
+        if not hasattr(node_attrs, attr_name):
+            raise web.notfound()
+        return json.dumps(
+            getattr(node_attrs, attr_name),
+            indent=4
+        )
