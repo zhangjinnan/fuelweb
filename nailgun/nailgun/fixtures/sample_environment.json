@@ -15,8 +15,7 @@
             "meta": {
               "disks": [
                 {
-                  "id": "123456",
-                  "size": 100000022933376,
+                  "size": 100000022933,
                   "model": "TOSHIBA MK3259GS",
                   "name": "sda",
                   "disk": "blablabla1"
@@ -103,7 +102,7 @@
             "meta": {
               "disks": [
                 {
-                    "size": 2147483648000,
+                    "size": 214748364800,
                     "model": "HITACHI LOL404",
                     "name": "sda",
                     "disk": "blablabla2"
@@ -111,7 +110,7 @@
                 {
                     "model": "SEAGATE B00B135",
                     "name": "vda",
-                    "size": 2147483648000,
+                    "size": 214748364800,
                     "disk": "blablabla3"
                 }
               ],
