@@ -192,7 +192,7 @@ class NodeAttributesByNameHandler(JSONHandler):
         node_attrs = orm().query(Node).get(node_id).attributes
         if not node_attrs or not hasattr(node_attrs, attr_name):
             raise web.notfound()
-        setattr(node_attrs, attr_name, web.data())
+        setattr(node_attrs, attr_name, json.loads(web.data()))
         return json.dumps(
             getattr(node_attrs, attr_name),
             indent=4
