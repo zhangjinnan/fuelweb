@@ -180,8 +180,19 @@ class NodeAttributesByNameHandler(JSONHandler):
     def GET(self, node_id, attr_name):
         web.header('Content-Type', 'application/json')
         node_attrs = orm().query(Node).get(node_id).attributes
-        if not hasattr(node_attrs, attr_name):
+        if not node_attrs or not hasattr(node_attrs, attr_name):
             raise web.notfound()
+        return json.dumps(
+            getattr(node_attrs, attr_name),
+            indent=4
+        )
+
+    def PUT(self, node_id, attr_name):
+        web.header('Content-Type', 'application/json')
+        node_attrs = orm().query(Node).get(node_id).attributes
+        if not node_attrs or not hasattr(node_attrs, attr_name):
+            raise web.notfound()
+        setattr(node_attrs, attr_name, web.data())
         return json.dumps(
             getattr(node_attrs, attr_name),
             indent=4
