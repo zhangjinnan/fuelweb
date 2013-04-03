@@ -166,7 +166,10 @@ class NodeAttributesHandler(JSONHandler):
 
     def GET(self, node_id):
         web.header('Content-Type', 'application/json')
-        node_attrs = orm().query(Node).get(node_id).attributes
+        node = orm().query(Node).get(node_id)
+        if not node:
+            return web.notfound()
+        node_attrs = node.attributes
         if not node_attrs:
             return web.notfound()
         return json.dumps(
@@ -176,7 +179,10 @@ class NodeAttributesHandler(JSONHandler):
 
     def PUT(self, node_id):
         web.header('Content-Type', 'application/json')
-        node_attrs = orm().query(Node).get(node_id).attributes
+        node = orm().query(Node).get(node_id)
+        if not node:
+            return web.notfound()
+        node_attrs = node.attributes
         if not node_attrs:
             return web.notfound()
         # NO data validation yet
@@ -194,7 +200,10 @@ class NodeAttributesByNameHandler(JSONHandler):
     def GET(self, node_id, attr_name):
         web.header('Content-Type', 'application/json')
         attr_params = web.input()
-        node_attrs = orm().query(Node).get(node_id).attributes
+        node = orm().query(Node).get(node_id)
+        if not node:
+            return web.notfound()
+        node_attrs = node.attributes
         if not node_attrs or not hasattr(node_attrs, attr_name):
             raise web.notfound()
         attr = getattr(node_attrs, attr_name)
