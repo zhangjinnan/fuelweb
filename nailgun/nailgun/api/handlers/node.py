@@ -5,7 +5,6 @@ from datetime import datetime
 
 import web
 
-from nailgun.keepalive import keep_alive
 from nailgun.db import orm
 from nailgun.notifier import notifier
 from nailgun.logger import logger
@@ -179,20 +178,28 @@ class NodeAttributesByNameHandler(JSONHandler):
 
     def GET(self, node_id, attr_name):
         web.header('Content-Type', 'application/json')
+        attr_params = web.input()
         node_attrs = orm().query(Node).get(node_id).attributes
         if not node_attrs or not hasattr(node_attrs, attr_name):
             raise web.notfound()
+        attr = getattr(node_attrs, attr_name)
+        if hasattr(attr_params, "type"):
+            attr = filter(lambda a: a["type"] == attr_params.type, attr)
         return json.dumps(
-            getattr(node_attrs, attr_name),
+            attr,
             indent=4
         )
 
     def PUT(self, node_id, attr_name):
         web.header('Content-Type', 'application/json')
+        attr_params = web.input()
         node_attrs = orm().query(Node).get(node_id).attributes
         if not node_attrs or not hasattr(node_attrs, attr_name):
             raise web.notfound()
         setattr(node_attrs, attr_name, json.loads(web.data()))
+        attr = getattr(node_attrs, attr_name)
+        if hasattr(attr_params, "type"):
+            attr = filter(lambda a: a["type"] == attr_params.type, attr)
         return json.dumps(
             getattr(node_attrs, attr_name),
             indent=4
