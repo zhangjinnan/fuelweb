@@ -85,7 +85,19 @@ class NodeCollectionHandler(JSONHandler):
             setattr(node, key, value)
         node.name = "Untitled (%s)" % data['mac'][-5:]
         node.timestamp = datetime.now()
-        node.generate_volumes_info()
+        orm().add(node)
+        orm().commit()
+        node.attributes = node.create_default_attrs()
+        try:
+            node.attributes.generate_volumes_info()
+        except Exception as exc:
+            logger.warning(
+                "Failed to get volumes info for node '{0}': '{1}'".format(
+                    data.get("mac"),
+                    str(exc)
+                )
+            )
+            raise web.badrequest(str(exc))
         orm().add(node)
         orm().commit()
         try:
@@ -160,12 +172,13 @@ class NodeAttributesHandler(JSONHandler):
             indent=4
         )
 
-    def PUT(self):
+    def PUT(self, node_id):
         web.header('Content-Type', 'application/json')
         node_attrs = orm().query(Node).get(node_id).attributes
         if not node_attrs:
             return web.notfound()
-        for key, value in web.data().iteritems():
+        # NO data validation yet
+        for key, value in json.loads(web.data()).iteritems():
             setattr(node_attrs, key, value)
         orm().commit()
         return json.dumps(
@@ -196,6 +209,8 @@ class NodeAttributesByNameHandler(JSONHandler):
         node_attrs = orm().query(Node).get(node_id).attributes
         if not node_attrs or not hasattr(node_attrs, attr_name):
             raise web.notfound()
+        # WARNING: all attributes will be updated now, not those by type
+        # NO data validation yet
         setattr(node_attrs, attr_name, json.loads(web.data()))
         attr = getattr(node_attrs, attr_name)
         if hasattr(attr_params, "type"):
