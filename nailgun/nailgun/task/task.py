@@ -261,6 +261,7 @@ mco_stompport=%(mco_stomp_port)s
 mco_stompuser=%(mco_stomp_user)s
 mco_stomppassword=%(mco_stomp_password)s
 mco_enable=1
+ks_spaces="%(ks_spaces)s"
             """ % {'puppet_master_host': settings.PUPPET_MASTER_HOST,
                    'puppet_version': settings.PUPPET_VERSION,
                    'mco_pskey': settings.MCO_PSKEY,
@@ -268,6 +269,7 @@ mco_enable=1
                    'mco_stomp_port': settings.MCO_STOMPPORT,
                    'mco_stomp_user': settings.MCO_STOMPUSER,
                    'mco_stomp_password': settings.MCO_STOMPPASSWORD,
+                   'ks_spaces': node.attributes.volumes
                    }
 
             logger.debug("Node %s\nks_meta without extra params: %s" %
