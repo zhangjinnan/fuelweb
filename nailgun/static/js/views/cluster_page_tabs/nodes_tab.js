@@ -570,6 +570,7 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
 
     NodeDisk = Backbone.View.extend({
         template: _.template(nodeDisksTemplate),
+        visible: false,
         events: {
             'click .toggle-volume': 'toggleEditDiskForm',
             'click .close-btn': 'deleteVolumeGroup',
@@ -578,24 +579,21 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
             'click .btn-bootable:not(:disabled)': 'switchBootableDisk'
         },
         toggleEditDiskForm: function(e) {
+            this.visible = !this.visible;
             this.$('.close-btn').toggle();
             this.$('.disk-edit-volume-group-form').collapse('toggle');
         },
         setVolumes: function(e, size, allUnallocated) {
-            this.$('input.error').removeClass('error');
             var group = this.$(e.currentTarget).parents('.volume-group').data('group');
-            var volume = _.find(this.volumes, {vg: group});
-            var unallocated = this.diskSize - this.countAllocatedSpace() + volume.size;
-            volume.size = allUnallocated ? volume.size + size : size;
-            console.log(this.disk.get('volumes'));
-            this.disk.set({volumes: this.volumes}, {validate: true, unallocated: unallocated});
-            console.log(this.disk.get('volumes'));
-            if (this.disk.validationError) {
-                this.volumes = this.disk.get('volumes');
-            }
             if (allUnallocated || !size) {
-                this.$('input[name=' + group + ']').val(volume.size);
+                this.$('input[name=' + group + ']').val(size).removeClass('error');
             }
+            var volumes = _.cloneDeep(this.volumes);
+            var volume = _.find(volumes, {vg: group});
+            var unallocated = this.diskSize - this.countAllocatedSpace() + volume.size;
+            volume.size = allUnallocated ? volume.size + parseInt(size, 10) : parseInt(size, 10);
+            this.disk.set({volumes: volumes}, {validate: true, unallocated: unallocated, group: group});
+            this.volumes = this.disk.get('volumes');
             this.renderVisualGraph();
             this.screen.checkForChanges();
         },
@@ -603,7 +601,7 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
             this.setVolumes(e, 0);
         },
         editVolumeGroups: function(e) {
-            this.setVolumes(e, parseInt(this.$(e.currentTarget).val(), 10));
+            this.setVolumes(e, this.$(e.currentTarget).val());
         },
         countAllocatedSpace: function() {
             var volumes = !!this.partition ? _.union(this.volumesToDisplay(), this.partition) : this.volumesToDisplay();
@@ -620,14 +618,13 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
                 disk.set({volumes: _.filter(disk.get('volumes'), {type: 'pv'})});
             });
             this.disk.set({volumes: _.union(this.volumes, [{type: 'partition', mount: '/boot', size: this.screen.partitionSize}, {type: 'mbr'}])});
-            this.screen.renderDisks();
+            _.invoke(this.screen.subViews, 'render');
             this.screen.checkForChanges();
         },
         initialize: function(options) {
             _.defaults(this, options);
             this.diskSize = Math.round(this.diskMetaData.size / Math.pow(1000, 3));
             this.volumes = this.disk.get('volumes');
-            this.partition = _.find(this.volumes, {type: 'partition'});
             this.disk.on('invalid', function(model, errors) {
                 _.each(errors, _.bind(function(error) {
                     this.$('input[name=' + error + ']').addClass('error');
@@ -654,15 +651,17 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
                 unallocatedWidth -= bootableWidth; unallocatedSize -= this.partition.size;
             }
             this.$('.disk-visual .unallocated').css('width', unallocatedWidth + '%').find('.volume-group-size').text(unallocatedSize + ' GB');
-            this.$('.btn-bootable').attr('disabled', unallocatedSize < this.screen.partitionSize);
+            this.$('.btn-bootable').attr('disabled', this.partition || unallocatedSize < this.screen.partitionSize);
         },
         render: function() {
+            this.partition = _.find(this.disk.get('volumes'), {type: 'partition'});
             this.$el.html(this.template({
                 disk: this.diskMetaData,
                 volumes: this.volumesToDisplay(),
                 partition: !!this.partition
             }));
-            this.$('.disk-edit-volume-group-form').collapse({toggle: false});
+            this.$('.disk-edit-volume-group-form').collapse({toggle: this.visible});
+            this.$('.close-btn').toggle(this.visible);
             this.renderVisualGraph();
             return this;
         }
