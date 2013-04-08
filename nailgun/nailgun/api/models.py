@@ -325,7 +325,7 @@ class Node(Base, BasicValidator):
         return d
 
 
-class NodeAttributes(Base):
+class NodeAttributes(Base, BasicValidator):
     __tablename__ = 'node_attributes'
     id = Column(Integer, primary_key=True)
     node_id = Column(Integer, ForeignKey('nodes.id'))
