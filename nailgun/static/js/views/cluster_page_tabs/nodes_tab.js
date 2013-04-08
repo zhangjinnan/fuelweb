@@ -675,7 +675,6 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
             if (allUnallocated || size === 0) {
                 if (allUnallocated) {
                     this.$('input[name=' + group + ']').val(_.find(this.volumes, {vg: group}).size.toFixed(2));
-
                     this.remainders[volume.vg] += this.remainders.unallocated;
                     this.remainders.unallocated = 0;
                 }
@@ -835,7 +834,7 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
                  }, this));
 /*                 .fail(_.bind(function() {
                      this.$('.btn, input').attr('disabled', false);
-                     var dialog = new dialogViews.SimpleMessage({error: true, 
+                     var dialog = new dialogViews.SimpleMessage({error: true,
                                                                  title: 'Node network interfaces configuration error'});
                      app.page.registerSubView(dialog);
                      dialog.render();
@@ -891,7 +890,7 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
                         }
                     },this)
                 }).disableSelection();
-                
+
             }, this));
         },
         render: function() {
