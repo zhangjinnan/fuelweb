@@ -249,6 +249,7 @@ function(models, simpleMessageTemplate, createClusterDialogTemplate, changeClust
     });
 
     views.ShowNodeInfoDialog = views.Dialog.extend({
+        className: 'modal fade node-modal-info',
         template: _.template(showNodeInfoTemplate),
         events: {
             'click .accordion-heading': 'toggle'
