@@ -589,7 +589,6 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
 
     NodeDisk = Backbone.View.extend({
         template: _.template(nodeDisksTemplate),
-        visible: false,
         events: {
             'click .toggle-volume': 'toggleEditDiskForm',
             'click .close-btn': 'deleteVolumeGroup',
@@ -598,7 +597,6 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
             'click .btn-bootable:not(:disabled)': 'switchBootableDisk'
         },
         toggleEditDiskForm: function(e) {
-            this.visible = !this.visible;
             this.$('.close-btn').toggle();
             this.$('.disk-edit-volume-group-form').collapse('toggle');
         },
@@ -608,7 +606,7 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
             var volumes = _.cloneDeep(this.volumes);
             var volume = _.find(volumes, {vg: group});
             var unallocated = this.diskSize - this.countAllocatedSpace() + volume.size;
-            volume.size = allUnallocated ? volume.size + parseFloat(size) : parseFloat(size);
+            volume.size = allUnallocated ? volume.size + size : size;
             this.disk.set({volumes: volumes}, {validate: true, unallocated: unallocated, group: group});
             this.volumes = this.disk.get('volumes');
             if (allUnallocated || size === 0) {
@@ -630,7 +628,7 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
         },
         editVolumeGroups: function(e) {
             var value = this.$(e.currentTarget).val();
-            this.setVolumes(e, value.replace(',', '.'));
+            this.setVolumes(e, parseFloat(value.replace(',', '.')));
         },
         countAllocatedSpace: function() {
             var volumes = this.volumesToDisplay();
@@ -692,8 +690,7 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
                 volumes: this.volumesToDisplay(),
                 partition: !!this.partition
             }));
-            this.$('.disk-edit-volume-group-form').collapse({toggle: this.visible});
-            this.$('.close-btn').toggle(this.visible);
+            this.$('.disk-edit-volume-group-form').collapse({toggle: false});
             this.renderVisualGraph();
             return this;
         }
