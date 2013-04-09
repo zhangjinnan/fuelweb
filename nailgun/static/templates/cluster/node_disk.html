@@ -1,6 +1,6 @@
 <div class="disk-box disk" data-disk="<%- disk.name %>">
 
-  <div class="disk-box-name pull-left"><%- disk.name %></div>
+  <div class="disk-box-name pull-left"><%- disk.name %><div class="boot-flag">[Bootable]</div></div>
   <% var diskSize = disk.size / Math.pow(1000, 3) %>
   <div class="disk-box-size pull-right">Total Space: <%= diskSize < 100 ? diskSize.toFixed(2) + ' GB' : (diskSize / 1000).toFixed(1) + ' TB' %></div>
 
@@ -56,7 +56,7 @@
         </div>
       <% }) %>
       <div class="disk-map-details-item">
-        <button class="btn btn-bootable" <%= partition ? 'disabled' : '' %>>Make Bootable</button>
+        <button class="btn btn-danger btn-bootable" <%= partition ? 'disabled' : '' %>>Make Bootable</button>
       </div>
     </div>
 
