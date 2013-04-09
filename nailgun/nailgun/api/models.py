@@ -326,6 +326,7 @@ class NodeAttributes(Base):
     id = Column(Integer, primary_key=True)
     node_id = Column(Integer, ForeignKey('nodes.id'))
     volumes = Column(JSON, default={})
+    interfaces = Column(JSON, default={})
 
     def _traverse(self, cdict):
         new_dict = {}
@@ -423,6 +424,31 @@ class NodeAttributes(Base):
         ])
 
         self.volumes = self._traverse(self.volumes)
+
+    def generate_interfaces_info(self):
+        if not "interfaces" in self.node.meta:
+            raise Exception("No interfaces metadata specified for node")
+        self.interfaces = []
+        for interface in self.node.meta["interfaces"]:
+            self.interfaces.append(
+                {
+                    "mac": interface["mac"],
+                    "speed": interface["max_speed"],
+                    "name": interface["name"],
+                    "current_speed": interface["current_speed"],
+                    "types": []
+                }
+            )
+
+        # auto assigning all stuff to first interface
+        self.interfaces[0]["types"] = [
+                                        {"name": "Management"},
+                                        {"name": "Floating"},
+                                        {"name": "Public"},
+                                        {"name": "Admin"}
+                                      ]
+        self.interfaces[1]["types"] = [{"name": "Fixed"}, {"name": "Storage"}]
+        self.interfaces = self._traverse(self.interfaces)
 
 
 class IPAddr(Base):
