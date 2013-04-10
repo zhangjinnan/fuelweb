@@ -222,10 +222,11 @@ class NodeAgent
     d.each do |f|
       next if f =~ /^\./
       devname = File.basename(File.expand_path(File.readlink(File.join(dn, f)), dn))
-      if devname =~ /^#{name}$/
+      if devname == name.to_s
         return "disk/by-path/#{f}"
       end
     end
+    raise "Path not found for such name: #{name}"
   end
 
   def _is_virtualbox
