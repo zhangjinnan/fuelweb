@@ -214,6 +214,7 @@ class FakeDeletionThread(FakeThread):
         nodes_to_restore = self.data['args'].get('nodes_to_restore', [])
         tick_interval = int(settings.FAKE_TASKS_TICK_INTERVAL) or 3
         resp_method = getattr(receiver, self.respond_to)
+        time.sleep(5)
         resp_method(**kwargs)
         orm = scoped_session(
             sessionmaker(bind=engine, query_cls=NoCacheQuery)
