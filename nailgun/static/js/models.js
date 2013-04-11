@@ -278,7 +278,6 @@ define(function() {
         model: models.Interface,
         url: '/api/nodes/',
         comparator: function(ifc) {
-            // TODO: implement this
             return ifc.name;
         }
     });
