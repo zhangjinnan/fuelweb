@@ -13,7 +13,6 @@ $(BUILD_DIR)/mirror/gems/gems-bundle/naily/Gemfile: \
 	mkdir -p $(@D)
 	echo -n > $@
 	for i in $(MIRROR_GEMS); do \
-		echo "source \"file://$(SOURCE_DIR)/$(LOCAL_MIRROR_GEMS)\"" >> $@; \
 		echo "source \"file://`readlink -f $(LOCAL_MIRROR_GEMS)`\"" >> $@; \
 		echo "source \"$$i\"" >> $@; \
 	done
