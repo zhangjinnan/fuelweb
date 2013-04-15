@@ -40,7 +40,7 @@ mysql-5.1.66-2.el6_3
 mysql-devel-5.1.66-2.el6_3
 mysql-server-5.1.66-2.el6_3
 nginx
-novnc-0.4-3.el6
+novnc
 ntp-4.2.4p8-2.el6.centos
 numpy-1.4.1-9.el6
 openssh-clients-5.3p1-81.el6_3
