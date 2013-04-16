@@ -32,6 +32,9 @@ MIRROR_EGGS?=http://172.18.8.209/fwm/eggs
 MIRROR_GEMS?=http://172.18.8.209/fwm/gems
 MIRROR_SRC?=http://172.18.8.209/fwm/src
 endif
+ifeq ($(USE_MIRROR),fuel-folsom-2.1)
+YUM_REPOS?=official fuel_folsom_2_1 puppetlabs
+endif
 
 MIRROR_CENTOS?=http://mirror.yandex.ru/centos
 MIRROR_CENTOS_OS_BASEURL:=$(MIRROR_CENTOS)/$(CENTOS_RELEASE)/os/$(CENTOS_ARCH)
