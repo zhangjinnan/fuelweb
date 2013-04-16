@@ -19,6 +19,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from nailgun.logger import logger
 from nailgun.db import orm
+from nailgun.volumes.manager import VolumeManager
 from nailgun.api.fields import JSON
 from nailgun.settings import settings
 from nailgun.api.validators import BasicValidator
@@ -37,6 +38,7 @@ class Release(Base, BasicValidator):
     description = Column(Unicode)
     networks_metadata = Column(JSON, default=[])
     attributes_metadata = Column(JSON, default={})
+    volumes_metadata = Column(JSON, default={})
     clusters = relationship("Cluster", backref="release")
 
     @classmethod
@@ -83,10 +85,12 @@ class ClusterChanges(Base, BasicValidator):
     __tablename__ = 'cluster_changes'
     POSSIBLE_CHANGES = (
         'networks',
-        'attributes'
+        'attributes',
+        'disks'
     )
     id = Column(Integer, primary_key=True)
     cluster_id = Column(Integer, ForeignKey('clusters.id'))
+    node_id = Column(Integer, ForeignKey('nodes.id'))
     name = Column(
         Enum(*POSSIBLE_CHANGES, name='possible_changes'),
         nullable=False
@@ -154,11 +158,15 @@ class Cluster(Base, BasicValidator):
                 raise web.webapi.badrequest(message="Invalid release id")
         return d
 
-    def add_pending_changes(self, changes_type):
+    def add_pending_changes(self, changes_type, node_id=None):
         ex_chs = orm().query(ClusterChanges).filter_by(
             cluster=self,
             name=changes_type
-        ).first()
+        )
+        if not node_id:
+            ex_chs = ex_chs.first()
+        else:
+            ex_chs = ex_chs.filter_by(node_id=node_id).first()
         # do nothing if changes with the same name already pending
         if ex_chs:
             return
@@ -166,6 +174,8 @@ class Cluster(Base, BasicValidator):
             cluster_id=self.id,
             name=changes_type
         )
+        if node_id:
+            ch.node_id = node_id
         orm().add(ch)
         orm().commit()
 
@@ -220,6 +230,9 @@ class Node(Base, BasicValidator):
     error_msg = Column(String(255))
     timestamp = Column(DateTime, nullable=False)
     online = Column(Boolean, default=True)
+    attributes = relationship("NodeAttributes",
+                              backref=backref("node"),
+                              uselist=False)
 
     @property
     def network_data(self):
@@ -227,6 +240,10 @@ class Node(Base, BasicValidator):
         #   which must be created on target node
         from nailgun.network import manager as netmanager
         return netmanager.get_node_networks(self.id)
+
+    @property
+    def volume_manager(self):
+        return VolumeManager(self)
 
     @property
     def needs_reprovision(self):
@@ -314,6 +331,13 @@ class Node(Base, BasicValidator):
                         "Invalid ID specified"
                     )
         return d
+
+
+class NodeAttributes(Base, BasicValidator):
+    __tablename__ = 'node_attributes'
+    id = Column(Integer, primary_key=True)
+    node_id = Column(Integer, ForeignKey('nodes.id'))
+    volumes = Column(JSON, default=[])
 
 
 class IPAddr(Base):
