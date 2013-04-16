@@ -42,7 +42,7 @@ describe "SimplePuppet DeploymentEngine" do
     it "ha deploy should not raise any exception" do
       @env['attributes']['deployment_mode'] = "ha"
       Astute::Metadata.expects(:publish_facts).never
-      Astute::PuppetdDeployer.expects(:deploy).times(6)
+      Astute::PuppetdDeployer.expects(:deploy).times(3)
       @deploy_engine.deploy(@env['nodes'], @env['attributes'])
     end
 

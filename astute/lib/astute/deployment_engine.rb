@@ -87,6 +87,19 @@ module Astute
                    n['network_data'].select {|nd| nd['name'] == 'public'}[0]['ip'].split(/\//)[0]})
       end
 
+      attrs['nodes'] = []
+      role = 'primary-controller'
+      ctrl_nodes.each do |n|
+        attrs['nodes'].push({
+          'name'             => n['fqdn'].split(/\./)[0],
+          'role'             => role,
+          'internal_address' => n['network_data'].select {|nd| nd['name'] == 'management'}[0]['ip'].split(/\//)[0],
+          'public_address'   => n['network_data'].select {|nd| nd['name'] == 'public'}[0]['ip'].split(/\//)[0],
+          'mountpoints'      => "1 1\n2 2",
+          'storage_local_net_ip' => n['network_data'].select {|nd| nd['name'] == 'management'}[0]['ip'].split(/\//)[0],
+        })
+        role = 'controller'
+      end
       attrs['ctrl_hostnames'] = ctrl_nodes.map {|n| n['fqdn'].split(/\./)[0]}
       attrs['master_hostname'] = ctrl_nodes[0]['fqdn'].split(/\./)[0]
       attrs['ctrl_public_addresses'] = ctrl_public_addrs
@@ -96,29 +109,22 @@ module Astute
 
     def deploy_ha(nodes, attrs)
       ctrl_nodes = nodes.select {|n| n['role'] == 'controller'}
-      Astute.logger.info "Starting deployment of all controllers one by one, ignoring failure"
-      ctrl_nodes.each {|n| deploy_piece([n], attrs, retries=0, change_node_status=false)}
-
-      Astute.logger.info "Starting deployment of all controllers, ignoring failure"
-      deploy_piece(ctrl_nodes, attrs, retries=0, change_node_status=false)
-
-      Astute.logger.info "Starting deployment of 1st controller again, ignoring failure"
+      Astute.logger.info "Starting deployment of 1st controller, ignoring failure"
       deploy_piece([ctrl_nodes[0]], attrs, retries=0, change_node_status=false)
 
-      Astute.logger.info "Starting deployment of all controllers, retries=0"
-      deploy_piece(ctrl_nodes, attrs, retries=0, change_node_status=false)
       retries = 3
-      Astute.logger.info "Starting deployment of all controllers until it completes, "\
+
+      Astute.logger.info "Starting deployment of all other controllers until it completes, "\
                          "allowed retries: #{retries}"
-      deploy_piece(ctrl_nodes, attrs, retries=retries)
+      deploy_piece(ctrl_nodes[1..-1], attrs, retries=retries)
 
-      compute_nodes = nodes.select {|n| n['role'] == 'compute'}
-      Astute.logger.info "Starting deployment of computes"
-      deploy_piece(compute_nodes, attrs)
+      Astute.logger.info "Starting deployment of 1st controller again" \
+                         "allowed retries: #{retries}"
+      deploy_piece([ctrl_nodes[0]], attrs, retries=retries)
 
-      other_nodes = nodes - ctrl_nodes - compute_nodes
+      other_nodes = nodes - ctrl_nodes
       Astute.logger.info "Starting deployment of other nodes"
-      deploy_piece(other_nodes, attrs)
+      deploy_piece(other_nodes, attrs, retries=retries)
       return
     end
 

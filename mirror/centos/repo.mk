@@ -1,5 +1,7 @@
 include $(SOURCE_DIR)/mirror/centos/yum_repos.mk
 
+.PHONY: show-yum-urls
+
 $(BUILD_DIR)/mirror/centos/etc/yum.conf: $(call depv,yum_conf)
 $(BUILD_DIR)/mirror/centos/etc/yum.conf: export contents:=$(yum_conf)
 $(BUILD_DIR)/mirror/centos/etc/yum.conf:
@@ -39,6 +41,17 @@ $(BUILD_DIR)/mirror/centos/yum.done: \
 		--destdir=$(LOCAL_MIRROR_CENTOS_OS_BASEURL)/Packages \
 		$(REQUIRED_RPMS)
 	$(ACTION.TOUCH)
+
+show-yum-urls: \
+		$(BUILD_DIR)/mirror/centos/yum-config.done \
+		$(SOURCE_DIR)/requirements-rpm.txt
+	$(MAKE) -B $(BUILD_DIR)/mirror/centos/yum.done SHOW_URLS=--urls
+	yum -c $(BUILD_DIR)/mirror/centos/etc/yum.conf clean all
+	rm -rf /var/tmp/yum-$$USER-*/
+	yumdownloader --urls -q --resolve --archlist=$(CENTOS_ARCH) \
+		-c $(BUILD_DIR)/mirror/centos/etc/yum.conf \
+		--destdir=$(LOCAL_MIRROR_CENTOS_OS_BASEURL)/Packages \
+		$(REQUIRED_RPMS)
 
 $(LOCAL_MIRROR_CENTOS_OS_BASEURL)/repodata/comps.xml: \
 		export COMPSXML=$(shell wget -qO- $(MIRROR_CENTOS_OS_BASEURL)/repodata/repomd.xml | grep -m 1 '$(@F)' | awk -F'"' '{ print $$2 }')

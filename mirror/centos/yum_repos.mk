@@ -36,7 +36,7 @@ name=CentOS-$(CENTOS_RELEASE) - Extras
 #mirrorlist=http://mirrorlist.centos.org/?release=$(CENTOS_RELEASE)&arch=$(CENTOS_ARCH)&repo=extras
 baseurl=$(MIRROR_CENTOS)/$(CENTOS_RELEASE)/extras/$(CENTOS_ARCH)
 gpgcheck=0
-enabled=1
+enabled=0
 priority=10
 
 [centosplus]
@@ -44,7 +44,7 @@ name=CentOS-$(CENTOS_RELEASE) - Plus
 #mirrorlist=http://mirrorlist.centos.org/?release=$(CENTOS_RELEASE)&arch=$(CENTOS_ARCH)&repo=centosplus
 baseurl=$(MIRROR_CENTOS)/$(CENTOS_RELEASE)/centosplus/$(CENTOS_ARCH)
 gpgcheck=0
-enabled=1
+enabled=0
 priority=10
 
 [contrib]
@@ -52,7 +52,7 @@ name=CentOS-$(CENTOS_RELEASE) - Contrib
 #mirrorlist=http://mirrorlist.centos.org/?release=$(CENTOS_RELEASE)&arch=$(CENTOS_ARCH)&repo=contrib
 baseurl=$(MIRROR_CENTOS)/$(CENTOS_RELEASE)/contrib/$(CENTOS_ARCH)
 gpgcheck=0
-enabled=1
+enabled=0
 priority=10
 endef
 
@@ -66,16 +66,39 @@ enabled=1
 priority=20
 endef
 
-define yum_repo_fuel_folsom
-[openstack-epel-fuel]
+define yum_repo_fuel_folsom_2_1
+[openstack-epel-fuel-2.1]
 name=Mirantis OpenStack Custom Packages
-mirrorlist=http://download.mirantis.com/epel-fuel-folsom/mirror.internal.list
+mirrorlist=http://download.mirantis.com/epel-fuel-folsom-2.1/mirror.internal-stage.list
 gpgkey=https://fedoraproject.org/static/0608B895.txt
-  http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-6
-  http://download.mirantis.com/epel-fuel-folsom/rabbit.key
-  http://download.mirantis.com/epel-fuel-folsom/mirantis.key
-gpgcheck=0
+  http://download.mirantis.com/epel-fuel-folsom-2.1/centos.key
+  http://download.mirantis.com/epel-fuel-folsom-2.1/epel.key
+  http://download.mirantis.com/epel-fuel-folsom-2.1/mirantis.key
+  http://download.mirantis.com/epel-fuel-folsom-2.1/mysql.key
+  http://download.mirantis.com/epel-fuel-folsom-2.1/rabbit.key
+gpgcheck=1
+enabled=0
+priority=1
+
+[mash-epel-fuel-grizzly]
+name=Epel Fuel Grizzly from Matt
+baseurl=http://osci-koji.srt.mirantis.net/mash/epel-fuel-grizzly/x86_64/
 enabled=1
+gpgcheck=0
+priority=1
+
+[mash-fuel-folsom]
+name=Fuel Folsom from Matt
+baseurl=http://osci-koji.srt.mirantis.net/mash/fuel-folsom/x86_64/
+enabled=1
+gpgcheck=0
+priority=1
+
+[mash-fuel-grizzly-puppet27]
+name=Puppet packages from Matt
+baseurl=http://osci-koji.srt.mirantis.net/mash/epel-fuel-grizzly-puppet27/x86_64/
+enabled=1
+gpgcheck=0
 priority=1
 endef
 
