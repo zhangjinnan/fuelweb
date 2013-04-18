@@ -46,14 +46,14 @@ function(models, commonViews, dialogViews, networkTabTemplate, networkTabViewMod
             }, this);
             this.model.get('networks').get(row.data('network-id')).set({
                 cidr: $('.cidr input', row).val(),
-                vlan_start: $('.vlan_start input:first', row).val(),
-                amount: this.model.get('net_manager') == 'FlatDHCPManager' ? 1 : $('.amount input', row).val(),
-                network_size: parseInt($('.network_size select', row).val(), 10)
-            });
-            if (this.$(e.currentTarget).attr('name') == 'fixed-amount') {
-                this.fixedAmount = parseInt(this.$(e.currentTarget).val(), 10);
-            }
-            this.checkForChanges();
+                vlan_start: parseInt($('.vlan_start input:first', row).val(), 10),
+                amount: this.manager == 'FlatDHCPManager' || this.networks.get(row.data('network-id')).get('name') != 'fixed' ? 1: parseInt(this.$('input[name=fixed-amount]').val(), 10),
+                network_size: e && this.$(e.currentTarget).parent().hasClass('cidr') && this.$(e.currentTarget).attr('name') != 'fixed-cidr' ? Math.pow(2, 32 - parseInt(_.last($('.cidr input', row).val().split('/')), 10)) : parseInt($('.network_size select', row).val(), 10)
+            }, {validate: true});
+            // check for changes
+            var noChanges = (_.isEqual(this.model.get('networks').toJSON(), this.networks.toJSON()) && this.model.get('net_manager') == this.manager) || _.some(this.networks.models, 'validationError');
+            this.defaultButtonsState(noChanges);
+            this.hasChanges = !noChanges;
             app.page.removeVerificationTask();
         },
         calculateVlanEnd: function() {
@@ -185,6 +185,20 @@ function(models, commonViews, dialogViews, networkTabTemplate, networkTabViewMod
             this.model.get('tasks').bind('remove', this.renderVerificationControl, this);
             this.model.get('tasks').bind('reset', this.bindTaskEvents, this);
             this.bindTaskEvents();
+        },
+        setInitialData: function() {
+            this.hasChanges = false;
+            this.networks = new models.Networks(this.model.get('networks').toJSON());
+            this.networks.on('invalid', function(model, errors) {
+                this.$('.control-group[data-network-id=' + model.id + ']').addClass('error').find('.help-inline').text(errors.cidr || errors.vlan_start || errors.amount);
+            }, this);
+            this.manager = this.model.get('net_manager');
+            var fixedNetwork = _.find(this.model.get('networks').models, function(network) {return network.get('name') == 'fixed';});
+            this.fixedAmount = fixedNetwork.get('amount') || 1;
+            _.each(_.filter(this.networks.models, function(network) {return network.get('name') != 'fixed';}), function(network) {
+                var cidr = network.get('cidr');
+                network.set({network_size: Math.pow(2, 32 - parseInt(_.last(cidr.split('/')), 10))});
+            });
         },
         revertChanges: function() {
             this.hasChanges = false;
