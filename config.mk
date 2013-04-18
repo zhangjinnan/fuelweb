@@ -17,7 +17,6 @@ LOCAL_MIRROR_CENTOS_OS_BASEURL:=$(LOCAL_MIRROR_CENTOS)/$(CENTOS_RELEASE)/os/$(CE
 # Use srv08 mirrors by default. Other possible default is 'msk'.
 # Setting any other value or removing of this variable will cause
 # download of all the packages directly from internet
-USE_MIRROR?=srv08
 ifeq ($(USE_MIRROR),srv08)
 YUM_REPOS?=proprietary
 MIRROR_CENTOS?=http://srv08-srt.srt.mirantis.net/fwm/centos
@@ -31,9 +30,6 @@ MIRROR_CENTOS?=http://172.18.8.209/fwm/centos
 MIRROR_EGGS?=http://172.18.8.209/fwm/eggs
 MIRROR_GEMS?=http://172.18.8.209/fwm/gems
 MIRROR_SRC?=http://172.18.8.209/fwm/src
-endif
-ifeq ($(USE_MIRROR),fuel-folsom-2.1)
-YUM_REPOS?=official fuel_folsom_2_1
 endif
 
 MIRROR_CENTOS?=http://mirror.yandex.ru/centos
@@ -52,7 +48,7 @@ REQUIRED_SRCS:=$(shell grep -v ^\\s*\# $(SOURCE_DIR)/requirements-src.txt)
 # The actual name will be constracted wich prepending "yum_repo_" prefix.
 # Example: YUM_REPOS?=official epel => yum_repo_official and yum_repo_epel
 # will be used.
-YUM_REPOS?=official epel fuel_folsom puppetlabs rpmforge devel_puppetlabs
+YUM_REPOS?=official fuel_folsom_2_1
 
 # Mirror of source packages. Bareword 'internet' is used to download packages
 # directly from the internet
