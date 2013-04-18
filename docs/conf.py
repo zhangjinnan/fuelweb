@@ -13,6 +13,9 @@
 
 import sys, os
 
+sys.path.insert(0, os.path.join(os.path.abspath('.'), "..", "nailgun"))
+autodoc_default_flags = ['members']
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -25,7 +28,13 @@ import sys, os
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc','rst2pdf.pdfbuilder','sphinxcontrib.plantuml']
+extensions = [
+    'sphinx.ext.autodoc',
+    'rst2pdf.pdfbuilder',
+    'sphinxcontrib.plantuml',
+    'nailgun.autosampledoc'
+]
+
 plantuml = ['java','-jar','plantuml.jar']
 
 # Add any paths that contain templates here, relative to this directory.

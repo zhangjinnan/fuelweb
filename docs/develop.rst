@@ -5,5 +5,7 @@ Development Documentation
 
 .. toctree::
 
-   develop/logical_arch
-   develop/sequence
+    develop/setup
+    develop/logical_arch
+    develop/sequence
+    develop/api_doc

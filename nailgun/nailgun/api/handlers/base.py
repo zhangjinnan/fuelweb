@@ -4,6 +4,7 @@ import json
 import uuid
 from wsgiref.handlers import format_date_time
 from datetime import datetime
+from functools import wraps
 
 import web
 import netaddr
@@ -43,6 +44,7 @@ def forbid_client_caching(handler):
 
 
 def content_json(func):
+    @wraps(func)
     def json_header(*args, **kwargs):
         web.header('Content-Type', 'application/json')
         data = func(*args, **kwargs)
@@ -76,6 +78,16 @@ class JSONHandler(object):
         super(JSONHandler, self).__init__(*args, **kwargs)
         self.db = orm()
 
+    def get_sample_handler_data(self, method):
+        h = getattr(self, method)
+        if not h:
+            raise NotImplementedError(
+                "Handler {0} has no method {1}".format(
+                    self.__name__,
+                    method
+                )
+            )
+
     def get_object_or_404(self, model, *args, **kwargs):
         # should be in ('warning', 'Log message') format
         # (loglevel, message)
@@ -95,6 +107,13 @@ class JSONHandler(object):
             if log_get:
                 getattr(logger, log_get[0])(log_get[1])
         return obj
+
+    @classmethod
+    def render_list(cls, instance_list, renderer=None):
+        if not renderer:
+            return map(cls.render, instance_list)
+        else:
+            return map(renderer.render, instance_list)
 
     @classmethod
     def render(cls, instance, fields=None):

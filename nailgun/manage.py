@@ -4,7 +4,6 @@
 import os
 import sys
 import argparse
-import code
 
 import web
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -120,7 +119,12 @@ if __name__ == "__main__":
     elif params.action == "shell":
         if params.config_file:
             settings.update_from_file(params.config_file)
-        code.interact(local={'orm': orm, 'settings': settings})
+        try:
+            import IPython
+            IPython.embed()
+        except:
+            import code
+            code.interact(local={'orm': orm, 'settings': settings})
         orm().commit()
     else:
         parser.print_help()

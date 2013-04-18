@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+"""
+Handlers dealing with clusters
+"""
 
 import json
 import uuid
@@ -31,6 +34,10 @@ from nailgun.task.errors import WrongNodeStatus
 
 
 class ClusterHandler(JSONHandler):
+    """
+    Cluster single object handler
+    """
+
     fields = (
         "id",
         "name",
@@ -60,11 +67,23 @@ class ClusterHandler(JSONHandler):
 
     @content_json
     def GET(self, cluster_id):
+        '''
+        :param cluster_id: Cluster ID in database.
+        :type  cluster_id: int
+        :returns: JSONized Cluster object.
+        :raises: web.notfound (HTTP 404 Not Found)
+        '''
         cluster = self.get_object_or_404(Cluster, cluster_id)
         return self.render(cluster)
 
     @content_json
     def PUT(self, cluster_id):
+        '''
+        :param cluster_id: Cluster ID in database.
+        :type  cluster_id: int
+        :returns: JSONized Cluster object.
+        :raises: web.notfound (404 Not Found)
+        '''
         cluster = self.get_object_or_404(Cluster, cluster_id)
         data = Cluster.validate(web.data())
         for key, value in data.iteritems():
@@ -82,6 +101,12 @@ class ClusterHandler(JSONHandler):
 
     @content_json
     def DELETE(self, cluster_id):
+        '''
+        :param cluster_id: Cluster ID in database.
+        :type  cluster_id: int
+        :returns: Empty object
+        :raises: web.badrequest (400 Bad Request), web.accepted (202 Accepted)
+        '''
         cluster = self.get_object_or_404(Cluster, cluster_id)
         task_manager = ClusterDeletionManager(cluster_id=cluster.id)
         try:
@@ -99,16 +124,29 @@ class ClusterHandler(JSONHandler):
 
 
 class ClusterCollectionHandler(JSONHandler):
+    """
+    Cluster collection handler
+    """
+
+    single_render = ClusterHandler
 
     @content_json
     def GET(self):
+        '''
+        :returns: JSONized Cluster collection
+        '''
         return map(
-            ClusterHandler.render,
+            self.single_render.render,
             self.db.query(Cluster).all()
         )
 
     @content_json
     def POST(self):
+        '''
+        :returns: JSONized Cluster collection
+        :raises: web.badrequest (400 Bad Request), web.accepted (202 Accepted),
+        web.conflict (409 Conflict)
+        '''
         data = Cluster.validate(web.data())
 
         cluster = Cluster()
@@ -195,19 +233,32 @@ class ClusterCollectionHandler(JSONHandler):
         cluster.add_pending_changes("networks")
 
         raise web.webapi.created(json.dumps(
-            ClusterHandler.render(cluster),
+            self.single_render.render.render(cluster),
             indent=4
         ))
 
 
 class ClusterChangesHandler(JSONHandler):
+    """
+    Cluster changes handler
+    """
+
     fields = (
         "id",
         "name",
     )
 
+    renderer = TaskHandler
+
     @content_json
     def PUT(self, cluster_id):
+        '''
+        :param cluster_id: Cluster ID in database.
+        :type  cluster_id: int
+        :returns: JSONized Task object.
+        :raises: web.notfound (404 Not Found), web.badrequest (400 Bad Request)
+        '''
+
         cluster = self.get_object_or_404(
             Cluster,
             cluster_id,
@@ -229,13 +280,26 @@ class ClusterChangesHandler(JSONHandler):
 
 
 class ClusterVerifyNetworksHandler(JSONHandler):
+    """
+    Cluster verify networks handler
+    """
+
     fields = (
         "id",
         "name",
     )
 
+    renderer = TaskHandler
+
     @content_json
     def PUT(self, cluster_id):
+        '''
+        :param cluster_id: Cluster ID in database.
+        :type  cluster_id: int
+        :returns: JSONized Task object.
+        :raises: web.notfound (404 Not Found)
+        '''
+
         cluster = self.get_object_or_404(Cluster, cluster_id)
         nets = NetworkGroup.validate_collection_update(web.data())
         vlan_ids = NetworkGroup.generate_vlan_ids_list(nets)
@@ -245,13 +309,26 @@ class ClusterVerifyNetworksHandler(JSONHandler):
 
 
 class ClusterSaveNetworksHandler(JSONHandler):
+    """
+    Cluster save networks handler
+    """
+
     fields = (
         "id",
         "name",
     )
 
+    renderer = TaskHandler
+
     @content_json
     def PUT(self, cluster_id):
+        '''
+        :param cluster_id: Cluster ID in database.
+        :type  cluster_id: int
+        :returns: JSONized Task object.
+        :raises: web.notfound (404 Not Found)
+        '''
+
         cluster = self.get_object_or_404(Cluster, cluster_id)
         new_nets = NetworkGroup.validate_collection_update(web.data())
         task_manager = CheckNetworksTaskManager(cluster_id=cluster.id)
@@ -288,12 +365,23 @@ class ClusterSaveNetworksHandler(JSONHandler):
 
 
 class ClusterAttributesHandler(JSONHandler):
+    """
+    Cluster attributes handler
+    """
+
     fields = (
         "editable",
     )
 
     @content_json
     def GET(self, cluster_id):
+        '''
+        :param cluster_id: Cluster ID in database.
+        :type  cluster_id: int
+        :returns: editable cluster attributes.
+        :raises: web.notfound (404 Not Found)
+        '''
+
         cluster = self.get_object_or_404(Cluster, cluster_id)
         if not cluster.attributes:
             raise web.internalerror("No attributes found!")
@@ -304,6 +392,13 @@ class ClusterAttributesHandler(JSONHandler):
 
     @content_json
     def PUT(self, cluster_id):
+        '''
+        :param cluster_id: Cluster ID in database.
+        :type  cluster_id: int
+        :returns: editable cluster attributes.
+        :raises: web.notfound (404 Not Found)
+        '''
+
         cluster = self.get_object_or_404(Cluster, cluster_id)
         if not cluster.attributes:
             raise web.internalerror("No attributes found!")
@@ -319,12 +414,22 @@ class ClusterAttributesHandler(JSONHandler):
 
 
 class ClusterAttributesDefaultsHandler(JSONHandler):
+    """
+    Cluster attributes defaults handler
+    """
+
     fields = (
         "editable",
     )
 
     @content_json
     def GET(self, cluster_id):
+        '''
+        :param cluster_id: Cluster ID in database.
+        :type  cluster_id: int
+        :returns: editable cluster attributes.
+        :raises: web.notfound (404 Not Found)
+        '''
         cluster = self.get_object_or_404(Cluster, cluster_id)
         attrs = cluster.release.attributes_metadata.get("editable")
         if not attrs:
@@ -333,6 +438,12 @@ class ClusterAttributesDefaultsHandler(JSONHandler):
 
     @content_json
     def PUT(self, cluster_id):
+        '''
+        :param cluster_id: Cluster ID in database.
+        :type  cluster_id: int
+        :returns: editable cluster attributes.
+        :raises: web.notfound (404 Not Found)
+        '''
         cluster = self.get_object_or_404(
             Cluster,
             cluster_id,

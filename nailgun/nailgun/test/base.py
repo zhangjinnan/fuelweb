@@ -4,6 +4,7 @@ import os
 import re
 import json
 import time
+import uuid
 import logging
 from random import randint
 from datetime import datetime
@@ -33,9 +34,10 @@ from nailgun.fixtures.fixman import upload_fixture
 
 class Environment(object):
 
-    def __init__(self, app, db=None):
+    def __init__(self, app, db=None, nocommit=False):
         self.db = db or orm()
         self.app = app
+        self.nocommit = nocommit
         self.tester = TestCase
         self.tester.runTest = lambda a: None
         self.tester = self.tester()
@@ -47,6 +49,19 @@ class Environment(object):
         self.releases = []
         self.clusters = []
         self.nodes = []
+
+    def create_by_model(self, model, **kwargs):
+        fabric = getattr(
+            self,
+            "create_{0}".format(
+                model.__name__.lower()
+            ),
+            None
+        )
+        if fabric:
+            return fabric(**kwargs)
+        else:
+            raise NotImplementedError()
 
     def create(self, **kwargs):
         cluster = self.create_cluster(
@@ -89,14 +104,19 @@ class Environment(object):
             release = Release()
             for field, value in release_data.iteritems():
                 setattr(release, field, value)
-            self.db.add(release)
-            self.db.commit()
+            if not self.nocommit:
+                self.db.add(release)
+                self.db.commit()
             self.releases.append(release)
         return release
 
     def create_cluster(self, api=True, **kwargs):
         cluster_data = {
-            'name': 'cluster-api-' + str(randint(0, 1000000))
+            'name': 'cluster-api-' + str(randint(0, 1000000)),
+            'net_manager': 'FlatDHCPManager',
+            'status': 'new',
+            'mode': 'singlenode',
+            'type': 'compute'
         }
         if kwargs:
             cluster_data.update(kwargs)
@@ -117,8 +137,9 @@ class Environment(object):
             cluster = Cluster()
             for field, value in cluster_data.iteritems():
                 setattr(cluster, field, value)
-            self.db.add(cluster)
-            self.db.commit()
+            if not self.nocommit:
+                self.db.add(cluster)
+                self.db.commit()
             self.clusters.append(cluster)
         return cluster
 
@@ -148,8 +169,9 @@ class Environment(object):
                 node.meta = self.default_metadata()
             for key, value in node_data.iteritems():
                 setattr(node, key, value)
-            self.db.add(node)
-            self.db.commit()
+            if not self.nocommit:
+                self.db.add(node)
+                self.db.commit()
             self.nodes.append(node)
         return node
 
@@ -166,9 +188,28 @@ class Environment(object):
         notification.cluster_id = notif_data.get("cluster_id")
         for f, v in notif_data.iteritems():
             setattr(notification, f, v)
-        self.db.add(notification)
-        self.db.commit()
+        if not self.nocommit:
+            self.db.add(notification)
+            self.db.commit()
         return notification
+
+    def create_task(self, **kwargs):
+        task_data = {
+            "status": "running",
+            "uuid": str(uuid.uuid4()),
+            "name": "super",
+            "progress": 0
+        }
+        if kwargs:
+            task_data.update(kwargs)
+        task = Task()
+        task.cluster_id = task_data.get("cluster_id")
+        for f, v in task_data.iteritems():
+            setattr(task, f, v)
+        if not self.nocommit:
+            self.db.add(task)
+            self.db.commit()
+        return task
 
     def default_metadata(self):
         item = self.find_item_by_pk_model(
