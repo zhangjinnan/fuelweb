@@ -33,7 +33,7 @@ MIRROR_GEMS?=http://172.18.8.209/fwm/gems
 MIRROR_SRC?=http://172.18.8.209/fwm/src
 endif
 ifeq ($(USE_MIRROR),fuel-folsom-2.1)
-YUM_REPOS?=official fuel_folsom_2_1 puppetlabs
+YUM_REPOS?=official fuel_folsom_2_1
 endif
 
 MIRROR_CENTOS?=http://mirror.yandex.ru/centos

@@ -93,6 +93,13 @@ baseurl=http://osci-koji.srt.mirantis.net/mash/fuel-folsom/x86_64/
 enabled=1
 gpgcheck=0
 priority=1
+
+[mash-fuel-grizzly-puppet27]
+name=Puppet packages from Matt
+baseurl=http://osci-koji.srt.mirantis.net/mash/epel-fuel-grizzly-puppet27/x86_64/
+enabled=1
+gpgcheck=0
+priority=1
 endef
 
 define yum_repo_puppetlabs
