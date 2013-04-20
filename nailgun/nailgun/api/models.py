@@ -331,7 +331,7 @@ class Vlan(Base, BasicValidator):
     __tablename__ = 'vlan'
     id = Column(Integer, primary_key=True)
     network = relationship("Network",
-                           backref=backref("vlan", cascade="delete"))
+                           backref=backref("vlan"))
 
 
 class Network(Base, BasicValidator):
@@ -373,10 +373,17 @@ class NetworkGroup(Base, BasicValidator):
                                      count=self.amount))
         logger.debug("Base CIDR sliced on subnets: %s", subnets)
 
+        clean_vlans = []
         for net in self.networks:
             logger.debug("Deleting old network with id=%s, cidr=%s",
                          net.id, net.cidr)
+            clean_vlans.append(net.vlan_id)
             orm().delete(net)
+        orm().commit()
+        for vlan_id in clean_vlans:
+            vlan = orm().query(Vlan).get(vlan_id)
+            if len(vlan.network) == 0:
+                orm().delete(vlan)
         orm().commit()
         self.networks = []
 

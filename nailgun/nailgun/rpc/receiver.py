@@ -19,7 +19,7 @@ from nailgun.network.manager import get_node_networks
 from nailgun.settings import settings
 from nailgun.task.helpers import update_task_status
 from nailgun.api.models import Node, Network, NetworkGroup
-from nailgun.api.models import IPAddr, Task
+from nailgun.api.models import IPAddr, Task, Vlan
 from nailgun.notifier import notifier
 
 
@@ -120,6 +120,10 @@ class NailgunReceiver(object):
             cls.db.commit()
 
             cls.db.delete(cluster)
+            cls.db.commit()
+
+            vlans = cls.db.query(Vlan).filter_by(network=None)
+            map(cls.db.delete, vlans)
             cls.db.commit()
 
             notifier.notify(
