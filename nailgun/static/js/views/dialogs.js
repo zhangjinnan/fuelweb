@@ -9,9 +9,10 @@ define(
     'text!templates/dialogs/remove_cluster.html',
     'text!templates/dialogs/error_message.html',
     'text!templates/dialogs/show_node.html',
-    'text!templates/dialogs/dismiss_settings.html'
+    'text!templates/dialogs/dismiss_settings.html',
+    'text!templates/dialogs/update_interfaces.html'
 ],
-function(models, simpleMessageTemplate, createClusterDialogTemplate, changeClusterModeDialogTemplate, discardChangesDialogTemplate, displayChangesDialogTemplate, removeClusterDialogTemplate, errorMessageTemplate, showNodeInfoTemplate, disacardSettingsChangesTemplate) {
+function(models, simpleMessageTemplate, createClusterDialogTemplate, changeClusterModeDialogTemplate, discardChangesDialogTemplate, displayChangesDialogTemplate, removeClusterDialogTemplate, errorMessageTemplate, showNodeInfoTemplate, disacardSettingsChangesTemplate, updateInterfacesTemplate) {
     'use strict';
 
     var views = {};
@@ -309,6 +310,30 @@ function(models, simpleMessageTemplate, createClusterDialogTemplate, changeClust
             this.constructor.__super__.render.call(this, {
                 message: this.message || this.defaultMessage,
                 verification: this.verification || false
+            });
+            return this;
+        }
+    });
+
+    views.UpdateInterfacesDialog = views.Dialog.extend({
+        template: _.template(updateInterfacesTemplate),
+        events: {
+            'click .change-interfaces-btn:not(.disabled)': 'applyInterfaces'
+        },
+        applyInterfaces: function() {
+            this.$('.change-interfaces-btn').addClass('disabled');
+            // var task = new models.Task();
+            // task.save({}, {url: _.result(this.model, 'url') + '/changes', type: 'PUT'})
+            //     .done(_.bind(function() {
+            //         this.$el.modal('hide');
+            //         app.page.deploymentStarted();
+            //     }, this))
+            //     .fail(_.bind(this.displayErrorMessage, this));
+        },
+        render: function() {
+            this.constructor.__super__.render.call(this, {
+                //cluster: this.model,
+                //size: this.model.get('mode') == 'ha' ? 3 : 1
             });
             return this;
         }
