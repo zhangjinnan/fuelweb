@@ -31,6 +31,7 @@ from nailgun.wsgi import build_app
 from nailgun.db import engine
 from nailgun.db import dropdb, syncdb, flush, orm
 from nailgun.fixtures.fixman import upload_fixture
+from nailgun.network.manager import NetworkManager
 
 
 class Environment(object):
@@ -49,6 +50,7 @@ class Environment(object):
         self.releases = []
         self.clusters = []
         self.nodes = []
+        self.network_manager = NetworkManager(db=self.db)
 
     def create(self, **kwargs):
         cluster = self.create_cluster(
