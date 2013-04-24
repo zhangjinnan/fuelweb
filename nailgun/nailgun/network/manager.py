@@ -12,7 +12,7 @@ from nailgun.api.models import Network, NetworkGroup
 
 
 def get_ip_from_settings_by_mac(nodid, netname):
-    if netname in settings.NETWORK_BINDING:
+    if netname in (settings.NETWORK_BINDING or {}):
         noddb = orm().query(Node).get(nodid)
         for i in noddb.meta.get('interfaces', []):
             for bindmac, bindip in settings.NETWORK_BINDING[netname]:
@@ -77,7 +77,7 @@ def assign_ips(nodes_ids, network_name):
                 ip_addr=bound_ip)
             orm().add(ip_db)
             orm().commit()
-            used_ips.append(free_ip)
+            used_ips.append(bound_ip)
             continue
 
         # check if any of node_ips in required cidr: network.cidr
