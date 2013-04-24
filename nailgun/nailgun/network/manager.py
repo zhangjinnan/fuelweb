@@ -4,10 +4,21 @@ import web
 from sqlalchemy.sql import not_
 from netaddr import IPSet, IPNetwork
 
+from nailgun.settings import settings
 from nailgun.db import orm
 from nailgun.task import errors
 from nailgun.api.models import Node, IPAddr, Cluster
 from nailgun.api.models import Network, NetworkGroup
+
+
+def get_ip_from_settings_by_mac(nodid, netname):
+    if netname in settings.NETWORK_BINDING:
+        noddb = orm().query(Node).get(nodid)
+        for i in noddb.meta.get('interfaces', []):
+            for bindmac, bindip in settings.NETWORK_BINDING[netname]:
+                if i['mac'] == bindmac:
+                    return bindip
+    return None
 
 
 def assign_ips(nodes_ids, network_name):
@@ -43,6 +54,32 @@ def assign_ips(nodes_ids, network_name):
         node_ips = [ne.ip_addr for ne in orm().query(IPAddr).
                     filter_by(node=node_id).
                     filter_by(network=network.id).all() if ne.ip_addr]
+
+        bound_ip = get_ip_from_settings_by_mac(node_id, network_name)
+        if bound_ip and bound_ip not in node_ips:
+            if bound_ip in used_ips:
+                raise Exception(
+                    "%s is bound to node %s, but it is already in use." %
+                    (bound_ip, node_id))
+
+            # remove all node ips
+            for ip_db in orm().query(IPAddr).filter_by(
+                    node=node_id).filter_by(network=network.id):
+                orm().delete(ip_db)
+                orm().commit()
+                try:
+                    used_ips.remove(ip_db.ip_addr)
+                except ValueError:
+                    pass
+            ip_db = IPAddr(
+                network=network.id,
+                node=node_id,
+                ip_addr=bound_ip)
+            orm().add(ip_db)
+            orm().commit()
+            used_ips.append(free_ip)
+            continue
+
         # check if any of node_ips in required cidr: network.cidr
         ips_belongs_to_net = IPSet(IPNetwork(network.cidr))\
             .intersection(IPSet(node_ips))

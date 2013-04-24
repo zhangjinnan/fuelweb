@@ -36,6 +36,18 @@ NETWORK_POOLS:
 NET_EXCLUDE:
   - "10.20.0.0/24"
 
+# # This is example IP binding settings
+# # You can use this settings in the case
+# # when you want your node get definite IP
+# # from let say "public" network
+NETWORK_BINDING:
+#  public:
+#     - ["00:00:00:00:00:00", "1.2.3.4"]
+#     - ["00:00:00:00:00:01", "1.2.3.5"]
+#  management:
+#     - ["00:00:00:00:00:00", "1.2.4.4"]
+#     - ["00:00:00:00:00:00", "1.2.4.5"]
+
 VLANS_RANGE_START: "100"
 VLANS_RANGE_END: "1000"
 
