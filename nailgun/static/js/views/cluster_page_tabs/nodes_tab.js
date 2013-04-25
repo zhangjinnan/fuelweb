@@ -708,7 +708,7 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
             var ethIfc = _.find(this.interfaces.models,
                                 function(ifc){ return ifc.get("name")==physical });
             if (_.isUndefined(ethIfc.get("networks"))){
-                ethIfc.set("networks"[]);
+                ethIfc.set("networks", []);
             }
             ethIfc.get("networks").push(logical);
         },
@@ -716,19 +716,24 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
             app.navigate('#cluster/' + this.model.id + '/nodes', {trigger: true, replace: true});
         },
         applyChanges: function() {
-            // var dialog = new dialogViews.UpdateInterfacesDialog({model: this.model});
-            // this.registerSubView(dialog);
-            // dialog.render();
-            
-            Backbone.sync('update', this.interfaces, {url: _.result(this.node, 'url') + '/attributes/interfaces'})
-                .done(_.bind(this.returnToNodesTab, this))
-                .fail(_.bind(function() {
-                    this.$('.btn, input').attr('disabled', false);
-                    var dialog = new dialogViews.SimpleMessage({error: true, 
-                                                                title: 'Node network interfaces configuration error'});
-                    app.page.registerSubView(dialog);
-                    dialog.render();
-                }, this));
+             Backbone.sync('update', this.interfaces, {url: _.result(this.node, 'url') + '/attributes/interfaces'})
+                 .always(_.bind(function(response, statusType, statusText) {
+                    if (response.status == 200) {
+                        this.this.returnToNodesTab();
+                    } else {
+                        this.topologies.models = this.topologies.parse(response);
+                        var dialog = new dialogViews.UpdateInterfacesDialog({model: this.topologies.models, interfaces: this.interfaces, node: this.node});
+                        this.registerSubView(dialog);
+                        dialog.render();
+                    }
+                 }, this));
+/*                 .fail(_.bind(function() {
+                     this.$('.btn, input').attr('disabled', false);
+                     var dialog = new dialogViews.SimpleMessage({error: true, 
+                                                                 title: 'Node network interfaces configuration error'});
+                     app.page.registerSubView(dialog);
+                     dialog.render();
+                 }, this));*/
        },
         setInitialData: function() {
             // TODO (Ivan K): implement this
@@ -739,6 +744,7 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
             this.node = this.model.get('nodes').get(this.screenOptions[0]);
             if (this.node) {
                 this.interfaces = new models.Interfaces();
+                this.topologies = new models.NetworkTopologies();
                 this.interfaces.fetch({
                     url: _.result(this.node, 'url') + '/attributes/interfaces'
                 }).done(_.bind(function(){
@@ -763,7 +769,6 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
                 var ifNetwork;
                 this.$( ".logical-network-box" ).sortable({
                     connectWith: ".connectedSortable",
-                    { appendTo: 'body' }
                     receive: _.bind(function(event, ui){
                         var obj = $(event.target);
                         obj.children(".network-help-message").addClass("hide");

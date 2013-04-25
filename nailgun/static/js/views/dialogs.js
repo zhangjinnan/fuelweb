@@ -318,22 +318,28 @@ function(models, simpleMessageTemplate, createClusterDialogTemplate, changeClust
     views.UpdateInterfacesDialog = views.Dialog.extend({
         template: _.template(updateInterfacesTemplate),
         events: {
-            'click .change-interfaces-btn:not(.disabled)': 'applyInterfaces'
+            'click .change-interfaces-btn:not(.disabled)': 'applyInterfaces',
+            'click .force-apply-btn': 'forceApply',
+            'click .net-topology': 'selectTypology',
         },
         applyInterfaces: function() {
             this.$('.change-interfaces-btn').addClass('disabled');
-            // var task = new models.Task();
-            // task.save({}, {url: _.result(this.model, 'url') + '/changes', type: 'PUT'})
-            //     .done(_.bind(function() {
-            //         this.$el.modal('hide');
-            //         app.page.deploymentStarted();
-            //     }, this))
-            //     .fail(_.bind(this.displayErrorMessage, this));
+            var topology = new models.NetworkTopology();
+            topology.save({}, {url: _.result(this.node, 'url') + '/attributes/interfaces', type: 'POST'})
+                 .done(_.bind(function() {
+                     this.$el.modal('hide');
+                 }, this))
+                 .fail(_.bind(this.displayErrorMessage, this));
+        },
+        forceApply: function(){
+            Backbone.sync('update', this.interfaces, {url: _.result(this.node, 'url') + '/attributes/interfaces?force=true'})
+        },
+        selectTypology: function() {
+            this.$('.change-interfaces-btn').removeAttr("disabled");
         },
         render: function() {
             this.constructor.__super__.render.call(this, {
-                //cluster: this.model,
-                //size: this.model.get('mode') == 'ha' ? 3 : 1
+                topologies: this.model,
             });
             return this;
         }
