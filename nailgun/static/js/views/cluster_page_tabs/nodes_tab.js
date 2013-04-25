@@ -769,6 +769,7 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
                 var ifNetwork;
                 this.$( ".logical-network-box" ).sortable({
                     connectWith: ".connectedSortable",
+                    //{ appendTo: 'body' }
                     receive: _.bind(function(event, ui){
                         var obj = $(event.target);
                         obj.children(".network-help-message").addClass("hide");
