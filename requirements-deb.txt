@@ -1,0 +1,7 @@
+git
+python-dev
+python-pip
+cobbler
+postgresql
+postgresql-server-dev-9.1
+phantomjs

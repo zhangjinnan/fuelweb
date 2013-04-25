@@ -9,25 +9,24 @@ export cobbler_tag="release24"
 export cobbler_git="git://github.com/cobbler/cobbler.git"
 
 export requirements_eggs_path="../requirements-eggs.txt"
+export requirements_deb_path="../requirements-deb.txt"
 export nailgun_path="$(pwd)/../nailgun"
 export nailgun_log="/var/log/nailgun.log"
 
 export linux_distr=` head -n1 /etc/issue | awk '{print $1}' `
 
+#-----Installation-------
+#Install packages
+echo " ---- Imstall packages ---- "
+
 case ${linux_distr} in
 Ubuntu*)
-	export requirements_install="apt-get install git python-dev python-webpy python-sqlalchemy python-yaml python-psycopg2 python-nose python-netaddr python-kombu python-greenlet python-eventlet python-pip cobbler postgresql postgresql-server-dev-9.1 phantomjs -y"
+	xargs -t -a ${requirements_deb_path} sudo apt-get install -y
 ;;
 *)
 echo "No package list available for non ubuntu linux"
 exit
 esac
-
-#-----Installation-------
-
-#Install packages
-echo " ---- Imstall packages ---- "
-sudo ${requirements_install}
 
 echo " ---- Imstall python dependencies ---- "
 sudo pip install -r ${requirements_eggs_path}
