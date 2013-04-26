@@ -3790,3 +3790,17 @@ hr.slim {
   top: -4px;
   padding-top: 4px;
 }
+
+.network-interfaces-modal-info {
+  margin-left: 34px;
+}
+.network-interfaces-modal-info > p {
+  margin: 0px;
+  font-weight: 600;
+  color: #666666;
+}
+.network-interfaces-modal-info > ul > li {
+  margin: 0px;
+  font-weight: 600;
+  color: #666666;
+}
