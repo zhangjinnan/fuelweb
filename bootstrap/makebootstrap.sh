@@ -33,6 +33,6 @@ cd tweak
 sudo sed -i -e 's/rhgb //g' -e 's/quiet //g' -e 's/timeout 100/timeout 30/g' isolinux/isolinux.cfg
 sudo sed -i -e 's/bootstrap-x86_64-............/fuel-bootstrap/g' isolinux/isolinux.cfg
 sudo /usr/bin/mkisofs -J -r -hide-rr-moved -hide-joliet-trans-tbl -V fuel-bootstrap -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-info-table -o ../bootstrap.iso .
-sudo umount iso
+sudo umount ../iso
 sudo /bin/cp -f ../bootstrap.iso /var/www/html/isos/bootstrap.iso
 
