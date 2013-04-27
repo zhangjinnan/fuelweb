@@ -18,7 +18,6 @@ db = ormgen()
 
 def upload_fixture(fileobj):
     fixture = json.load(fileobj)
-
     known_objects = {}
 
     for obj in fixture:

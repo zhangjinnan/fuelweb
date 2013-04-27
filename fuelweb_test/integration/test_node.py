@@ -510,7 +510,7 @@ class TestNode(Base):
         )
         resp = self.client.get("/api/networks/?cluster_id=%d" % cluster_id)
         self.assertEquals(200, resp.getcode())
-        networks = json.loads(resp.read())
+        networks = {'networks': json.loads(resp.read())}
         changes = self.client.put(
             "/api/clusters/%d/verify/networks/" % cluster_id, networks
         )
@@ -701,17 +701,20 @@ class TestNode(Base):
             self.assertEquals(201, resp.getcode())
             cluster_id = _get_cluster_id(name)
             self.client.put(
-                "/api/clusters/%s/" % cluster_id,
+                "/api/clusters/%d/save/networks/" % cluster_id,
                 {'net_manager': net_manager}
             )
+
             if net_manager == "VlanManager":
                 response = self.client.get(
                     "/api/networks/?cluster_id=%d" % cluster_id
                 )
                 networks = json.loads(response.read())
-                flat_net = [n for n in networks if n['name'] == 'fixed']
-                flat_net[0]['amount'] = 8
-                flat_net[0]['network_size'] = 16
+                flat_net = {
+                    'networks': [n for n in networks if n['name'] == 'fixed']
+                }
+                flat_net['networks'][0]['amount'] = 8
+                flat_net['networks'][0]['network_size'] = 16
                 self.client.put(
                     "/api/clusters/%d/save/networks/" % cluster_id, flat_net
                 )

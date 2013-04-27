@@ -232,10 +232,12 @@ class ClusterVerifyNetworksHandler(JSONHandler):
     @content_json
     def PUT(self, cluster_id):
         cluster = self.get_object_or_404(Cluster, cluster_id)
-        nets = NetworkGroup.validate_collection_update(web.data())
-        vlan_ids = NetworkGroup.generate_vlan_ids_list(nets)
+        data = json.loads(web.data())
+        networks = data['networks']
+        nets = NetworkGroup.validate_collection_update(json.dumps(networks))
+        vlan_ids = NetworkGroup.generate_vlan_ids_list(networks)
         task_manager = VerifyNetworksTaskManager(cluster_id=cluster.id)
-        task = task_manager.execute(nets, vlan_ids)
+        task = task_manager.execute(data, vlan_ids)
         return TaskHandler.render(task)
 
 
@@ -247,20 +249,26 @@ class ClusterSaveNetworksHandler(JSONHandler):
 
     @content_json
     def PUT(self, cluster_id):
+        data = json.loads(web.data())
         cluster = self.get_object_or_404(Cluster, cluster_id)
-        new_nets = NetworkGroup.validate_collection_update(web.data())
+
         task_manager = CheckNetworksTaskManager(cluster_id=cluster.id)
-        task = task_manager.execute(new_nets)
-        if task.status != 'error':
-            nets_to_render = []
-            error = False
+        task = task_manager.execute(data)
+
+        if 'net_manager' in data:
+            setattr(cluster, 'net_manager', data['net_manager'])
+
+        if 'networks' in data and task.status != 'error':
+            new_nets = NetworkGroup.validate_collection_update(
+                json.dumps(data['networks']))
+
             for ng in new_nets:
                 ng_db = self.db.query(NetworkGroup).get(ng['id'])
                 for key, value in ng.iteritems():
                     setattr(ng_db, key, value)
                 try:
                     ng_db.create_networks()
-                    ng_db.cluster.add_pending_changes("networks")
+                    ng_db.cluster.add_pending_changes('networks')
                 except Exception as exc:
                     err = str(exc)
                     update_task_status(
@@ -270,14 +278,12 @@ class ClusterSaveNetworksHandler(JSONHandler):
                         msg=err
                     )
                     logger.error(traceback.format_exc())
-                    error = True
                     break
-                nets_to_render.append(ng_db)
 
-            if task.status == 'error':
-                self.db.rollback()
-            else:
-                self.db.commit()
+        if task.status == 'error':
+            self.db.rollback()
+        else:
+            self.db.commit()
 
         return TaskHandler.render(task)
 

@@ -89,9 +89,9 @@ class TestClusterChanges(BaseHandlers):
             reverse(
                 'ClusterSaveNetworksHandler',
                 kwargs={'cluster_id': cluster['id']}),
-            json.dumps([
-                {"id": net_id, "access": "restricted"}
-            ]),
+            json.dumps({'networks': [{
+                "id": net_id, "access": "restricted"}
+            ]}),
             headers=self.default_headers
         )
         pending_changes = self.db.query(ClusterChanges).filter_by(
