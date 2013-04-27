@@ -501,7 +501,7 @@ class TestNode(Base):
         resp = self.client.get(
             '/api/clusters/%d/network_configuration/' % cluster_id)
         self.assertEquals(200, resp.getcode())
-        network_configuration = json.loads(resp.read())
+        networks = {'networks': json.loads(resp.read())}
         changes = self.client.put(
             '/api/clusters/%d/network_configuration/verify/' % cluster_id,
             network_configuration
