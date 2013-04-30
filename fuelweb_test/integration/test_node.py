@@ -697,7 +697,7 @@ class TestNode(Base):
             )
 
             if net_manager == "VlanManager":
-                response self.client.get(
+                response = self.client.get(
                     '/api/clusters/%d/network_configuration/' % cluster_id
                 )
                 networks = json.loads(response.read())['networks']

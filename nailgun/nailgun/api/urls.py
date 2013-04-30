@@ -49,7 +49,7 @@ urls = (
     'ClusterAttributesDefaultsHandler',
     r'/clusters/(?P<cluster_id>\d+)/network_configuration/?$',
     'NetworkConfigurationHandler',
-    r'/clusters/(?P<cluster_id>\d+)/network_configuration/verify?$',
+    r'/clusters/(?P<cluster_id>\d+)/network_configuration/verify/?$',
     'NetworkConfigurationVerifyHandler',
     r'/nodes/?$',
     'NodeCollectionHandler',
