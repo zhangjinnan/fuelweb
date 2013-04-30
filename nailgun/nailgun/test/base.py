@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 
+try:
+    from unittest.case import TestCase
+except ImportError:
+    # Runing unit-tests in production environment
+    from unittest2.case import TestCase
+
 import os
 import re
 import json
@@ -8,7 +14,6 @@ import logging
 import mock
 from random import randint
 from datetime import datetime
-from unittest.case import TestCase
 from functools import partial, wraps
 from paste.fixture import TestApp
 
@@ -338,7 +343,7 @@ class Environment(object):
 
             resp = self.app.put(
                 reverse(
-                    'ClusterVerifyNetworksHandler',
+                    'NetworkConfigurationVerifyHandler',
                     kwargs={'cluster_id': self.clusters[0].id}),
                 nets,
                 headers=self.default_headers

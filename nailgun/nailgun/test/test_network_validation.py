@@ -23,7 +23,7 @@ class TestHandlers(BaseHandlers):
             cluster.id
         )
         resp = self.app.put(
-            reverse('ClusterSaveNetworksHandler',
+            reverse('NetworkConfigurationHandler',
                     kwargs={'cluster_id': cluster.id}),
             json.dumps(nets),
             headers=self.default_headers
@@ -49,7 +49,7 @@ class TestHandlers(BaseHandlers):
         nets = self.env.generate_ui_networks(cluster.id)
         nets['networks'][-1]["cidr"] = settings.NET_EXCLUDE[0]
         resp = self.app.put(
-            reverse('ClusterSaveNetworksHandler',
+            reverse('NetworkConfigurationHandler',
                     kwargs={'cluster_id': cluster.id}),
             json.dumps(nets),
             headers=self.default_headers,
@@ -83,7 +83,7 @@ class TestHandlers(BaseHandlers):
         nets['networks'][-1]["amount"] = 2
         nets['networks'][-1]["cidr"] = "10.0.0.0/23"
         resp = self.app.put(
-            reverse('ClusterSaveNetworksHandler',
+            reverse('NetworkConfigurationHandler',
                     kwargs={'cluster_id': cluster.id}),
             json.dumps(nets),
             headers=self.default_headers

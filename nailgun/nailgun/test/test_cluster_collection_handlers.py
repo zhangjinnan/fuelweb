@@ -128,7 +128,7 @@ class TestHandlers(BaseHandlers):
         nets['networks'][-1]["network_size"] = 16
         nets['networks'][-1]["amount"] = 3
         resp = self.app.put(
-            reverse('ClusterSaveNetworksHandler',
+            reverse('NetworkConfigurationHandler',
                     kwargs={'cluster_id': cluster['id']}),
             json.dumps(nets),
             headers=self.default_headers
@@ -139,7 +139,7 @@ class TestHandlers(BaseHandlers):
     def test_verify_networks(self, mocked_rpc):
         cluster = self.env.create_cluster(api=True)
         resp = self.app.put(
-            reverse('ClusterVerifyNetworksHandler',
+            reverse('NetworkConfigurationHandler',
                     kwargs={'cluster_id': cluster['id']}),
             json.dumps(self.env.generate_ui_networks(cluster["id"])),
             headers=self.default_headers
