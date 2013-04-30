@@ -8,6 +8,7 @@ import netaddr
 from nailgun.settings import settings
 from nailgun.logger import logger
 from nailgun.errors import errors
+
 from nailgun.api.models import Cluster
 from nailgun.api.models import Node
 from nailgun.api.models import Network, NetworkGroup, Vlan
@@ -17,13 +18,16 @@ from nailgun.api.models import Task
 
 from nailgun.api.validators import ClusterValidator
 from nailgun.api.validators import AttributesValidator
+
 from nailgun.network.manager import NetworkManager
 from nailgun.network.errors import OutOfVLANs
 from nailgun.network.errors import OutOfIPs
 from nailgun.network.errors import NoSuitableCIDR
+
 from nailgun.api.handlers.base import JSONHandler, content_json
 from nailgun.api.handlers.node import NodeHandler
 from nailgun.api.handlers.tasks import TaskHandler
+
 from nailgun.task.helpers import update_task_status
 from nailgun.task.manager import DeploymentTaskManager
 from nailgun.task.manager import ClusterDeletionManager
