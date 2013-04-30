@@ -79,4 +79,3 @@ class NetworkConfigurationHandler(JSONHandler):
             self.db.commit()
 
         return TaskHandler.render(task)
-

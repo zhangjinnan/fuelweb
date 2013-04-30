@@ -8,8 +8,10 @@ from nailgun.api.handlers.cluster import ClusterChangesHandler
 from nailgun.api.handlers.cluster import ClusterAttributesHandler
 from nailgun.api.handlers.cluster import ClusterAttributesDefaultsHandler
 
-from nailgun.api.handlers.network_configuration import NetworkConfigurationHandler
-from nailgun.api.handlers.network_configuration import NetworkConfigurationVerifyHandler
+from nailgun.api.handlers.network_configuration \
+    import NetworkConfigurationHandler
+from nailgun.api.handlers.network_configuration \
+    import NetworkConfigurationVerifyHandler
 
 from nailgun.api.handlers.release import ReleaseHandler
 from nailgun.api.handlers.release import ReleaseCollectionHandler
