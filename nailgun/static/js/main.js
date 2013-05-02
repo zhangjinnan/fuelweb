@@ -11,6 +11,7 @@ requirejs.config({
         coccyx: 'js/libs/coccyx',
         bootstrap: 'js/libs/bootstrap.min',
         text: 'js/libs/text',
+        piecon: 'js/libs/piecon',
         app: 'js/app',
         models: 'js/models',
         collections: 'js/collections',
@@ -37,7 +38,7 @@ requirejs.config({
             deps: ['jquery']
         },
         app: {
-            deps: ['jquery', 'underscore', 'backbone', 'coccyx', 'bootstrap', 'jquery-checkbox', 'jquery-timeout']
+            deps: ['jquery', 'underscore', 'backbone', 'coccyx', 'bootstrap', 'jquery-checkbox', 'jquery-timeout', 'piecon']
         }
     }
 });
