@@ -18,10 +18,10 @@ iso: $(BUILD_DIR)/iso/iso.done
 $(BUILD_DIR)/iso/isoroot-pungi.done: $(BUILD_DIR)/iso/kickstart.done
 	if [ -f 6.3/x86_64/os/images/install.img ];then \
 	  echo "Reusing existing iso data (and saving time)...";\
-	  sudo pungi -c $(BUILDKS) --nosplitmedia --name=$(ISOBASENAME) --ver=$(ISOVER) --nosource -G -C -I --force --destdir $$PWD; \
+	  sudo pungi -c $(BUILDKS) --nosplitmedia --name=$(ISOBASENAME) --ver=$(ISOVER) --nosource --nodebuginfo -G -C -I --force --destdir $$PWD; \
 	else \
 	  echo "No existing iso data. Building from scratch (~15 minutes)..."; \
-	  sudo pungi -c $(BUILDKS) --nosplitmedia --name=$(ISOBASENAME) --ver=$(ISOVER) --nosource -G -C -I --force; \
+	  sudo pungi -c $(BUILDKS) --nosplitmedia --name=$(ISOBASENAME) --ver=$(ISOVER) --nosource --nodebuginfo -G -C -I --force; \
 	fi
 	mkdir -p mountiso $(ISOROOT)
 	sudo mount -o loop,ro $(ISOVER)/x86_64/iso/$(ISOBASENAME)-$(ISOVER)-x86_64-DVD.iso mountiso
@@ -29,6 +29,17 @@ $(BUILD_DIR)/iso/isoroot-pungi.done: $(BUILD_DIR)/iso/kickstart.done
 	sudo umount mountiso
 	rm -rf mountiso
 	#sudo rm -rf $(ISOVER)/x86_64/iso/*.iso
+
+$(BUILD_DIR)/iso/isoroot-files.done: \
+	        $(ISOROOT)/isolinux/isolinux.cfg \
+	        $(ISOROOT)/ks.cfg \
+	        $(ISOROOT)/bootstrap_admin_node.sh \
+	        $(ISOROOT)/bootstrap_admin_node.conf \
+	        $(ISOROOT)/version.yaml \
+	        $(ISOROOT)/puppet-nailgun.tgz \
+	        $(ISOROOT)/puppet-slave.tgz
+	$(ACTION.TOUCH)
+
 
 $(BUILD_DIR)/iso/kickstart.done: $(SOURCE_DIR)/packages/ksrepo/build.done $(BUILDKS)
 $(BUILDKS): $(call depv,ks_build_cfg)
@@ -104,6 +115,24 @@ $(BUILD_DIR)/iso/isoroot.done: \
                 $(BUILD_DIR)/iso/isoroot-bootstrap.done
 	$(ACTION.TOUCH)
 
+########################
+# Bootstrap image.
+########################
+
+BOOTSTRAP_FILES:=initramfs.img linux
+
+$(BUILD_DIR)/iso/isoroot-bootstrap.done: \
+	        $(ISOROOT)/bootstrap/bootstrap.rsa \
+	        $(addprefix $(ISOROOT)/bootstrap/, $(BOOTSTRAP_FILES))
+	$(ACTION.TOUCH)
+
+$(addprefix $(ISOROOT)/bootstrap/, $(BOOTSTRAP_FILES)): \
+                $(BUILD_DIR)/bootstrap/build.done
+	@mkdir -p $(@D)
+	cp $(BUILD_DIR)/bootstrap/$(@F) $@
+
+$(ISOROOT)/bootstrap/bootstrap.rsa: $(SOURCE_DIR)/bootstrap/ssh/id_rsa ; $(ACTION.COPY)
+
 
 ########################
 # Building CD and USB stick images
@@ -115,10 +144,10 @@ $(BUILD_DIR)/iso/isoroot.done: \
 # and then copy these files into another directory
 ifeq "$(ISO_METHOD)" "pungi"
 $(BUILD_DIR)/iso/iso.done: $(BUILD_DIR)/iso/isoroot-pungi.done \
-		$(BUILD_DIR)/iso/isoroot-files.done \
-		$(BUILD_DIR)/iso/isoroot-bootstrap.done
+		$(BUILD_DIR)/iso/isoroot-files.done 
 else
-$(BUILD_DIR)/iso/iso.done: $(BUILD_DIR)/iso/isoroot.done
+$(BUILD_DIR)/iso/iso.done: $(BUILD_DIR)/iso/isoroot.done \
+	        $(BUILD_DIR)/iso/isoroot-dotfiles.done
 endif
 	rm -f $(ISONAME)
 	mkdir -p $(BUILD_DIR)/iso/isoroot-mkisofs
