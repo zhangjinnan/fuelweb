@@ -80,6 +80,13 @@ $(BUILD_DIR)/iso/isoroot-gems.done: \
 #
 #
 
+$(BUILD_DIR)/iso/isoroot-dotfiles.done: \
+                $(ISOROOT)/.discinfo \
+                $(ISOROOT)/.treeinfo
+	$(ACTION.TOUCH)
+
+$(ISOROOT)/.discinfo: $(SOURCE_DIR)/iso/.discinfo ; $(ACTION.COPY)
+$(ISOROOT)/.treeinfo: $(SOURCE_DIR)/iso/.treeinfo ; $(ACTION.COPY)
 $(ISOROOT)/isolinux/isolinux.cfg: $(SOURCE_DIR)/iso/isolinux/isolinux.cfg ; $(ACTION.COPY)
 $(ISOROOT)/ks.cfg: $(SOURCE_DIR)/iso/ks.cfg ; $(ACTION.COPY)
 $(ISOROOT)/bootstrap_admin_node.sh: $(SOURCE_DIR)/iso/bootstrap_admin_node.sh ; $(ACTION.COPY)
