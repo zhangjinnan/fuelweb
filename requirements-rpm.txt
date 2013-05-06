@@ -1,10 +1,10 @@
 MySQL-client-5.5.28-6
-MySQL-client-wsrep-5.5.28_wsrep_23.7-11
+MySQL-client-wsrep-5.5.28_wsrep_23.7-12
 MySQL-python-1.2.3-0.3.c1.2.el6
 MySQL-server-5.5.28-6
-MySQL-server-wsrep-5.5.28_wsrep_23.7-11
+MySQL-server-wsrep-5.5.28_wsrep_23.7-12
 MySQL-shared-5.5.28-6
-MySQL-shared-wsrep-5.5.28_wsrep_23.7-11
+MySQL-shared-wsrep-5.5.28_wsrep_23.7-12
 authconfig-6.1.12-10.el6
 autoconf-2.63-5.1.el6
 automake-1.11.1-1.2.el6
@@ -40,7 +40,7 @@ memcached-1.4.4-3.el6
 mysql-5.1.66-2.el6_3
 mysql-devel-5.1.66-2.el6_3
 mysql-server-5.1.66-2.el6_3
-nginx-1.0.15-3.el6
+nginx-1.0.15-4.el6
 novnc-0.4-3.el6
 ntp-4.2.4p8-2.el6.centos
 numpy-1.4.1-9.el6
@@ -78,7 +78,6 @@ python-novaclient-2.9.0-1.el6
 python-pip-0.8-1.el6
 python-setuptools-0.6.10-3.el6
 python-virtualenv-1.7-1.el6
-qemu-0.15.0-1.el6.rfx
 qemu-img-0.12.1.2-2.295.el6_3.10
 qemu-kvm-0.12.1.2-2.295.el6_3.10
 rabbitmq-server-2.8.7-2.el6

@@ -41,7 +41,6 @@ qemu-guest-agent
 nailgun-agent
 nailgun-mcagents
 nailgun-net-check
-bootstrap-files
 send2syslog
 
 #Packages needed for mirror
