@@ -3,6 +3,8 @@ Summary:   Ruby 1.9.3-p392 inside rbenv environment
 Version:   0.0.1
 Release:   1
 License:   Ruby
+Source0:   382db59cd0c16518d0cec0974e220a2c46aa7a25.zip
+Source1:   1fb955eead087646f4d73ac36786432c380309a9.zip
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-build
 URL:       http://mirantis.com
 %description
@@ -12,9 +14,9 @@ Ruby 1.9.3-p392 inside rbenv environment
 rm -rf "%{name}-%{version}"
 mkdir %{name}-%{version}
 cd %{name}-%{version}
-unzip -q %{_sourcedir}/382db59cd0c16518d0cec0974e220a2c46aa7a25.zip
+unzip -q %{SOURCE0}
            mv -f rbenv-382db59cd0c16518d0cec0974e220a2c46aa7a25 rbenv
-unzip -q %{_sourcedir}/1fb955eead087646f4d73ac36786432c380309a9.zip
+unzip -q %{SOURCE1} 
       mv -f ruby-build-1fb955eead087646f4d73ac36786432c380309a9 ruby-build
 ln -fs `pwd`/rbenv /opt
 
