@@ -119,3 +119,41 @@ In order to do so, press <TAB> аt the very first installation screen which says
 
 After that press Enter and wait for the installation to complete.
 
+Configuring additional interfaces
+---------------------------------
+There are two ways to configure additional network interfaces on the admin node.
+
+\1. Press a key when prompted after the CentOS installer has finished and follow the menus. e.g.::
+
+    Press any key to make changes in network configuration
+    or to configure additional network interfaces...
+
+    1) Configure global network settings
+    2) Configure additional interfaces
+    3) Exit
+    Choice: 2
+
+    Enter device name: eth1
+    Enter ip: 192.168.56.12
+    Enter netmask: 255.255.255.0
+
+    You entered:
+    Device: eth1, MAC: 08:00:27:5E:B1:58
+    IP address: 192.168.56.12 Netmask: 255.255.255.0
+
+    Do you want to keep these settings? (y/N)
+
+\2. Configure the interfaces manually after installation has completed and the system has rebooted.
+
+To configure the eth1 device you would edit  /etc/sysconfig/network-scripts/ifcfg-eth1 to contain:::
+
+    DEVICE=eth1
+    BOOTPROTO=static
+    ONBOOT=yes
+    IPADDR=192.168.56.12
+    NETMASK=255.255.255.0
+
+Restart networking to bring up the interface(s).::
+
+    service network restart
+
