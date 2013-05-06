@@ -1,6 +1,7 @@
 include $(SOURCE_DIR)/packages/rpm/module.mk
 include $(SOURCE_DIR)/packages/eggs/module.mk
 include $(SOURCE_DIR)/packages/gems/module.mk
+include $(SOURCE_DIR)/packages/ksrepo/module.mk
 
 .PHONY: packages
 
@@ -11,3 +12,4 @@ $(BUILD_DIR)/packages/build.done: \
 	$(ACTION.TOUCH)
 
 packages: $(BUILD_DIR)/packages/build.done
+ksrepo: $(SOURCE_DIR)/packages/ksrepo/build.done

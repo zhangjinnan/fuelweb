@@ -1,38 +1,73 @@
 .PHONY: iso img
 all: iso img
 
+include $(SOURCE_DIR)/iso/ks-build.mk
+
 ISOROOT:=$(BUILD_DIR)/iso/isoroot
-ISOBASENAME:=nailgun-centos-6.3
+ISOBASENAME:=nailgun
+ISOVER:=6.3
 ISONAME:=$(BUILD_DIR)/iso/$(ISOBASENAME).iso
 IMGNAME:=$(BUILD_DIR)/iso/$(ISOBASENAME).img
-BUILDKS:=$(SOURCE_DIR)/iso/ks-build.cfg
+BUILDKS:=$(BUILD_DIR)/iso/ks-build.cfg
 INSTALLKS:=$(SOURCE_DIR)/iso/ks.cfg
-BUILDINSTALL:=-B
 
-#yiso: $(BUILD_DIR)/iso/firstpass.done $(BUILD_DIR)/iso/iso.done
+#iso: $(BUILD_DIR)/iso/firstpass.done $(BUILD_DIR)/iso/iso.done
 iso: $(BUILD_DIR)/iso/iso.done
 
 
-#$(BUILD_DIR)/iso/isoroot-centos.done:
-$(BUILD_DIR)/iso/isoroot.done:
-	sudo pungi -c $(BUILDKS) --nosource --name="$(ISOBASENAME)" -G -C $(BUILDINSTALLOPT) -I --force 
-	mkdir -p mountiso isoroot-mkisofs
-	sudo mount -o loop,ro $(ISOBASENAME).iso mountiso
-	rsync -vaz mountiso/. isoroot-mkisofs/.
+$(BUILD_DIR)/iso/isoroot-pungi.done: $(BUILD_DIR)/iso/kickstart.done
+	if [ -f 6.3/x86_64/os/images/install.img ];then \
+	  echo "Reusing existing iso data (and saving time)...";\
+	  sudo pungi -c $(BUILDKS) --nosplitmedia --name=$(ISOBASENAME) --ver=$(ISOVER) --nosource -G -C -I --force --destdir $$PWD; \
+	else \
+	  echo "No existing iso data. Building from scratch (~15 minutes)..."; \
+	  sudo pungi -c $(BUILDKS) --nosplitmedia --name=$(ISOBASENAME) --ver=$(ISOVER) --nosource -G -C -I --force; \
+	fi
+	mkdir -p mountiso $(ISOROOT)
+	sudo mount -o loop,ro $(ISOVER)/x86_64/iso/$(ISOBASENAME)-$(ISOVER)-x86_64-DVD.iso mountiso
+	rsync -a --delete --exclude=isolinux/isolinux.cfg mountiso/. $(ISOROOT)/.
 	sudo umount mountiso
 	rm -rf mountiso
-	$(ACTION.COPY)
+	#sudo rm -rf $(ISOVER)/x86_64/iso/*.iso
 
-$(BUILD_DIR)/iso/isoroot-files.done: \
-                $(BUILD_DIR)/iso/isoroot-dotfiles.done \
-                $(ISOROOT)/isolinux/isolinux.cfg \
-                $(ISOROOT)/ks.cfg \
-                $(ISOROOT)/bootstrap_admin_node.sh \
-                $(ISOROOT)/bootstrap_admin_node.conf \
-                $(ISOROOT)/version.yaml \
-                $(ISOROOT)/puppet-nailgun.tgz \
-                $(ISOROOT)/puppet-slave.tgz
+$(BUILD_DIR)/iso/kickstart.done: $(SOURCE_DIR)/packages/ksrepo/build.done $(BUILDKS)
+$(BUILDKS): $(call depv,ks_build_cfg)
+$(BUILDKS): export contents:=$(ks_build_cfg)
+$(BUILDKS):
+	mkdir -p $(@D)
+	echo -e "$${contents}" > $@
+	
+
+$(BUILD_DIR)/iso/isoroot-centos.done: \
+               $(BUILD_DIR)/mirror/build.done \
+               $(BUILD_DIR)/packages/build.done \
+               $(BUILD_DIR)/iso/isoroot-dotfiles.done
+	mkdir -p $(ISOROOT)
+	rsync -rp $(LOCAL_MIRROR_CENTOS_OS_BASEURL)/    $(ISOROOT)
+	createrepo -g `readlink -f "$(ISOROOT)/repodata/comps.xml"` \
+               -u media://`head -1 $(ISOROOT)/.discinfo` $(ISOROOT)
 	$(ACTION.TOUCH)
+
+$(BUILD_DIR)/iso/isoroot-eggs.done: \
+               $(BUILD_DIR)/mirror/build.done \
+               $(BUILD_DIR)/packages/build.done
+	mkdir -p $(ISOROOT)/eggs
+	rsync -a --delete $(LOCAL_MIRROR_EGGS)/ $(ISOROOT)/eggs
+	$(ACTION.TOUCH)
+
+$(BUILD_DIR)/iso/isoroot-gems.done: \
+               $(BUILD_DIR)/mirror/build.done \
+               $(BUILD_DIR)/packages/build.done
+	mkdir -p $(ISOROOT)/gems
+	rsync -a --delete $(LOCAL_MIRROR_GEMS)/ $(ISOROOT)/gems
+	$(ACTION.TOUCH)
+
+
+########################
+# Extra files
+# ########################
+#
+#
 
 $(ISOROOT)/isolinux/isolinux.cfg: $(SOURCE_DIR)/iso/isolinux/isolinux.cfg ; $(ACTION.COPY)
 $(ISOROOT)/ks.cfg: $(SOURCE_DIR)/iso/ks.cfg ; $(ACTION.COPY)
@@ -55,6 +90,20 @@ $(ISOROOT)/puppet-slave.tgz: \
 	(cd $(SOURCE_DIR)/fuel/deployment/puppet && tar rf $(ISOROOT)/puppet-slave.tar ./*)
 	gzip -c -9 $(ISOROOT)/puppet-slave.tar > $@ && \
                 rm $(ISOROOT)/puppet-slave.tar
+########################
+# Iso image root file system.
+########################
+
+$(BUILD_DIR)/iso/isoroot.done: \
+                $(BUILD_DIR)/mirror/build.done \
+                $(BUILD_DIR)/packages/build.done \
+                $(BUILD_DIR)/iso/isoroot-centos.done \
+                $(BUILD_DIR)/iso/isoroot-eggs.done \
+                $(BUILD_DIR)/iso/isoroot-gems.done \
+                $(BUILD_DIR)/iso/isoroot-files.done \
+                $(BUILD_DIR)/iso/isoroot-bootstrap.done
+	$(ACTION.TOUCH)
+
 
 ########################
 # Building CD and USB stick images
@@ -64,15 +113,22 @@ $(ISOROOT)/puppet-slave.tgz: \
 # from which it builds iso image
 # that is why we need to make isoroot.done dependent on some files
 # and then copy these files into another directory
+ifeq "$(ISO_METHOD)" "pungi"
+$(BUILD_DIR)/iso/iso.done: $(BUILD_DIR)/iso/isoroot-pungi.done \
+		$(BUILD_DIR)/iso/isoroot-files.done \
+		$(BUILD_DIR)/iso/isoroot-bootstrap.done
+else
 $(BUILD_DIR)/iso/iso.done: $(BUILD_DIR)/iso/isoroot.done
+endif
 	rm -f $(ISONAME)
 	mkdir -p $(BUILD_DIR)/iso/isoroot-mkisofs
 	rsync -a --delete $(ISOROOT)/ $(BUILD_DIR)/iso/isoroot-mkisofs
-	mkisofs -r -V "Mirantis FuelWeb" -p "Mirantis Inc." \
+	sudo mkisofs -r -V "Mirantis FuelWeb" -p "Mirantis Inc." \
                 -J -T -R -b isolinux/isolinux.bin \
                 -no-emul-boot \
                 -boot-load-size 4 -boot-info-table \
                 -x "lost+found" -o $(ISONAME) $(BUILD_DIR)/iso/isoroot-mkisofs
-	implantisomd5 $(ISONAME)
+	sudo implantisomd5 $(ISONAME)
+	env user=$$USER sudo chown $$user:$$user $(ISONAME)
 	$(ACTION.TOUCH)
 

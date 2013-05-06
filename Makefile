@@ -22,6 +22,7 @@ help:
 	@echo '  MIRROR_EGGS: $(MIRROR_EGGS)'
 	@echo '  MIRROR_GEMS: $(MIRROR_GEMS)'
 	@echo '  MIRROR_SRC: $(MIRROR_SRC)'
+	@echo '  ISO_METHOD: $(ISO_METHOD)'
 	@echo
 	@echo 'Available targets:'
 	@echo '  all  - build product'
@@ -51,7 +52,8 @@ help:
 MIRROR_CENTOS=http://<your_mirror>/centos \
 MIRROR_EGGS=http://<your_mirror>/eggs \
 MIRROR_GEMS=http://<your_mirror>/gems \
-MIRROR_SRC=http://<your_mirror>/src'
+MIRROR_SRC=http://<your_mirror>/src \
+ISO_METHOD=pungi'
 
 all: iso
 
