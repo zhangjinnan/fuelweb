@@ -7,6 +7,7 @@ import netaddr
 
 from nailgun.settings import settings
 from nailgun.logger import logger
+from nailgun.errors import errors
 from nailgun.api.models import Cluster
 from nailgun.api.models import Node
 from nailgun.api.models import Network, NetworkGroup, Vlan
@@ -23,9 +24,6 @@ from nailgun.api.handlers.tasks import TaskHandler
 from nailgun.task.helpers import update_task_status
 from nailgun.task.manager import DeploymentTaskManager
 from nailgun.task.manager import ClusterDeletionManager
-from nailgun.task.errors import FailedProvisioning
-from nailgun.task.errors import DeploymentAlreadyStarted
-from nailgun.task.errors import WrongNodeStatus
 
 
 class ClusterHandler(JSONHandler):
