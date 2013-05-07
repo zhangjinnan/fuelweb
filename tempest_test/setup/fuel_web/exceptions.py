@@ -1,0 +1,4 @@
+
+
+class ErrorStatusFuelWebException(Exception):
+    pass
