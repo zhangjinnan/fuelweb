@@ -57,7 +57,7 @@
             </div>
           <% }) %>
 
-          <% var fixedNetwork = _.find(networks.models, function(network){return network.get('name') == 'fixed'; }) %>
+          <% var fixedNetwork = networks.findWhere({name: 'fixed'}) %>
           <% if (fixedNetwork) { %>
 
             <% var vlan = net_manager == 'VlanManager' ? '' : 'hide' %>

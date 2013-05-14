@@ -154,8 +154,10 @@ function(models, commonViews, dialogViews, networkTabTemplate, networkTabVerific
             this.networkConfiguration.get('networks').on('invalid', function(model, errors) {
                 this.$('.control-group[data-network-id=' + model.id + ']').addClass('error').find('.help-inline').text(errors.cidr || errors.vlan_start || errors.amount);
             }, this);
+            console.log(_.reject(this.networkConfiguration.get('networks').models, function(network) {return network.get('name') == 'fixed';}).length);
+            console.log(_.reject(this.networkConfiguration.get('networks').models, {name: 'fixed'}).length);
             this.fixedAmount = this.networkConfiguration.get('networks').findWhere({name: 'fixed'}).get('amount') || 1;
-            _.each(_.reject(this.networkConfiguration.get('networks').models, {'name': 'fixed'}), function(network) {
+            _.each(_.filter(this.networkConfiguration.get('networks').models, function(network) {return network.get('name') != 'fixed';}), function(network) {
                 var cidr = network.get('cidr');
                 network.set({network_size: Math.pow(2, 32 - parseInt(_.last(cidr.split('/')), 10))});
             });
