@@ -9,7 +9,7 @@ export cobbler_tag="release24"
 export cobbler_git="git://github.com/cobbler/cobbler.git"
 
 export requirements_eggs_path="../requirements-eggs.txt"
-export requirements_deb_path="../requirements-deb.txt"
+export requirements_deb_path="requirements/dev-deb.txt"
 export nailgun_path="$(pwd)/../nailgun"
 export nailgun_log="/var/log/nailgun.log"
 
