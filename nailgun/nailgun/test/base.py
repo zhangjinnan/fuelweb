@@ -12,7 +12,6 @@ from functools import partial, wraps
 
 import mock
 from paste.fixture import TestApp
-#from sqlalchemy.orm.events import orm
 
 import nailgun
 from nailgun.api.models import Node
