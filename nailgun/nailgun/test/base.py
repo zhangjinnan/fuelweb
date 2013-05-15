@@ -408,30 +408,13 @@ class BaseHandlers(TestCase):
         self.default_headers = {
             "Content-Type": "application/json"
         }
-
-    def _wait_for_threads(self):
-        # wait for fake task thread termination
-        import threading
-        for thread in threading.enumerate():
-            if thread is not threading.currentThread():
-                if hasattr(thread, "rude_join"):
-                    timer = time.time()
-                    timeout = 25
-                    thread.rude_join(timeout)
-                    if time.time() - timer > timeout:
-                        raise Exception(
-                            '{0} seconds is not enough'
-                            ' - possible hanging'.format(
-                                timeout
-                            )
-                        )
+        map(self.__define_request_method, ['put', 'post', 'delete', 'get'])
 
     @classmethod
     def setUpClass(cls):
         cls.db = orm()
         cls.app = TestApp(build_app().wsgifunc())
         nailgun.task.task.DeploymentTask._prepare_syslog_dir = mock.Mock()
-        #dropdb()
         syncdb()
 
     @classmethod
@@ -447,6 +430,46 @@ class BaseHandlers(TestCase):
         flush()
         self.env = Environment(app=self.app, db=self.db)
         self.env.upload_fixtures(self.fixtures)
+
+    def _wait_for_threads(self):
+        """Wait for fake task thread termination"""
+        import threading
+        for thread in threading.enumerate():
+            if thread is not threading.currentThread():
+                if hasattr(thread, "rude_join"):
+                    timer = time.time()
+                    timeout = 25
+                    thread.rude_join(timeout)
+                    if time.time() - timer > timeout:
+                        raise Exception(
+                            '{0} seconds is not enough'
+                            ' - possible hanging'.format(
+                                timeout
+                            )
+                        )
+
+    def __define_request_method(self, method_name):
+        """Define request method"""
+        def request(handler='', data=None, request_args={}, expect_errors=False):
+            if handler:
+                handler_name = handler
+            elif hasattr(self, 'default_handler_name'):
+                handler_name = self.default_handler_name
+            else:
+                raise TypeError('Handler name not defined')
+
+            url = reverse(handler_name, kwargs=request_args)
+            request_method = getattr(self.app, method_name)
+
+            data_to_send = ''
+            if data:
+                data_to_send = json.dumps(data)
+
+            return request_method(url, data_to_send,
+                headers=self.default_headers,
+                expect_errors=expect_errors)
+
+        setattr(self, method_name, request)
 
 
 def fake_tasks(fake_rpc=True, **kwargs):

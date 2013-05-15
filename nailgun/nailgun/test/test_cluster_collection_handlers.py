@@ -11,25 +11,21 @@ from nailgun.test.base import reverse
 
 
 class TestHandlers(BaseHandlers):
+
+    default_handler_name = 'ClusterCollectionHandler'
+
     def test_cluster_list_empty(self):
-        resp = self.app.get(
-            reverse('ClusterCollectionHandler'),
-            headers=self.default_headers
-        )
+        resp = self.get()
         self.assertEquals(200, resp.status)
         response = json.loads(resp.body)
         self.assertEquals([], response)
 
     def test_cluster_create(self):
         release_id = self.env.create_release(api=False).id
-        resp = self.app.post(
-            reverse('ClusterCollectionHandler'),
-            json.dumps({
-                'name': 'cluster-name',
-                'release': release_id,
-            }),
-            headers=self.default_headers
-        )
+        resp = self.post(data={
+            'name': 'cluster-name',
+            'release': release_id})
+
         self.assertEquals(201, resp.status)
 
     def test_if_cluster_creates_correct_networks(self):
@@ -58,14 +54,10 @@ class TestHandlers(BaseHandlers):
         }
         self.db.add(release)
         self.db.commit()
-        resp = self.app.post(
-            reverse('ClusterCollectionHandler'),
-            json.dumps({
-                'name': 'cluster-name',
-                'release': release.id,
-            }),
-            headers=self.default_headers
-        )
+        resp = self.post(data={
+            'name': 'cluster-name',
+            'release': release.id})
+
         self.assertEquals(201, resp.status)
         nets = self.db.query(Network).all()
         obtained = []
@@ -127,21 +119,17 @@ class TestHandlers(BaseHandlers):
         nets = self.env.generate_ui_networks(cluster["id"])
         nets['networks'][-1]["network_size"] = 16
         nets['networks'][-1]["amount"] = 3
-        resp = self.app.put(
-            reverse('NetworkConfigurationHandler',
-                    kwargs={'cluster_id': cluster['id']}),
-            json.dumps(nets),
-            headers=self.default_headers
-        )
+        resp = self.put(
+            handler='NetworkConfigurationHandler',
+            data=nets,
+            request_args={'cluster_id': cluster['id']})
         self.assertEquals(200, resp.status)
 
     @patch('nailgun.rpc.cast')
     def test_verify_networks(self, mocked_rpc):
         cluster = self.env.create_cluster(api=True)
-        resp = self.app.put(
-            reverse('NetworkConfigurationHandler',
-                    kwargs={'cluster_id': cluster['id']}),
-            json.dumps(self.env.generate_ui_networks(cluster["id"])),
-            headers=self.default_headers
-        )
+        resp = self.put(
+            handler='NetworkConfigurationHandler',
+            request_args={'cluster_id': cluster['id']},
+            data=self.env.generate_ui_networks(cluster["id"]))
         self.assertEquals(200, resp.status)
