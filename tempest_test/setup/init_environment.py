@@ -5,6 +5,7 @@ import keystoneclient.v2_0
 import glanceclient
 import os
 import re
+from optparse import OptionParser
 from fuel_web.client import Client as FuelWebClient
 from fuel_web.exceptions import ErrorStatusFuelWebException
 from root import root
@@ -17,11 +18,11 @@ class Prepare(object):
     REGEXP_SERVICE_END_POINT = r'SERVICE_ENDPOINT=(.*?)\s'
     REGEXP_ID = r'\|\s+id\s+\|\s+(.*?)\s+\|'
 
-    def __init__(self):
+    def __init__(self, admin_ip):
         self.cirros_image = 'http://srv08-srt.srt.mirantis.net/cirros-0.3.0-x86_64-disk.img'
 
-        self.admin_ip = '10.20.0.2'
-        self.compute_ip = '10.20.0.245'
+        self.admin_ip = admin_ip
+        #self.compute_ip = ''
 
         self.admin_name = 'admin'
         self.admin_password = 'admin'
@@ -93,6 +94,8 @@ class Prepare(object):
         if not res['status'] == 200:
             raise ErrorStatusFuelWebException()
 
+        self.compute_ip = self.node2['ip']
+
         res = fuel_web.put_changes(self.cluster['id'])
         if not res['status'] == 200:
             raise ErrorStatusFuelWebException()
@@ -149,15 +152,14 @@ class Prepare(object):
             self.tempest_config_folsom(
                 image_ref=image_ref,
                 image_ref_alt=image_ref_alt,
-                path_to_private_key=root('fuel_test', 'config', 'ssh_keys',
-                                         'openstack'),
+                path_to_private_key=root('config', 'ssh_keys', 'openstack'),
                 compute_db_uri='mysql://nova:nova@%s/nova' % self.compute_ip
             ))
 
     def tempest_config_folsom(self, image_ref, image_ref_alt,
                               path_to_private_key,
                               compute_db_uri='mysql://user:pass@localhost/nova'):
-        sample = load(root('fuel_test', 'config', 'tempest.conf.folsom.sample'))
+        sample = load(root('config', 'tempest.conf.folsom.sample'))
         config = sample % {
             'IDENTITY_USE_SSL': 'false',
             'IDENTITY_HOST': self.compute_ip,
@@ -255,7 +257,11 @@ class Prepare(object):
 
 
 if __name__ == '__main__':
-    prepare = Prepare()
+    parser = OptionParser()
+    parser.add_option("-a", "--admin-ip", dest="admin_ip", type="string", help="admin ip")
+    arguments = parser.parse_args()
+
+    prepare = Prepare(arguments[0].admin_ip)
     prepare.setup_nodes()
     prepare.prepare_slave()
     prepare.prepare_tempest_folsom()
