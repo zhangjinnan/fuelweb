@@ -22,7 +22,8 @@ class Prepare(object):
         self.cirros_image = 'http://srv08-srt.srt.mirantis.net/cirros-0.3.0-x86_64-disk.img'
 
         self.admin_ip = admin_ip
-        #self.compute_ip = ''
+        # self.compute_ip = ''
+        # self.controller_ip = ''
 
         self.admin_name = 'admin'
         self.admin_password = 'admin'
@@ -39,7 +40,7 @@ class Prepare(object):
         self.glance_port = 9292
 
     def get_auth_url(self):
-        return 'http://%s:5000/v2.0/' % self.compute_ip
+        return 'http://%s:5000/v2.0/' % self.controller_ip
 
     def _copy_ssh_files(self):
         ssh = SSHClient()
@@ -94,6 +95,7 @@ class Prepare(object):
         if not res['status'] == 200:
             raise ErrorStatusFuelWebException()
 
+        self.controller_ip = self.node1['ip']
         self.compute_ip = self.node2['ip']
 
         res = fuel_web.put_changes(self.cluster['id'])
@@ -110,10 +112,13 @@ class Prepare(object):
             sleep(20)
 
     def prepare_slave(self):
+        self.controller_ip = '10.20.0.40'
+        self.compute_ip = '10.20.0.245'
+
         keyfiles = self._copy_ssh_files()
 
         ssh = SSHClient()
-        ssh.connect_ssh(self.compute_ip, username='root', password='r00tme', key_filename=keyfiles)
+        ssh.connect_ssh(self.controller_ip, username='root', password='r00tme', key_filename=keyfiles)
 
         # source auth info
         res = ssh.execute('cat openrc')
@@ -162,7 +167,7 @@ class Prepare(object):
         sample = load(root('config', 'tempest.conf.folsom.sample'))
         config = sample % {
             'IDENTITY_USE_SSL': 'false',
-            'IDENTITY_HOST': self.compute_ip,
+            'IDENTITY_HOST': self.controller_ip,
             'IDENTITY_PORT': '5000',
             'IDENTITY_API_VERSION': 'v2.0',
             'IDENTITY_PATH': 'tokens',
@@ -216,7 +221,7 @@ class Prepare(object):
         return config
 
     def tempest_write_config(self, config):
-        with open(root('..', 'tempest.conf'), 'w') as f:
+        with open(root('tempest', 'etc', 'tempest.conf'), 'w') as f:
             f.write(config)
 
     def make_tempest_objects(self, ):
@@ -242,7 +247,7 @@ class Prepare(object):
 
     def _get_image_client(self):
         keystone = self._get_identity_client()
-        endpoint = 'http://%s:%s' % (self.compute_ip, self.glance_port)
+        endpoint = 'http://%s:%s' % (self.controller_ip, self.glance_port)
         return glanceclient.Client('1', endpoint=endpoint,
                                    token=keystone.auth_token)
 
@@ -262,6 +267,6 @@ if __name__ == '__main__':
     arguments = parser.parse_args()
 
     prepare = Prepare(arguments[0].admin_ip)
-    prepare.setup_nodes()
+    # prepare.setup_nodes()
     prepare.prepare_slave()
     prepare.prepare_tempest_folsom()

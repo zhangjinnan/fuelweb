@@ -4,3 +4,6 @@
 [submodule "astute"]
 	path = astute
 	url = git@github.com:Mirantis/astute.git
+[submodule "tempest_test/tempest"]
+	path = tempest_test/tempest
+	url = https://github.com/openstack/tempest.git
