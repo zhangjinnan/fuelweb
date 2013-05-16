@@ -477,7 +477,7 @@ class L2Topology(Base):
     id = Column(Integer, primary_key=True)
     network_id = Column(
         Integer,
-        ForeignKey('networks.id', ondelete="CASCADE"),
+        ForeignKey('network_groups.id', ondelete="CASCADE"),
         nullable=False
     )
 
@@ -504,7 +504,7 @@ class AllowedNetworks(Base):
     id = Column(Integer, primary_key=True)
     network_id = Column(
         Integer,
-        ForeignKey('networks.id', ondelete="CASCADE"),
+        ForeignKey('network_groups.id', ondelete="CASCADE"),
         nullable=False
     )
     interface_id = Column(
@@ -519,7 +519,7 @@ class NetworkAssignment(Base):
     id = Column(Integer, primary_key=True)
     network_id = Column(
         Integer,
-        ForeignKey('networks.id', ondelete="CASCADE"),
+        ForeignKey('network_groups.id', ondelete="CASCADE"),
         nullable=False
     )
     interface_id = Column(
@@ -542,12 +542,11 @@ class NodeNICInterface(Base):
     max_speed = Column(Integer)
     current_speed = Column(Integer)
     allowed_networks = relationship(
-        "Network",
+        "NetworkGroup",
         secondary=AllowedNetworks.__table__,
     )
     assigned_networks = relationship(
-        "Network",
+        "NetworkGroup",
         secondary=NetworkAssignment.__table__,
     )
-
 
