@@ -1,5 +1,7 @@
 define(
 [
+    'chaplin',
+    'routes',
     'models',
     'views/common',
     'views/cluster_page',
@@ -9,7 +11,7 @@ define(
     'views/notifications_page',
     'views/support_page'
 ],
-function(models, commonViews, ClusterPage, NodesTab, ClustersPage, ReleasesPage, NotificationsPage, SupportPage) {
+function(Chaplin, routes, models, commonViews, ClusterPage, NodesTab, ClustersPage, ReleasesPage, NotificationsPage, SupportPage) {
     'use strict';
 
     var AppRouter = Backbone.Router.extend({
@@ -135,24 +137,59 @@ function(models, commonViews, ClusterPage, NodesTab, ClustersPage, ReleasesPage,
         }
     });
 
-    return {
+    var Application = Chaplin.Application.extend({
+        title: 'Chaplin Example Application',
         initialize: function() {
-            // our server doesn't support PATCH, so use PUT instead
-            var originalSync = Backbone.sync;
-            Backbone.sync = function() {
-                var args = arguments;
-                if (args[0] == 'patch') {
-                    args[0] = 'update';
-                }
-                return originalSync.apply(this, args);
-            };
+            Chaplin.Application.prototype.initialize.apply(this, arguments);
+            this.initRouter(routes, {pushState: false, root: '/'});
+            this.initDispatcher({controllerPath: 'js/controllers/', controllerSuffix: ''});
 
-            window.isWebkit = navigator.userAgent.indexOf('AppleWebKit/') !== -1;
+            // Layout listens for click events & delegates internal links to router.
+            this.initLayout();
 
-            var app = new AppRouter();
-            window.app = app;
+            // Composer grants the ability for views and stuff to be persisted.
+            this.initComposer();
 
-            Backbone.history.start();
+            // Mediator is a global message broker which implements pub-sub pattern.
+            this.initMediator();
+
+            // Actually start routing.
+            this.startRouting();
+        },
+        initMediator: function() {
+            // Add additional application-specific properties and methods
+            // e.g. mediator.prop = null
+            // Create a user property
+            Chaplin.mediator.user = null;
+            // Add additional application-specific properties and methods
+            // Seal the mediator
+            Chaplin.mediator.seal();
         }
-    };
+    });
+
+    return Application;
 });
+
+
+//    return {
+//        initialize: function() {
+//            // our server doesn't support PATCH, so use PUT instead
+//            var originalSync = Backbone.sync;
+//            Backbone.sync = function() {
+//                var args = arguments;
+//                if (args[0] == 'patch') {
+//                    args[0] = 'update';
+//                }
+//                return originalSync.apply(this, args);
+//            };
+//
+//            window.isWebkit = navigator.userAgent.indexOf('AppleWebKit/') !== -1;
+//
+//            var app = new AppRouter();
+//            window.app = app;
+//
+//            Backbone.history.start();
+//        }
+//    };
+//});
+//

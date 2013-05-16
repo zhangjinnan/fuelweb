@@ -9,9 +9,11 @@ requirejs.config({
         underscore: 'js/libs/lodash.underscore',
         backbone: 'js/libs/backbone',
         coccyx: 'js/libs/coccyx',
+        chaplin: 'js/libs/chaplin',
         bootstrap: 'js/libs/bootstrap.min',
         text: 'js/libs/text',
         app: 'js/app',
+        routes: 'js/routes',
         models: 'js/models',
         collections: 'js/collections',
         views: 'js/views'
@@ -37,12 +39,14 @@ requirejs.config({
             deps: ['jquery']
         },
         app: {
-            deps: ['jquery', 'underscore', 'backbone', 'coccyx', 'bootstrap', 'jquery-checkbox', 'jquery-timeout']
+            deps: ['jquery', 'underscore', 'backbone', 'chaplin', 'coccyx', 'bootstrap', 'jquery-checkbox', 'jquery-timeout']
         }
     }
 });
 
-require(['app'], function (app) {
+require(['app'], function (App) {
     'use strict';
-    $(document).ready(app.initialize);
+    //$(document).ready(app.initialize);
+    window.app = new App();
+    window.app.initialize();
 });
