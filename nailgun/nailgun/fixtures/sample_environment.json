@@ -10,7 +10,7 @@
             "platform_name": "Model-1",
             "role": null,
             "fqdn": "",
-            "mac": "C0:8D:DF:52:76:F1",
+            "mac": "52:54:00:96:81:6E",
             "ip": "10.0.12.45",
             "meta": {
               "disks": [
@@ -82,6 +82,28 @@
                 "family": "Power Edge"
               }
             }
+        }
+    },
+    {
+        "pk": 1,
+        "model": "nailgun.node_nic_interfaces",
+        "fields": {
+            "node_id": 1,
+            "mac": "52:54:00:96:81:6E",
+            "name": "eth0",
+            "max_speed": 1000,
+            "current_speed": 100
+        }
+    },
+    {
+        "pk": 2,
+        "model": "nailgun.node_nic_interfaces",
+        "fields": {
+            "node_id": 1,
+            "mac": "C8:0A:A9:A6:FF:28",
+            "name": "eth1",
+            "max_speed": 1000,
+            "current_speed": 1000
         }
     },
     {
