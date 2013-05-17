@@ -267,6 +267,6 @@ if __name__ == '__main__':
     arguments = parser.parse_args()
 
     prepare = Prepare(arguments[0].admin_ip)
-    # prepare.setup_nodes()
+    prepare.setup_nodes()
     prepare.prepare_slave()
     prepare.prepare_tempest_folsom()
