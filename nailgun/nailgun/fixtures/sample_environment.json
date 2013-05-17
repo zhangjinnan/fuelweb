@@ -86,7 +86,7 @@
     },
     {
         "pk": 1,
-        "model": "nailgun.node_nic_interfaces",
+        "model": "nailgun.node_n_i_c_interface",
         "fields": {
             "node_id": 1,
             "mac": "52:54:00:96:81:6E",
@@ -97,7 +97,7 @@
     },
     {
         "pk": 2,
-        "model": "nailgun.node_nic_interfaces",
+        "model": "nailgun.node_n_i_c_interface",
         "fields": {
             "node_id": 1,
             "mac": "C8:0A:A9:A6:FF:28",
