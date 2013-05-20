@@ -235,7 +235,7 @@ class Environment(object):
             "vlan_start": 100 + i,
             "cidr": nd[1],
             "id": start_id + i
-        } for i, nd in enumerate(zip(net_names, net_cidrs))]}
+        } for i, nd in enumerate(zip(net_names, net_cidrs))]
         return nets
 
     def get_default_volumes_metadata(self):
@@ -517,7 +517,7 @@ class Environment(object):
 
 class BaseHandlers(TestCase):
 
-    fixtures = []
+    fixtures = ["admin_network"]
 
     def __init__(self, *args, **kwargs):
         super(BaseHandlers, self).__init__(*args, **kwargs)
