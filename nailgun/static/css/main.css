@@ -634,7 +634,6 @@ h6.page-title {
   margin: 0px;
   padding: 0px;
   height: 25px;
-  margin-top: 16px;
   cursor: pointer;
   height: 25px;
   overflow: hidden;
@@ -3329,6 +3328,11 @@ hr.slim {
   min-width: 10px;
 }
 
+.node-connect {
+  height: 16px;
+  font-size: 9.5px;
+  text-align: center;
+}
 
 /* Disk Utility Start*/
 .disk-box {
