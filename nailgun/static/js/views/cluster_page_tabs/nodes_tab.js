@@ -849,7 +849,7 @@ function(models, commonViews, dialogViews, nodesTabSummaryTemplate, editNodesScr
 
     NodeInterface = Backbone.View.extend({
         template: _.template(nodeInterfaceTemplate),
-        vents: {
+        events: {
             'sortremove .logical-network-box': 'dragStart',
             'sortreceive .logical-network-box': 'dragStop',
             'sortstop .logical-network-box': 'dragStop'
