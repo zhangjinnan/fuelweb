@@ -185,6 +185,7 @@ class NodeCollectionHandler(JSONHandler, NICUtils):
                     )
                     continue
                 setattr(node, key, value)
+            self.db.add(node)
             if not node.attributes:
                 node.attributes = NodeAttributes()
                 self.db.commit()
