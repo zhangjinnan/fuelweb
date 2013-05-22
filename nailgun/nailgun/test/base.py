@@ -225,7 +225,7 @@ class Environment(object):
         start_id = self.db.query(NetworkGroup.id).order_by(
             NetworkGroup.id
         ).first()
-        start_id = 0 if not start_id else start_id[0]
+        start_id = 0 if not start_id else start_id[-1] + 1
         net_names = (
             "floating_test",
             "public_test",
@@ -536,7 +536,7 @@ class Environment(object):
 
 class BaseHandlers(TestCase):
 
-    fixtures = []
+    fixtures = ["admin_network"]
 
     def __init__(self, *args, **kwargs):
         super(BaseHandlers, self).__init__(*args, **kwargs)
@@ -582,6 +582,12 @@ class BaseHandlers(TestCase):
         }
         flush()
         self.env = Environment(app=self.app, db=self.db)
+        # hack for admin net
+        map(
+            self.db.delete,
+            self.db.query(Network).all(),
+        )
+        self.db.commit()
         self.env.upload_fixtures(self.fixtures)
 
 
