@@ -118,8 +118,11 @@ class VolumeManager(object):
             # root = 10Gb
             "calc_root_size": lambda: 1024 ** 3 * 10,
             "calc_boot_size": lambda: 1024 ** 2 * 200,
-            # let's think that size of mbr is 1Mb
-            "calc_mbr_size": lambda: 1024 ** 2,
+            # any partition on disk is always aligned on the cylinder boundary
+            # on hardware the size of cylinder is equal to 1M
+            # while on VMs it is equal to 8225280 bytes
+            # so we just think that 10M is always enough
+            "calc_mbr_size": lambda: 10 * 1024 ** 2,
             "calc_lvm_meta_size": lambda: 1024 ** 2 * 64
         }
         generators["calc_os_size"] = lambda: sum([
