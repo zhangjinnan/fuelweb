@@ -2,15 +2,6 @@ node default {
 
   Exec  {path => '/usr/bin:/bin:/usr/sbin:/sbin'}
 
-  $centos_repos =
-  [
-   {
-   "id" => "nailgun",
-   "name" => "Nailgun",
-   "url"  => "http://${ipaddress}:8080/centos/6.3/nailgun/x86_64"
-   },
-   ]
-
   $cobbler_user = "cobbler"
   $cobbler_password = "cobbler"
 

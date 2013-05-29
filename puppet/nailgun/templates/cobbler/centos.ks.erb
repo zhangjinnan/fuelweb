@@ -4,11 +4,6 @@ install
 # INSTALLATION SOURCE (centos repository)
 url --url=$tree
 
-# ALTERNATIVE REPOSITORIES
-<% ks_repo.each do |repo| %>
-repo --name=<%= repo['name'] %> --baseurl=<%= repo['url'] %>
-<% end %>
-
 # KEYBOARD AND LANGUAGE CUSTOMIZATION
 lang en_US.UTF-8
 keyboard us

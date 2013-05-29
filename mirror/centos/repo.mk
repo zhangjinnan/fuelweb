@@ -42,7 +42,7 @@ $(BUILD_DIR)/mirror/centos/yum.done: \
 		$(REQUIRED_RPMS)
 	$(ACTION.TOUCH)
 
-show-yum-urls: \
+show-yum-urls-centos: \
 		$(BUILD_DIR)/mirror/centos/yum-config.done \
 		$(SOURCE_DIR)/requirements-rpm.txt
 	yum -c $(BUILD_DIR)/mirror/centos/etc/yum.conf clean all

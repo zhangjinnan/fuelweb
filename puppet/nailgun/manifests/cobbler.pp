@@ -1,15 +1,10 @@
 class nailgun::cobbler(
   $cobbler_user = "cobbler",
   $cobbler_password = "cobbler",
-
-  $centos_repos,
   $gem_source,
-
   $ks_system_timezone         = "Etc/UTC",
-
   # default password is 'r00tme'
   $ks_encrypted_root_password = "\$6\$tCD3X7ji\$1urw6qEMDkVxOkD33b4TpQAjRiCeDZx0jmgMhDYhfB9KuGfqO9OcMaKyUxnGGWslEDQ4HxTw7vcAMP85NxQe61",
-
   ){
 
   anchor { "nailgun-cobbler-begin": }
@@ -82,9 +77,6 @@ class nailgun::cobbler(
     require => Class["cobbler::server"],
   }
 
-  # THIS VARIABLE IS NEEDED FOR TEMPLATING centos63-x86_64.ks
-  $ks_repo = $centos_repos
-
   file { "/var/lib/cobbler/kickstarts/centos63-x86_64.ks":
     content => template("nailgun/cobbler/centos.ks.erb"),
     owner => root,
@@ -110,6 +102,25 @@ class nailgun::cobbler(
     ksmeta => "",
     menu => true,
     require => Cobbler_distro["centos63-x86_64"],
+  }
+
+  cobbler_distro { "rhel63-x86_64":
+    kernel => "${repo_root}/rhel/isolinux/vmlinuz",
+    initrd => "${repo_root}/rhel/isolinux/initrd.img",
+    arch => "x86_64",
+    breed => "redhat",
+    osversion => "rhel6",
+    ksmeta => "tree=http://@@server@@:8080/rhel",
+    require => Class["cobbler::server"],
+  }
+
+  cobbler_profile { "rhel63-x86_64":
+    kickstart => "/var/lib/cobbler/kickstarts/centos63-x86_64.ks",
+    kopts => "",
+    distro => "rhel63-x86_64",
+    ksmeta => "",
+    menu => true,
+    require => Cobbler_distro["rhel63-x86_64"],
   }
 
   cobbler_distro { "bootstrap":

@@ -30,11 +30,15 @@ IMG_PATH:=$(ISO_DIR)/$(ISO_NAME).img
 # Do not compress javascript and css files
 NO_UI_OPTIMIZE:=0
 
+# Do not copy RHEL repo to the iso
+NO_RHEL:=1
+
 LOCAL_MIRROR_SRC:=$(LOCAL_MIRROR)/src
 LOCAL_MIRROR_EGGS:=$(LOCAL_MIRROR)/eggs
 LOCAL_MIRROR_GEMS:=$(LOCAL_MIRROR)/gems
 LOCAL_MIRROR_CENTOS:=$(LOCAL_MIRROR)/centos
 LOCAL_MIRROR_CENTOS_OS_BASEURL:=$(LOCAL_MIRROR_CENTOS)/$(CENTOS_RELEASE)/os/$(CENTOS_ARCH)
+LOCAL_MIRROR_RHEL:=$(LOCAL_MIRROR)/rhel
 
 BUILD_MIRROR_GEMS:=$(BUILD_DIR)/packages/gems
 
@@ -69,6 +73,8 @@ endif
 
 MIRROR_CENTOS?=http://archive.kernel.org/centos
 MIRROR_CENTOS_OS_BASEURL:=$(MIRROR_CENTOS)/$(CENTOS_RELEASE)/os/$(CENTOS_ARCH)
+MIRROR_RHEL?=http://srv11-msk.msk.mirantis.net/rhel6/rhel-6-server-rpms
+MIRROR_RHEL_BOOT?=http://srv11-msk.msk.mirantis.net/rhel6/rhel-server-6.4-x86_64
 # It can be any a list of links (--find-links) or a pip index (--index-url).
 MIRROR_EGGS?=http://pypi.python.org/simple
 # NOTE(mihgen): removed gemcutter - it redirects to rubygems.org and has issues w/certificate now
@@ -84,6 +90,9 @@ REQUIRED_SRCS:=$(shell grep -v ^\\s*\# $(SOURCE_DIR)/requirements-src.txt)
 # Example: YUM_REPOS?=official epel => yum_repo_official and yum_repo_epel
 # will be used.
 YUM_REPOS?=official fuel_folsom_2_1 puppetlabs
+ifeq ($(NO_RHEL),0)
+YUM_REPOS:=$(YUM_REPOS) rhel
+endif
 
 # Mirror of source packages. Bareword 'internet' is used to download packages
 # directly from the internet
