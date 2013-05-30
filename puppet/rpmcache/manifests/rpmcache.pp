@@ -41,6 +41,7 @@ rh_username, rh_password, rh_channels)  {
     owner => 'root',
     group => 'root',
     mode => 0755,
+    timeout => 0
   }
 
   Exec  {path => '/usr/bin:/bin:/usr/sbin:/sbin'}

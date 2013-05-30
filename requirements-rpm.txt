@@ -108,3 +108,11 @@ xfsprogs-3.1.1-7.el6
 xinetd-2.3.14-35.el6_3
 yum-3.2.29-30.el6.centos
 zlib-devel-1.2.3-27.el6
+python-dmidecode
+dbus-python
+pygobject2
+usermode
+virt-what
+python-ethtool
+libuser
+passwd
