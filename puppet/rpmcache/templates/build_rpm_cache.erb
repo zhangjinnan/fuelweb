@@ -1,0 +1,37 @@
+#!/bin/bash
+#Add subscription-manager packages
+yum-config-manager --add-repo=http://repos.fedorapeople.org/repos/candlepin/subscription-manager/epel-subscription-manager.repo
+yum install -y subscription-manager
+
+#Register
+subscription-manager register "--username=<%= rh_username %>" "--password=<%= rh_password %> --autosubscribe
+
+#Attach to RHOS product
+poolid="$(subscription-manager list --available | grep -A2 "Red Hat OpenStack" | tail -1 | cut -f2)" 
+subscription-manager attach "--pool=$poolid"
+
+#Enable channels
+for channel in <%= rh_channels %>; do
+  yum-config-manager --enable "$channel"
+done
+ 
+#Tell RHSM to let CentOS accept packages from Red Hat
+
+#Generate /etc/yum.repos.d/redhat.repo. It will fail.
+yum repolist || :
+sed -i 's/\$releasever/6Server/' /etc/yum.repos.d/redhat.repo
+chattr +i /etc/yum.repos.d/redhat.repo
+
+mkdir -p /var/www/nailgun/rhel/6.4/nailgun/x86_64/repodata
+yumdownloader --disablerepo='*' --enablerepo='rhel*' --resolve --destdir /var/www/nailgun/rhel/6.4/nailgun/x86_64 $(cat /etc/nailgun/required-rpms.txt | xargs echo)
+
+
+#Need to include RH comps.xml here instead
+cp /var/www/nailgun/centos/6.3/nailgun/x86_64/repodata/comps.xml /var/www/nailgun/rhel/6.4/nailgun/x86_64/repodata/comps.xml
+
+createrepo -g /var/www/nailgun/rhel/repodata/comps.xml /var/www/nailgun/rhel
+
+#http://srv11-msk.msk.mirantis.net/rhel6/rhel-server-6.4-x86_64-boot.iso
+
+#Disable all RHEL repos so you don't accidentally update and break master node
+yum-config-manager --disable 'rhel*'
