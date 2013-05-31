@@ -56,3 +56,6 @@ python-devel
 python-keystone
 python-novaclient
 python-setuptools
+qpid-cpp-client
+qpid-cpp-server
+qpid-cpp-server-cluster
