@@ -5,5 +5,8 @@ node default {
     rh_username => "username",
     rh_password => "password",
     rh_channels => "rhel-6-server-rpms rhel-6-server-optional-rpms rhel-lb-for-rhel-6-server-rpms rhel-rs-for-rhel-6-server-rpms rhel-ha-for-rhel-6-server-rpms rhel-server-ost-6-folsom-rpms",
+    use_satellite => false,
+    sat_hostname => undef,
+    activation_key => undef
   }
 }
