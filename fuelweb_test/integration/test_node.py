@@ -201,16 +201,56 @@ class TestNode(Base):
         # assert nodes progress
         for i, n in enumerate(cluster_info):
             if n['id'] == nodes[0]['id']:
-                self.assertEquals(n['progress'], 100, 'Progress value of controller node is 100')
-                self.assertEquals(n['status'], 'ready', 'Status value of controller node is "ready"')
+                self.assertEquals(
+                    n['progress'], 100,
+                    'Progress value of controller node is 100')
+                self.assertEquals(
+                    n['status'], 'ready',
+                    'Status value of controller node is "ready"')
             if n['id'] == nodes[1]['id']:
-                self.assertEquals(n['progress'], 100, 'Progress value of first compute node is 100')
-                self.assertEquals(n['status'], 'ready', 'Status value of first compute node is "ready"')
+                self.assertEquals(
+                    n['progress'], 100,
+                    'Progress value of first compute node is 100')
+                self.assertEquals(
+                    n['status'], 'ready',
+                    'Status value of first compute node is "ready"')
             if n['id'] == nodes[2]['id']:
-                self.assertNotEqual(n['progress'], 100, 'Progress value of first compute node is 100')
-                self.assertEquals(n['status'], 'provisioning', 'Status value of first compute node is "provisioning"')
+                self.assertNotEqual(
+                    n['progress'], 100,
+                    'Progress value of first compute node is 100')
+                self.assertEquals(
+                    n['status'], 'provisioning',
+                    'Status value of first compute node is "provisioning"')
 
+    @snapshot_errors
+    def test_cinder(self):
+        self._revert_nodes()
+        self._bootstrap_nodes(['slave1', 'slave2', 'slave3'])
+        cluster_id = self._create_cluster(name='empty')
 
+        self.client.put("/api/clusters/%s" % cluster_id,
+                        {"mode": "multinode", "type": "both"})
+
+        # fetch nodes list
+        nodes = self.client.get('/api/nodes')
+        # build nodes list for initial deployment.
+        # One controller and one compute
+        nodes_put_data = [{'id': nodes[0]['id'], 'cluster_id': cluster_id,
+                          'role': 'controller', 'pending_addition': 'true',
+                          'pending_deletion': 'false'},
+                          {'id': nodes[1]['id'], 'cluster_id': cluster_id,
+                          'role': 'compute', 'pending_addition': 'true',
+                          'pending_deletion': 'false'},
+                          {'id': nodes[2]['id'], 'cluster_id': cluster_id,
+                          'role': 'cinder', 'pending_addition': 'true',
+                          'pending_deletion': 'false'}]
+        # Put initial nodes and apply changes
+        self.client.put("/api/nodes", nodes_put_data)
+        response = self.client.put("/api/clusters/%s/changes"
+                                   % cluster_id, {})
+        task = json.loads(response.read())
+        # wait for the task completion
+        self._task_wait(task, 'Deployment', 60 * 10)
 
     @snapshot_errors
     def test_one_node_provisioning(self):
