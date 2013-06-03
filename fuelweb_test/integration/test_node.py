@@ -224,6 +224,8 @@ class TestNode(Base):
 
     @snapshot_errors
     def test_cinder(self):
+        logging.info("Test for cinder.")
+
         self._revert_nodes()
         self._bootstrap_nodes(['slave1', 'slave2', 'slave3'])
         cluster_id = self._create_cluster(name='empty')
@@ -232,7 +234,11 @@ class TestNode(Base):
                         {"mode": "multinode", "type": "both"})
 
         # fetch nodes list
-        nodes = self.client.get('/api/nodes')
+        response = self.client.get('/api/nodes')
+        nodes = json.loads(response.read())
+        logging.info("Available nodes: ")
+        logging.info(json.dumps(nodes))
+
         # build nodes list for initial deployment.
         # One controller and one compute
         nodes_put_data = [{'id': nodes[0]['id'], 'cluster_id': cluster_id,
@@ -249,8 +255,11 @@ class TestNode(Base):
         response = self.client.put("/api/clusters/%s/changes"
                                    % cluster_id, {})
         task = json.loads(response.read())
+        logging.info("Deployment task: ")
+        logging.info(json.dumps(task))
+
         # wait for the task completion
-        self._task_wait(task, 'Deployment', 60 * 10)
+        self._task_wait(task, 'Deployment', 60 * 20)
 
     @snapshot_errors
     def test_one_node_provisioning(self):
