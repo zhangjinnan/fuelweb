@@ -125,7 +125,8 @@ class FileLoggerMiddleware(object):
             log_format = logging.Formatter(
                 kw.get('logformat', HTTP_LOGFORMAT),
                 kw.get('datefmt', DATEFORMAT))
-            filelogger = WatchedFileHandler(kw.get('file', settings.ACCESS_LOG))
+            filelogger = WatchedFileHandler(
+                kw.get('file', settings.ACCESS_LOG))
             filelogger.setFormatter(log_format)
             logger.addHandler(filelogger)
             self.logger = WriteLogger(logger)
