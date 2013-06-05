@@ -175,6 +175,9 @@ class NodeCollectionHandler(JSONHandler, NICUtils):
                 node = q.get(nd["id"])
             else:
                 node = self.validator.validate_mac_and_get_existent_node(nd)
+                if not node:
+                    raise web.webapi.badrequest(
+                        message='Cannot find node by mac address')
 
             if is_agent:
                 node.timestamp = datetime.now()
