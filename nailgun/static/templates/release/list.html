@@ -1,12 +1,83 @@
 <div class="row-fluid">
   <div class="span12">
-    <h3 class="page-title">OpenStack Releases</h3>
+    <h3 class="page-title">Releases / Downloads</h3>
   </div>
 </div>
 
 <div class="table-releases-box">
 
 <% if (releases.length) { %>
+
+  <h4>Operating Systems</h4>
+
+  <table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+          <th width="60%">Name</th>
+          <th width="12%">Version</th>
+          <th width="12%">Status</th>
+          <th width="16%">Action</th>
+        </tr>
+        <tbody>
+        <tr>
+          <td>Ubuntu</td>
+          <td>12.04</td>
+          <td>Available</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>CentOS</td>
+          <td>6.4</td>
+          <td>Available</td>
+          <td>
+            <div class="progress progress-success progress-striped active" style="margin-bottom: 0px;">
+              <div class="bar" style="width: 40%;"></div>
+            </div>
+            <div style="display: block; width: 100%; margin-top: -21px; font-size: 11px; text-align: center;">Installing RHEL</div>
+          </td>
+        </tr>
+        <tr>
+          <td>RHEL</td>
+          <td>6.4</td>
+          <td>Not available</td>
+          <td><a href="#myModal" data-toggle="modal">Download</a></td>
+        </tr>
+      </tbody>
+      </thead>
+  
+  </table>
+
+  <h4>OpenStack Releases</h4>
+
+  <table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+          <th width="52%">Name</th>
+          <th width="12%">OS</th>
+          <th width="12%">Version</th>
+          <th width="12%">Status</th>
+          <th width="12%">Action</th>
+        </tr>
+        <tbody>
+        <tr>
+          <td>Mirantis OpenStack</td>
+          <td>CentOS</td>
+          <td>Grizzly-2013.1</td>
+          <td>Available</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>RedHat OpenStack (RHOS)</td>
+          <td>RHEL</td>
+          <td>Grizzly-2013.1</td>
+          <td>Not available</td>
+          <td><a href="#">Download</a></td>
+        </tr>
+      </tbody>
+      </thead>
+  
+  </table>
+
   <section>
     <table class="table table-bordered table-releases">
       <thead>
@@ -28,5 +99,91 @@
 <% } else { %>
   <div class="alert">There are no OpenStack releases available.</div>
 <% } %>
+
+</div>
+
+
+<!-- Modal -->
+<div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+
+  <div class="modal-header">
+  <button type="button" class="close" data-dismiss="modal">×</button>
+  <h3>RedHat Enterprise Linux Account Settings</h3>
+</div>
+<div class="modal-body">
+  <form class="form-horizontal" onsubmit="return false">
+
+    <div class="radio-checkbox-group net-manager" style="margin-left: 38px; margin-bottom: 30px;">
+        <div class="item-box">
+          <label class="parameter-box clearfix">
+            <div class="parameter-control">
+              <div class="custom-tumbler">
+                <input type="radio" checked="" name="net-manager" value="FlatDHCPManager">
+                <!-- [if !IE |(gte IE 9)]> --><span>&nbsp;</span><!-- <![endif] -->
+              </div>
+            </div>
+            <div class="parameter-name">RHSM</div>
+          </label>
+        </div>
+      
+        <div class="item-box">
+          <label class="parameter-box clearfix">
+            <div class="parameter-control">
+              <div class="custom-tumbler">
+                <input type="radio" name="net-manager" value="VlanManager">
+                <!-- [if !IE |(gte IE 9)]> --><span>&nbsp;</span><!-- <![endif] -->
+              </div>
+            </div>
+            <div class="parameter-name">RHN Satellite</div>
+          </label>
+        </div>
+    </div>
+
+    <fieldset style="margin-left: 40px;">
+      <div class="control-group">
+        <label class="control-label" style="text-align: left;">RedHat Userame</label>
+        <div class="controls">
+          <input type="text" class="input-large" name="name" maxlength="50" autofocus />
+          <!-- <span class="help-inline"></span> -->
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label" style="text-align: left;">RedHat Password</label>
+        <div class="controls">
+          <input type="password" class="input-large" name="name" maxlength="50" autofocus />
+          <!--
+          <span class="help-inline"></span>
+          <span class="help-block"></span>
+          -->
+        </div>
+      </div>
+       <div class="control-group">
+        <label class="control-label" style="text-align: left;">Satellite Server Hostname</label>
+        <div class="controls">
+          <input type="text" class="input-large" name="name" maxlength="50" autofocus placeholder="example: satellite.domain.com" />
+          <!--
+          <span class="help-inline"></span>
+          <span class="help-block"></span>
+          -->
+        </div>
+      </div>
+       <div class="control-group">
+        <label class="control-label" style="text-align: left;">Activation Key</label>
+        <div class="controls">
+          <input type="password" class="input-large" name="name" maxlength="50" autofocus />
+          <!--
+          <span class="help-inline"></span>
+          <span class="help-block"></span>
+          -->
+        </div>
+      </div>
+    </fieldset>
+  </form>
+</div>
+<div class="modal-footer">
+  <button class="btn" data-dismiss="modal">Cancel</button>
+  <button class="btn btn-success create-cluster-btn">Create</button>
+</div>
+
 
 </div>
