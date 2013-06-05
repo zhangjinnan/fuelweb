@@ -174,7 +174,7 @@ class NodeCollectionHandler(JSONHandler, NICUtils):
             if 'id' in nd:
                 node = q.get(nd["id"])
             else:
-                node = self.validator.validate_and_get_existent_node(nd)
+                node = self.validator.validate_mac_and_get_existent_node(nd)
 
             if is_agent:
                 node.timestamp = datetime.now()
