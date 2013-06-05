@@ -180,7 +180,7 @@ class NodeValidator(BasicValidator):
             q = cls.db.query(Node)
             if q.filter(Node.mac == d["mac"]).first():
                 raise web.webapi.conflict()
-            if cls.validate_existent_node_mac(d):
+            if cls.validate_mac_and_get_existent_node(d):
                 raise web.webapi.conflict()
         if "id" in d:
             raise web.webapi.badrequest(
@@ -191,13 +191,12 @@ class NodeValidator(BasicValidator):
         return d
 
     @classmethod
-    def validate_existent_node_mac(cls, data):
-        if 'meta' in data:
-            MetaValidator.validate(data['meta'])
-            if 'interfaces' in data['meta']:
-                existent_node = cls.db.query(Node).filter(Node.mac.in_(
-                    [n['mac'] for n in data['meta']['interfaces']])).first()
-                return existent_node
+    def validate_mac_and_get_existent_node(cls, data):
+        MetaValidator.validate(data['meta'])
+
+        existent_node = cls.db.query(Node).filter(Node.mac.in_(
+            [n['mac'] for n in data['meta']['interfaces']])).first()
+        return existent_node
 
     @classmethod
     def validate_update(cls, data):
@@ -235,7 +234,7 @@ class NodeValidator(BasicValidator):
             else:
                 if "mac" in nd:
                     existent_node = q.filter_by(mac=nd["mac"]).first() \
-                        or cls.validate_existent_node_mac(nd)
+                        or cls.validate_mac_and_get_existent_node(nd)
                     if not existent_node:
                         raise web.badrequest(
                             "Invalid MAC specified"

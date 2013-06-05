@@ -171,11 +171,11 @@ class NodeCollectionHandler(JSONHandler, NICUtils):
         for nd in data:
             is_agent = nd.pop("is_agent") if "is_agent" in nd else False
             node = None
-            if "mac" in nd:
-                node = q.filter_by(mac=nd["mac"]).first() \
-                    or self.validator.validate_existent_node_mac(nd)
-            else:
+            if 'id' in nd:
                 node = q.get(nd["id"])
+            else:
+                node = self.validator.validate_and_get_existent_node(nd)
+
             if is_agent:
                 node.timestamp = datetime.now()
                 if not node.online:
