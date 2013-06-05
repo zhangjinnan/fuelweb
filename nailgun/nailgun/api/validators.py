@@ -192,11 +192,13 @@ class NodeValidator(BasicValidator):
 
     @classmethod
     def validate_mac_and_get_existent_node(cls, data):
-        MetaValidator.validate(data['meta'])
+        if 'meta' in data:
+            MetaValidator.validate(data['meta'])
 
-        existent_node = cls.db.query(Node).filter(Node.mac.in_(
-            [n['mac'] for n in data['meta']['interfaces']])).first()
-        return existent_node
+            if 'interfaces' in data['meta']:
+                existent_node = cls.db.query(Node).filter(Node.mac.in_(
+                    [n['mac'] for n in data['meta']['interfaces']])).first()
+                return existent_node
 
     @classmethod
     def validate_update(cls, data):
