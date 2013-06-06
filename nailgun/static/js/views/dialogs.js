@@ -10,9 +10,10 @@ define(
     'text!templates/dialogs/remove_cluster.html',
     'text!templates/dialogs/error_message.html',
     'text!templates/dialogs/show_node.html',
-    'text!templates/dialogs/dismiss_settings.html'
+    'text!templates/dialogs/dismiss_settings.html',
+    'text!templates/dialogs/rhel_license.html'
 ],
-function(utils, models, simpleMessageTemplate, createClusterDialogTemplate, changeClusterModeDialogTemplate, discardChangesDialogTemplate, displayChangesDialogTemplate, removeClusterDialogTemplate, errorMessageTemplate, showNodeInfoTemplate, disacardSettingsChangesTemplate) {
+function(utils, models, simpleMessageTemplate, createClusterDialogTemplate, changeClusterModeDialogTemplate, discardChangesDialogTemplate, displayChangesDialogTemplate, removeClusterDialogTemplate, errorMessageTemplate, showNodeInfoTemplate, disacardSettingsChangesTemplate, rhelLicenseTemplate) {
     'use strict';
 
     var views = {};
@@ -149,6 +150,16 @@ function(utils, models, simpleMessageTemplate, createClusterDialogTemplate, chan
             this.releases = new models.Releases();
             this.releases.fetch();
             this.releases.on('sync', this.renderReleases, this);
+        }
+    });
+
+    views.RhelLicenseDialog = views.Dialog.extend({
+        template: _.template(rhelLicenseTemplate),
+        events: {
+            'change input[name=license-type]': 'toggleTypes'
+        },
+        toggleTypes: function() {
+
         }
     });
 
