@@ -227,7 +227,7 @@ define(function() {
             if (_.isNaN(volume.size) || volume.size < 0) {
                 errors[volume.vg] = 'Invalid size';
             } else if (volume.size > options.unallocated) {
-                errors[volume.vg] = 'Maximal size is ' + options.unallocated + ' GB';
+                errors.overallocation = 'The current allocation exceeds the maximum disk size. Reduce the size of one of the volume groups.';
             } else if (volume.size < options.min) {
                 var min_size = Math.round(options.min * 100) / 100;
                 errors[volume.vg] = 'This value is too low. You must allocate at least ' + min_size + ' GB for the operating system.';
