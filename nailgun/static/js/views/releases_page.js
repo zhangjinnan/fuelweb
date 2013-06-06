@@ -9,14 +9,14 @@ function(commonViews, dialogViews, releaseListTemplate) {
 
     var ReleasesPage = commonViews.Page.extend({
         navbarActiveElement: 'releases',
-        breadcrumbsPath: [['Home', '#'], 'OpenStack Releases'],
-        title: 'OpenStack Releases',
+        breadcrumbsPath: [['Home', '#'], 'Releases / Downloads'],
+        title: 'Releases / Downloads',
         template: _.template(releaseListTemplate),
         'events': {
             'click .rhel-license': 'showAccountSettings'
         },
         showAccountSettings: function() {
-            var dialog = dialogViews.RhelLicenseDialog();
+            var dialog = new dialogViews.RhelLicenseDialog();
             this.registerSubView(dialog);
             dialog.render();
         },

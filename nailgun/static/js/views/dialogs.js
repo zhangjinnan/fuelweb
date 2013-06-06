@@ -159,7 +159,7 @@ function(utils, models, simpleMessageTemplate, createClusterDialogTemplate, chan
             'change input[name=license-type]': 'toggleTypes'
         },
         toggleTypes: function() {
-
+            this.$('.control-group').toggleClass('hide');//, this.$('input[name=mode]:checked').val() == 'singlenode');            
         }
     });
 

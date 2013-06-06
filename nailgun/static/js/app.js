@@ -26,7 +26,7 @@ function(models, commonViews, ClusterPage, NodesTab, ClustersPage, ReleasesPage,
             this.content = $('#content');
             this.navbar = new commonViews.Navbar({elements: [
                 ['OpenStack Environments', '#clusters'],
-                ['OpenStack Releases', '#releases'],
+                ['Releases / Downloads', '#releases'],
                 ['Support', '#support']
             ]});
             this.content.before(this.navbar.render().el);
