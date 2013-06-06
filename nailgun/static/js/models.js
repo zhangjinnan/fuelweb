@@ -229,7 +229,8 @@ define(function() {
             } else if (volume.size > options.unallocated) {
                 errors[volume.vg] = 'Maximal size is ' + options.unallocated + ' GB';
             } else if (volume.size < options.min) {
-                errors[volume.vg] = 'Minimal size is ' + options.min + ' GB';
+                var min_size = Math.round(options.min * 100) / 100;
+                errors[volume.vg] = 'This value is too low. You must allocate at least ' + min_size + ' GB for the operating system.';
             }
             return _.isEmpty(errors) ? null : errors;
         }
