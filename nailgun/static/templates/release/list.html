@@ -40,7 +40,7 @@
           <td>RHEL</td>
           <td>6.4</td>
           <td>Not available</td>
-          <td><a href="#" class="rhel-license">Download</a></td>
+          <td><span class="btn-link rhel-license">Download</span></td>
         </tr>
       </tbody>
       </thead>
@@ -99,91 +99,5 @@
 <% } else { %>
   <div class="alert">There are no OpenStack releases available.</div>
 <% } %>
-
-</div>
-
-
-<!-- Modal -->
-<div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-
-  <div class="modal-header">
-  <button type="button" class="close" data-dismiss="modal">×</button>
-  <h3>RedHat Enterprise Linux Account Settings</h3>
-</div>
-<div class="modal-body">
-  <form class="form-horizontal" onsubmit="return false">
-
-    <div class="radio-checkbox-group net-manager" style="margin-left: 38px; margin-bottom: 30px;">
-        <div class="item-box">
-          <label class="parameter-box clearfix">
-            <div class="parameter-control">
-              <div class="custom-tumbler">
-                <input type="radio" checked="" name="net-manager" value="FlatDHCPManager">
-                <!-- [if !IE |(gte IE 9)]> --><span>&nbsp;</span><!-- <![endif] -->
-              </div>
-            </div>
-            <div class="parameter-name">RHSM</div>
-          </label>
-        </div>
-      
-        <div class="item-box">
-          <label class="parameter-box clearfix">
-            <div class="parameter-control">
-              <div class="custom-tumbler">
-                <input type="radio" name="net-manager" value="VlanManager">
-                <!-- [if !IE |(gte IE 9)]> --><span>&nbsp;</span><!-- <![endif] -->
-              </div>
-            </div>
-            <div class="parameter-name">RHN Satellite</div>
-          </label>
-        </div>
-    </div>
-
-    <fieldset style="margin-left: 40px;">
-      <div class="control-group">
-        <label class="control-label" style="text-align: left;">RedHat Userame</label>
-        <div class="controls">
-          <input type="text" class="input-large" name="name" maxlength="50" autofocus />
-          <!-- <span class="help-inline"></span> -->
-        </div>
-      </div>
-      <div class="control-group">
-        <label class="control-label" style="text-align: left;">RedHat Password</label>
-        <div class="controls">
-          <input type="password" class="input-large" name="name" maxlength="50" autofocus />
-          <!--
-          <span class="help-inline"></span>
-          <span class="help-block"></span>
-          -->
-        </div>
-      </div>
-       <div class="control-group">
-        <label class="control-label" style="text-align: left;">Satellite Server Hostname</label>
-        <div class="controls">
-          <input type="text" class="input-large" name="name" maxlength="50" autofocus placeholder="example: satellite.domain.com" />
-          <!--
-          <span class="help-inline"></span>
-          <span class="help-block"></span>
-          -->
-        </div>
-      </div>
-       <div class="control-group">
-        <label class="control-label" style="text-align: left;">Activation Key</label>
-        <div class="controls">
-          <input type="password" class="input-large" name="name" maxlength="50" autofocus />
-          <!--
-          <span class="help-inline"></span>
-          <span class="help-block"></span>
-          -->
-        </div>
-      </div>
-    </fieldset>
-  </form>
-</div>
-<div class="modal-footer">
-  <button class="btn" data-dismiss="modal">Cancel</button>
-  <button class="btn btn-success create-cluster-btn">Create</button>
-</div>
-
 
 </div>
