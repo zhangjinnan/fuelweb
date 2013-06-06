@@ -1,9 +1,10 @@
 define(
 [
     'views/common',
+    'views/dialogs',
     'text!templates/release/list.html'
 ],
-function(commonViews, releaseListTemplate) {
+function(commonViews, dialogViews, releaseListTemplate) {
     'use strict';
 
     var ReleasesPage = commonViews.Page.extend({
@@ -11,6 +12,14 @@ function(commonViews, releaseListTemplate) {
         breadcrumbsPath: [['Home', '#'], 'OpenStack Releases'],
         title: 'OpenStack Releases',
         template: _.template(releaseListTemplate),
+        'events': {
+            'click .rhel-license': 'showAccountSettings'
+        },
+        showAccountSettings: function() {
+            var dialog = dialogViews.RhelLicenseDialog();
+            this.registerSubView(dialog);
+            dialog.render();
+        },
         initialize: function() {
             this.collection.on('sync', this.render, this);
         },
