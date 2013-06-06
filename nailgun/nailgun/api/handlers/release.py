@@ -13,6 +13,8 @@ class ReleaseHandler(JSONHandler):
     fields = (
         "id",
         "name",
+        "operation_system",
+        "distribution",
         "version",
         "description"
     )
