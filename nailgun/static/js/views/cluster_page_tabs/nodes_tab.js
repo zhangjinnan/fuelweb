@@ -722,7 +722,9 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
                 size = Number((this.$('input[name=' + group + ']').val()).replace(',', '.'));
             }
             this.$('input[name=' + group + ']').removeClass('error').parents('.volume-group').next().text('');
-            this.$('.overallocation-error-message').text('');
+            if (!this.$('input.error').length) {
+                this.$('.overallocation-error-message').text('');
+            }
             var volumes = _.cloneDeep(this.volumes);
             var volume = _.find(volumes, {vg: group});
             var unallocated = (this.diskSize - this.countAllocatedSpace() + volume.size).toFixed(2);

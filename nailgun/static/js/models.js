@@ -1,4 +1,4 @@
-define(function() {
+define(['utils'],function(utils) {
     'use strict';
 
     var models = {};
@@ -224,10 +224,12 @@ define(function() {
         validate: function(attrs, options) {
             var errors = {};
             var volume = _.find(attrs.volumes, {vg: options.group});
+            var diskSize = utils.showDiskSize(attrs.size);
             if (_.isNaN(volume.size) || volume.size < 0) {
                 errors[volume.vg] = 'Invalid size';
             } else if (volume.size > options.unallocated) {
-                errors.overallocation = 'The current allocation exceeds the maximum disk size. Reduce the size of one of the volume groups.';
+                errors.overallocation = 'The current allocation exceeds the maximum disk size of ' + diskSize +
+                    '. Reduce the size of one of the volume groups.';
             } else if (volume.size < options.min) {
                 var min_size = Math.round(options.min * 100) / 100;
                 errors[volume.vg] = 'This value is too low. You must allocate at least ' + min_size + ' GB for the operating system.';
