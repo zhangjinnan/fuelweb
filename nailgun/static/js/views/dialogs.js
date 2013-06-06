@@ -68,7 +68,8 @@ function(utils, models, simpleMessageTemplate, createClusterDialogTemplate, chan
         events: {
             'click .create-cluster-btn:not(.disabled)': 'createCluster',
             'keydown input': 'onInputKeydown',
-            'change select[name=release]': 'updateReleaseDescription'
+            'change select[name=release]': 'updateReleaseDescription',
+            'change select[name=operation_system]': 'renderDistribution'
         },
         createCluster: function() {
             this.$('.control-group').removeClass('error').find('.help-inline').text('');
@@ -106,13 +107,36 @@ function(utils, models, simpleMessageTemplate, createClusterDialogTemplate, chan
                 this.createCluster();
             }
         },
+
         renderReleases: function(e) {
+            this.renderOS();
+            this.renderDistribution()
             var input = this.$('select[name=release]');
             input.html('');
+
             this.releases.each(function(release) {
-                input.append($('<option/>').attr('value', release.id).text(release.get('name')));
+                if (_.contains(release.get('operation_system'), this.$('select[name=operation_system]').val())){
+                    input.append($('<option/>').attr('value', release.id).text(release.get('name')));
+                }                
             }, this);
-            this.updateReleaseDescription();
+        },
+        renderOS: function() {
+            var input = this.$('select[name=operation_system]');
+            input.html('');
+            this.releases.each(function(release) {
+                input.append($('<option/>').attr('value', release.get('operation_system')).text(release.get('operation_system')));
+            }, this);
+        },
+        renderDistribution: function() {
+            var input = this.$('select[name=distribution]');
+            input.html('');
+            this.releases.each(function(release) {
+                if (_.contains(release.get('operation_system'), this.$('select[name=operation_system]').val())){
+                    _(release.get('distribution')).forEach(function(distribution){
+                        input.append($('<option/>').attr('value', distribution).text(distribution));    
+                    });                                        
+                }
+            }, this);
         },
         updateReleaseDescription: function() {
             if (this.releases.length) {

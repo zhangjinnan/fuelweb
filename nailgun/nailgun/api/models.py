@@ -28,11 +28,13 @@ Base = declarative_base()
 
 class Release(Base):
     __tablename__ = 'releases'
-    __table_args__ = (
-        UniqueConstraint('name', 'version'),
-    )
+    # __table_args__ = (
+    #     UniqueConstraint('name', 'version'),
+    # )
     id = Column(Integer, primary_key=True)
     name = Column(Unicode(100), nullable=False)
+    operation_system = Column(JSON, default=[])
+    distribution = Column(JSON, default=[])
     version = Column(String(30), nullable=False)
     description = Column(Unicode)
     networks_metadata = Column(JSON, default=[])
