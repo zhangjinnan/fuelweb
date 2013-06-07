@@ -20,8 +20,24 @@ function(commonViews, dialogViews, releaseListTemplate) {
             this.registerSubView(dialog);
             dialog.render();
         },
+        downloadStarted: function() {
+            this.$('.rhel-license, #download_progress').toggleClass('hide');
+            this.progress = 0;
+            this.renderProgress();
+        },
+        renderProgress: function(){
+            if (this.progress <= 100){
+                this.progress++;
+                this.$('.bar').css('width', this.progress+'%');
+                window.setTimeout(_.bind(this.renderProgress, this), 200);
+            } else {
+                this.$('#download_progress, .available, .not-available').toggleClass('hide');
+
+            }
+        },
         initialize: function() {
             this.collection.on('sync', this.render, this);
+
         },
         render: function() {
             this.$el.html(this.template({releases: this.collection}));

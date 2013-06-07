@@ -156,7 +156,12 @@ function(utils, models, simpleMessageTemplate, createClusterDialogTemplate, chan
     views.RhelLicenseDialog = views.Dialog.extend({
         template: _.template(rhelLicenseTemplate),
         events: {
+            'click .btn-success': 'saveSettings',
             'change input[name=license-type]': 'toggleTypes'
+        },
+        saveSettings: function() {
+            this.$el.modal('hide');
+            app.page.downloadStarted();
         },
         toggleTypes: function() {
             this.$('.control-group').toggleClass('hide');//, this.$('input[name=mode]:checked').val() == 'singlenode');            
