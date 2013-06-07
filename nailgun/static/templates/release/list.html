@@ -29,18 +29,24 @@
           <td>CentOS</td>
           <td>6.4</td>
           <td>Available</td>
-          <td>
-            <div class="progress progress-success progress-striped active" style="margin-bottom: 0px;">
-              <div class="bar" style="width: 40%;"></div>
-            </div>
-            <div style="display: block; width: 100%; margin-top: -21px; font-size: 11px; text-align: center;">Installing RHEL</div>
-          </td>
+          <td></td>
         </tr>
         <tr>
           <td>RHEL</td>
           <td>6.4</td>
-          <td>Not available</td>
-          <td><span class="btn-link rhel-license">Download</span></td>
+          <td>
+            <span class="not-available">Not available</span>
+            <span class="available hide">Available</span>
+          </td>
+          <td>
+            <span class="btn-link rhel-license">Download</span>
+              <div id="download_progress" class="hide">
+                <div class="progress progress-success progress-striped active" style="margin-bottom: 0px;">
+                  <div class="bar" style="width: 0%;"></div>
+                </div>
+                <div style="display: block; width: 100%; margin-top: -21px; font-size: 11px; text-align: center;">Downloading RHEL</div>
+              </div>
+          </td>
         </tr>
       </tbody>
       </thead>
@@ -53,10 +59,10 @@
     <thead>
         <tr>
           <th width="52%">Name</th>
-          <th width="12%">OS</th>
-          <th width="12%">Version</th>
-          <th width="12%">Status</th>
-          <th width="12%">Action</th>
+          <th width="16%">OS</th>
+          <th width="16%">Version</th>
+          <th width="16%">Status</th>
+          <!-- <th width="12%">Action</th> -->
         </tr>
         <tbody>
         <tr>
@@ -64,21 +70,24 @@
           <td>CentOS</td>
           <td>Grizzly-2013.1</td>
           <td>Available</td>
-          <td></td>
+          <!-- <td></td> -->
         </tr>
         <tr>
           <td>RedHat OpenStack (RHOS)</td>
           <td>RHEL</td>
           <td>Grizzly-2013.1</td>
-          <td>Not available</td>
-          <td><a href="#">Download</a></td>
+          <td>
+            <span class="not-available">Not available</span>
+            <span class="available hide">Available</span>
+          </td>
+          <!-- <td><a href="#">Download</a></td> -->
         </tr>
       </tbody>
       </thead>
   
   </table>
 
-  <section>
+<!--   <section>
     <table class="table table-bordered table-releases">
       <thead>
         <tr>
@@ -95,7 +104,7 @@
         <% }) %>
       </tbody>
     </table>
-  </section>
+  </section> -->
 <% } else { %>
   <div class="alert">There are no OpenStack releases available.</div>
 <% } %>
