@@ -1,13 +1,13 @@
-#!/bin/bash
+#!/bin/bash -x
 #Register
-subscription-manager register "--username=<%= rh_username %>" "--password=<%= rh_password %>" --autosubscribe
+subscription-manager register "--username=<%= rh_username %>" "--password=<%= rh_password %>" --autosubscribe --force
 
 #Attach to RHOS product
-poolid="$(subscription-manager list --available | grep -A2 "Red Hat OpenStack" | tail -1 | cut -f2)" 
+poolid="$(subscription-manager list --available | grep -A2 "Red Hat OpenStack" | tail -1 | cut -c15-)" 
 subscription-manager attach "--pool=$poolid"
 
 #Enable channels
-for channel in <%= rh_channels %>; do
+for channel in <%= rh_base_channels %> <%= rh_openstack_channel %>; do
   yum-config-manager --enable "$channel"
 done
  
@@ -56,18 +56,28 @@ fi
 <% end %>
 
 #Download packages
-mkdir -p /var/www/nailgun/rhel/6.4/nailgun/x86_64/repodata
-yumdownloader --releasever=<%= releasever %> --disablerepo='*' --enablerepo='rhel*' --resolve --destdir /var/www/nailgun/rhel/6.4/nailgun/x86_64 $(cat /etc/nailgun/required-rpms.txt | xargs echo -en)
+mkdir -p <%= pkgdir %>/repodata <%= pkgdir %>/Packages
+#yumdownloader --releasever=<%= releasever %> --disablerepo='*' --enablerepo='rhel*' --resolve --destdir "<%= pkgdir %>/Packages" $(cat /etc/nailgun/required-rpms.txt | xargs echo -en)
+
+yum-config-manager --disable 'nailgun' &> /dev/null
+yum-config-manager --disable 'centos' &> /dev/null
+echo 6Server > /etc/yum/vars/releasever
+yum --releasever=<%= releasever %> makecache
+repotrack -a x86_64 -p "<%= pkgdir %>/Packages" $(cat /etc/nailgun/required-rpms.txt | xargs echo -en)
+rm -f /etc/yum/vars/releasever
+yum-config-manager --enable 'nailgun' &> /dev/null
+yum-config-manager --enable 'centos' &> /dev/null
 
 #Run again just for good measure
-yumdownloader --releasever=<%= releasever %> --disablerepo='*' --enablerepo='rhel*' --resolve --destdir /var/www/nailgun/rhel/6.4/nailgun/x86_64 $(cat /etc/nailgun/required-rpms.txt | xargs echo -en)
+#yumdownloader --releasever=<%= releasever %> --disablerepo='*' --enablerepo='rhel*' --resolve --destdir "<%= pkgdir %>/Packages" $(cat /etc/nailgun/required-rpms.txt | xargs echo -en)
 
 #Disable all RHEL repos so you don't accidentally update and break master node
-yum-config-manager --disable '*rhel*' > /dev/null
+yum-config-manager --disable '*rhel*' &> /dev/null
 
 
 #Need to include RH comps.xml here instead
-cp /var/www/nailgun/centos/6.3/nailgun/x86_64/repodata/comps.xml /var/www/nailgun/rhel/6.4/nailgun/x86_64/repodata/comps.xml
+cp /var/www/nailgun/centos/6.3/nailgun/x86_64/repodata/comps.xml "<%= pkgdir %>/repodata/comps.xml"
 
-createrepo -g /var/www/nailgun/rhel/repodata/comps.xml /var/www/nailgun/rhel
-
+#Purge Django 1.3 RPM
+rm -f <%= pkgdir %>/Packages/Django-1.3*
+createrepo -g <%= pkgdir %>/repodata/comps.xml <%= pkgdir %>
