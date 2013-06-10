@@ -230,9 +230,6 @@ class TestNode(Base):
         self._bootstrap_nodes(['slave1', 'slave2', 'slave3'])
         cluster_id = self._create_cluster(name='empty')
 
-        self.client.put("/api/clusters/%s" % cluster_id,
-                        {"mode": "multinode", "type": "both"})
-
         # fetch nodes list
         response = self.client.get('/api/nodes')
         nodes = json.loads(response.read())
@@ -250,16 +247,21 @@ class TestNode(Base):
                           {'id': nodes[2]['id'], 'cluster_id': cluster_id,
                           'role': 'cinder', 'pending_addition': 'true',
                           'pending_deletion': 'false'}]
-        # Put initial nodes and apply changes
+        # Put nodes and apply changes
         self.client.put("/api/nodes", nodes_put_data)
-        response = self.client.put("/api/clusters/%s/changes"
-                                   % cluster_id, {})
-        task = json.loads(response.read())
-        logging.info("Deployment task: ")
-        logging.info(json.dumps(task))
-
-        # wait for the task completion
+        task = self._launch_provisioning(cluster_id)
         self._task_wait(task, 'Deployment', 60 * 20)
+
+        # verify node's role
+        node_controller = self._get_node(nodes[0]['id'])
+        self.assertEquals(node_controller['role'], 'controller', 'Node %d is controller' % nodes[0]['id'])
+
+        node_controller = self._get_node(nodes[1]['id'])
+        self.assertEquals(node_controller['role'], 'compute', 'Node %d is compute' % nodes[0]['id'])
+
+        node_controller = self._get_node(nodes[2]['id'])
+        self.assertEquals(node_controller['role'], 'cinder', 'Node %d is cinder' % nodes[0]['id'])
+
 
     @snapshot_errors
     def test_one_node_provisioning(self):
@@ -956,3 +958,7 @@ class TestNode(Base):
         for node in ci.environment.nodes:
             node.restore_snapshot('initial')
             sleep(5)
+
+    def _get_node(self, node_id):
+        response = self.client.get("/api/nodes/%s" % node_id)
+        return json.loads(response.read())
