@@ -413,5 +413,15 @@ define(function() {
         url: '/api/logs/sources'
     });
 
+    models.RedHatAccount = Backbone.Model.extend({
+        constructorName: 'RedHatAccount',
+        urlRoot: '/api/redhat/account'
+    });
+
+    models.RedHatAccounts = Backbone.Collection.extend({
+        model: models.RedHatAccount,
+        urlRoot: '/api/redhat/account'
+    });
+
     return models;
 });

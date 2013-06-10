@@ -453,3 +453,28 @@ class NetAssignmentValidator(BasicValidator):
                 message="Too few neworks to assign to node '%d'" %
                         node['id']
             )
+
+
+class RedHatLicenseValidator(BasicValidator):
+    @classmethod
+    def validate(cls, data):
+        d = cls.validate_json(data)
+        if not "license_type" in d:
+            raise web.webapi.badrequest(
+                message="No License Type specified"
+            )
+        if data["license_type"] not in ["rhsm", "rhn"]:
+            raise web.webapi.badrequest(
+                message="Invalid License Type"
+            )
+        if d["license_type"] == "rhsm":
+            if "username" not in d or "password" not in d:
+                raise web.webapi.badrequest(
+                    message="Username or password not specified"
+                )
+        else:
+            if "hostname" not in d or "activation_key" not in d:
+                raise web.webapi.badrequest(
+                    message="Satellite hostname or activation key "
+                            "not specified"
+                )

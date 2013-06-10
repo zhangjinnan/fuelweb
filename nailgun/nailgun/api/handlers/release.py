@@ -5,7 +5,7 @@ import json
 import web
 
 from nailgun.api.models import Release
-from nailgun.api.validators import ReleaseValidator
+from nailgun.api.validators import ReleaseValidator, RedHatLicenseValidator
 from nailgun.api.handlers.base import JSONHandler, content_json
 
 
@@ -68,3 +68,14 @@ class ReleaseCollectionHandler(JSONHandler):
             ReleaseHandler.render(release),
             indent=4
         ))
+
+
+class RedHatLicenseHandler(JSONHandler):
+
+    validator = RedHatLicenseValidator
+
+    @content_json
+    def POST(self):
+        data = self.validator.validate(web.data())
+        # TODO: activate and save status
+        raise web.accepted(data=data)

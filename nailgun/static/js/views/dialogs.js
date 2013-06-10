@@ -158,13 +158,33 @@ function(utils, models, simpleMessageTemplate, createClusterDialogTemplate, chan
         events: {
             'click .btn-success': 'saveSettings',
             'change input[name=license-type]': 'toggleTypes'
+            'change input[type=text]': 'validate'
         },
         saveSettings: function() {
-            this.$el.modal('hide');
+            this.account.license_type = this.$('input[name=license-type]:checked').val();
+            if (this.account.license_type == 'rhsm') {
+                this.account.username = this.$('input[name=username').val();
+                this.account.password = this.$('input[name=password').val();
+            }
+            else {
+                this.account.hostname = this.$('input[name=hostname').val();
+                this.account.activation_key = this.$('input[name=activation_key').val();   
+            }
+
+            this.model.save({}, {url: _.result(this.model, 'url'), type: 'POST'})
+                .done(_.bind(function() {
+                    this.$el.modal('hide');
+                    app.page.downloadStarted();
+                }, this))
+                .fail(_.bind(this.displayErrorMessage, this));
             app.page.downloadStarted();
         },
         toggleTypes: function() {
-            this.$('.control-group').toggleClass('hide');//, this.$('input[name=mode]:checked').val() == 'singlenode');            
+            this.account.license_type = this.$('input[name=license-type]:checked').val()
+            this.$('.control-group').toggleClass('hide');
+        },
+        validate: function(e) {
+            var a = 2;
         }
     });
 

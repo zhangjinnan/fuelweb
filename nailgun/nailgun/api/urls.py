@@ -99,7 +99,9 @@ urls = (
     r'/logs/sources/nodes/(?P<node_id>\d+)/?$',
     'LogSourceByNodeCollectionHandler',
     r'/version/?$',
-    'VersionHandler'
+    'VersionHandler',
+    r'redhat/account,
+    ''
 )
 
 api_app = web.application(urls, locals())

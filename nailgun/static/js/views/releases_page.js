@@ -16,7 +16,7 @@ function(commonViews, dialogViews, releaseListTemplate) {
             'click .rhel-license': 'showAccountSettings'
         },
         showAccountSettings: function() {
-            var dialog = new dialogViews.RhelLicenseDialog();
+            var dialog = new dialogViews.RhelLicenseDialog({model: this.model});
             this.registerSubView(dialog);
             dialog.render();
         },
@@ -37,7 +37,7 @@ function(commonViews, dialogViews, releaseListTemplate) {
         },
         initialize: function() {
             this.collection.on('sync', this.render, this);
-
+            this.account = new models.RedHatAccount();
         },
         render: function() {
             this.$el.html(this.template({releases: this.collection}));
