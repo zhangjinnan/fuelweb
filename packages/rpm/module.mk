@@ -51,21 +51,6 @@ $(BUILD_DIR)/packages/rpm/rpm-nailgun-net-check.done: \
 	sudo sh -c "$${SANDBOX_DOWN}"
 	$(ACTION.TOUCH)
 
-$(BUILD_DIR)/packages/rpm/rpm-rbenv-ruby.done: SANDBOX:=$(BUILD_DIR)/packages/rpm/SANDBOX
-$(BUILD_DIR)/packages/rpm/rpm-rbenv-ruby.done: export SANDBOX_UP:=$(SANDBOX_UP)
-$(BUILD_DIR)/packages/rpm/rpm-rbenv-ruby.done: export SANDBOX_DOWN:=$(SANDBOX_DOWN)
-$(BUILD_DIR)/packages/rpm/rpm-rbenv-ruby.done: \
-		$(BUILD_DIR)/packages/rpm/prep.done \
-		$(SOURCE_DIR)/packages/rpm/specs/rbenv-ruby-1.9.3-p392.spec
-	sudo sh -c "$${SANDBOX_UP}"
-	sudo mkdir -p $(SANDBOX)/tmp/SOURCES
-	sudo cp $(LOCAL_MIRROR_SRC)/* $(SANDBOX)/tmp/SOURCES
-	sudo cp $(SOURCE_DIR)/packages/rpm/specs/rbenv-ruby-1.9.3-p392.spec $(SANDBOX)/tmp
-	sudo chroot $(SANDBOX) rpmbuild -vv --define "_topdir /tmp" -ba /tmp/rbenv-ruby-1.9.3-p392.spec
-	cp $(SANDBOX)/tmp/RPMS/x86_64/rbenv-ruby-*.rpm $(BUILD_DIR)/packages/rpm/RPMS/x86_64/
-	sudo sh -c "$${SANDBOX_DOWN}"
-	$(ACTION.TOUCH)
-
 MCOLLECTIVE_COMMIT:=9f8d2ec75ba326d2a37884224698f3f96ff01629
 $(BUILD_DIR)/packages/rpm/rpm-mcollective.done: SANDBOX:=$(BUILD_DIR)/packages/rpm/SANDBOX
 $(BUILD_DIR)/packages/rpm/rpm-mcollective.done: export SANDBOX_UP:=$(SANDBOX_UP)
@@ -88,7 +73,6 @@ $(BUILD_DIR)/packages/rpm/repo.done: \
 		$(BUILD_DIR)/packages/rpm/rpm-nailgun-agent.done \
 		$(BUILD_DIR)/packages/rpm/rpm-nailgun-mcagents.done \
 		$(BUILD_DIR)/packages/rpm/rpm-nailgun-net-check.done \
-		$(BUILD_DIR)/packages/rpm/rpm-rbenv-ruby.done \
 		$(BUILD_DIR)/packages/rpm/rpm-mcollective.done
 	find $(BUILD_DIR)/packages/rpm/RPMS -name '*.rpm' -exec cp -u {} $(LOCAL_MIRROR_CENTOS_OS_BASEURL)/Packages \;
 	createrepo -g $(LOCAL_MIRROR_CENTOS_OS_BASEURL)/repodata/comps.xml \

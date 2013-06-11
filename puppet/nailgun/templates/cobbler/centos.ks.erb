@@ -117,6 +117,15 @@ openssh-clients
 openssh-server
 ruby-augeas
 ruby-devel
+rubygem-cstruct
+rubygem-httpclient
+rubygem-json
+rubygem-ohai
+rubygem-rethtool
+rubygem-yajl-ruby
+rubygem-rspec
+rubygem-rake-compiler
+rubygems
 system-config-firewall-base
 wget
 yum
@@ -133,10 +142,6 @@ $SNIPPET('mcollective_install_if_enabled')
 # HERE ARE COMMANDS THAT WILL BE LAUNCHED JUST AFTER
 # INSTALLATION ITSELF COMPLETED
 %post
-gem install httpclient --version 2.2.5  --source <%= gem_source %> --no-ri --no-rdoc
-gem install json       --version 1.6.1  --source <%= gem_source %> --no-ri --no-rdoc
-gem install ohai       --version 6.14.0 --source <%= gem_source %> --no-ri --no-rdoc
-gem install rethtool   --version 0.0.3  --source <%= gem_source %> --no-ri --no-rdoc
 mkdir -p /etc/nailgun-agent/
 cat > /etc/nailgun-agent/config.yaml << EOA
 ---

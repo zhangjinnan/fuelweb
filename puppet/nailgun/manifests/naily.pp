@@ -15,11 +15,12 @@ class nailgun::naily(
   exec { 'configure-rubygems':
     command => '/opt/rbenv/bin/rbenv exec gem sources -r http://rubygems.org/',
     environment => ['RBENV_ROOT=/opt/rbenv', 'RBENV_VERSION=1.9.3-p392'],
-    require => Package['rbenv-ruby-1.9.3-p392-0.0.1-1'],
+    require => Package['rbenv-ruby-1.9.3-p392-0.0.1-1', 'ruby-devel'],
     logoutput => true,
   }
 
   package { 'rbenv-ruby-1.9.3-p392-0.0.1-1': }
+  package { 'ruby-devel': }
 
   file { '/usr/bin/nailyd':
     content => template('nailgun/nailyd.erb'),
