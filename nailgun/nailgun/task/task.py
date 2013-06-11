@@ -260,8 +260,13 @@ class ProvisionTask(object):
                         (node.name, node.id)
                     )
 
+            if cluster_attrs.get('profile', '') == 'rhel':
+                cobbler_profile = settings.COBBLER_RHEL_PROFILE
+            else
+                cobbler_profile = settings.COBBLER_CENTOS_PROFILE
+
             node_data = {
-                'profile': settings.COBBLER_PROFILE,
+                'profile': cobbler_profile,
                 'power_type': 'ssh',
                 'power_user': 'root',
                 'power_address': node.ip,
