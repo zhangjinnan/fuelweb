@@ -31,26 +31,26 @@ $(BUILD_DIR)/mirror/rhel/yum-config.done: \
 		$(BUILD_DIR)/mirror/rhel/etc/yum/pluginconf.d/priorities.conf
 	$(ACTION.TOUCH)
 
+$(BUILD_DIR)/mirror/rhel/yum.done: $(call depv,REQUIRED_RHEL_RPMS)
 $(BUILD_DIR)/mirror/rhel/yum.done: \
-		$(BUILD_DIR)/mirror/rhel/yum-config.done \
-		$(SOURCE_DIR)/requirements-rpm.txt
+		$(BUILD_DIR)/mirror/rhel/yum-config.done
 	yum -c $(BUILD_DIR)/mirror/rhel/etc/yum.conf clean all
 	rm -rf /var/tmp/yum-$$USER-*/
 	yumdownloader -q --resolve --archlist=$(CENTOS_ARCH) \
 		-c $(BUILD_DIR)/mirror/rhel/etc/yum.conf \
 		--destdir=$(LOCAL_MIRROR_RHEL)/Packages \
-		`echo $(REQUIRED_RPMS) | /bin/sed 's/-[0-9][0-9\.a-zA-Z_-]\+//g'`
+		`echo $(REQUIRED_RHEL_RPMS) | /bin/sed 's/-[0-9][0-9\.a-zA-Z_-]\+//g'`
 	$(ACTION.TOUCH)
 
+show-yum-urls-rhel: $(call depv,REQUIRED_RHEL_RPMS)
 show-yum-urls-rhel: \
-		$(BUILD_DIR)/mirror/rhel/yum-config.done \
-		$(SOURCE_DIR)/requirements-rpm.txt
+		$(BUILD_DIR)/mirror/rhel/yum-config.done
 	yum -c $(BUILD_DIR)/mirror/rhel/etc/yum.conf clean all
 	rm -rf /var/tmp/yum-$$USER-*/
 	yumdownloader --urls -q --resolve --archlist=$(CENTOS_ARCH) \
 		-c $(BUILD_DIR)/mirror/rhel/etc/yum.conf \
 		--destdir=$(LOCAL_MIRROR_RHEL)/Packages \
-		`echo $(REQUIRED_RPMS) | /bin/sed 's/-[0-9][0-9\.a-zA-Z_-]\+//g'`
+		`echo $(REQUIRED_RHEL_RPMS) | /bin/sed 's/-[0-9][0-9\.a-zA-Z_-]\+//g'`
 
 $(LOCAL_MIRROR_RHEL)/repodata/comps.xml: \
 		export COMPSXML=$(shell wget -qO- $(MIRROR_RHEL)/repodata/repomd.xml | grep -m 1 '$(@F)' | awk -F'"' '{ print $$2 }')
@@ -63,8 +63,16 @@ $(LOCAL_MIRROR_RHEL)/repodata/comps.xml:
 		wget -O $@ $(MIRROR_RHEL)/$${COMPSXML}; \
 	fi
 
+$(BUILD_DIR)/mirror/rhel/fuel.done:
+	mkdir -p $(LOCAL_MIRROR)/mirror/rhel/fuel/Packages
+	-wget -c -i $(SOURCE_DIR)/req-fuel-rhel.txt -B http://download.mirantis.com/epel-fuel-grizzly/x86_64/ -P $(LOCAL_MIRROR)/rhel/fuel/Packages
+	-wget -c -i $(SOURCE_DIR)/req-fuel-rhel.txt -B http://download.mirantis.com/epel-fuel-grizzly/noarch/ -P $(LOCAL_MIRROR)/rhel/fuel/Packages
+	-wget -c -i $(SOURCE_DIR)/req-fuel-rhel.txt -B http://srv11-msk.msk.mirantis.net/rhel6/fuel-rpms/x86_64/ -P $(LOCAL_MIRROR)/rhel/fuel/Packages
+	$(ACTION.TOUCH)
+
 $(BUILD_DIR)/mirror/rhel/repo.done: \
 		$(BUILD_DIR)/mirror/rhel/yum.done \
+		$(BUILD_DIR)/mirror/rhel/fuel.done \
 		| $(LOCAL_MIRROR_RHEL)/repodata/comps.xml
 	createrepo -g $(LOCAL_MIRROR_RHEL)/repodata/comps.xml \
 		-o $(LOCAL_MIRROR_RHEL)/ $(LOCAL_MIRROR_RHEL)/

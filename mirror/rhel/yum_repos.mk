@@ -34,24 +34,39 @@ priority=1
 endef
 
 define rhel_yum_repo_rhel
-[rhel-base-mirror]
-name=RHEL mirror
+[rhel-os-30-puddle]
+name=OpenStack-3.0-Puddle
+baseurl=http://srv11-msk.msk.mirantis.net/rhel6/OpenStack-3.0-Puddle
+gpgcheck=0
+enabled=1
+
+[rhel-server-rpms]
+name=rhel-6-server-rpms
 baseurl=http://srv11-msk.msk.mirantis.net/rhel6/rhel-6-server-rpms
 gpgcheck=0
 enabled=1
-priority=2
 
-[rhel-os-mirror]
-name=RHOS mirror
-baseurl=http://srv11-msk.msk.mirantis.net/rhel6/rhel-server-ost-6-folsom-rpms/
+[rhel-server-optional-rpms]
+name=rhel-6-server-optional-rpms
+baseurl=http://srv11-msk.msk.mirantis.net/rhel6/rhel-6-server-optional-rpms
 gpgcheck=0
 enabled=1
-priority=2
 
-[rhel-fuel-temporary]
-name=RHOS mirror
-baseurl=http://srv08-srt.srt.mirantis.net/rhel6/fuel-rpms/
+[rhel-ha-rpms]
+name=rhel-ha-for-rhel-6-server-rpms
+baseurl=http://srv11-msk.msk.mirantis.net/rhel6/rhel-ha-for-rhel-6-server-rpms
 gpgcheck=0
 enabled=1
-priority=2
+
+[rhel-lb-rpms]
+name=rhel-lb-for-rhel-6-server-rpms
+baseurl=http://srv11-msk.msk.mirantis.net/rhel6/rhel-lb-for-rhel-6-server-rpms
+gpgcheck=0
+enabled=1
+
+[rhel-rs-rpms]
+name=rhel-rs-for-rhel-6-server-rpms
+baseurl=http://srv11-msk.msk.mirantis.net/rhel6/rhel-rs-for-rhel-6-server-rpms
+gpgcheck=0
+enabled=1
 endef
