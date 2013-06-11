@@ -115,7 +115,7 @@ file {"/var/lib/cobbler/snippets/dhclient_ignore_routers_opt":
     require => Cobbler_distro["centos-x86_64"],
   }
 
-  cobbler_distro { "rhel63-x86_64":
+  cobbler_distro { "rhel-x86_64":
     kernel => "${repo_root}/rhel/isolinux/vmlinuz",
     initrd => "${repo_root}/rhel/isolinux/initrd.img",
     arch => "x86_64",
@@ -125,13 +125,13 @@ file {"/var/lib/cobbler/snippets/dhclient_ignore_routers_opt":
     require => Class["cobbler::server"],
   }
 
-  cobbler_profile { "rhel63-x86_64":
-    kickstart => "/var/lib/cobbler/kickstarts/centos63-x86_64.ks",
+  cobbler_profile { "rhel-x86_64":
+    kickstart => "/var/lib/cobbler/kickstarts/centos-x86_64.ks",
     kopts => "",
-    distro => "rhel63-x86_64",
+    distro => "rhel-x86_64",
     ksmeta => "",
     menu => true,
-    require => Cobbler_distro["rhel63-x86_64"],
+    require => Cobbler_distro["rhel-x86_64"],
   }
 
   cobbler_distro { "bootstrap":
