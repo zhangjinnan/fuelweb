@@ -84,6 +84,7 @@ wxGTK-gl
 wxGTK
 ruby-irb
 ruby-rdoc
+rubygems
 tk
 unixODBC
 screen
@@ -106,6 +107,7 @@ openaislib
 python-rhsm
 python-six
 python-webob1.2
+python-webob1.0
 subscription-manager
 usermode
 resource-agents
@@ -120,4 +122,19 @@ openais
 openaislib
 python-rhsm
 python-six
-python-webob1.2
+openvswitch-controller
+openvswitch
+iproute
+iproute-doc
+kernel-devel
+openstack-quantum
+openstack-quantum-openvswitch
+openstack-selinux
+python-oslo-config
+python-quantumclient
+python-stevedore
+mlocate
+wxGTK
+rsyslog-relp
+redhat-rpm-config
+python-webob
