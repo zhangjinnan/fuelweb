@@ -26,9 +26,11 @@ NET_EXCLUDE:
   - "<%= @exclude_network %>/<%= @exclude_cidr %>"
 
 ADMIN_NETWORK:
+  cidr: "<%= @admin_network %>/<%= @admin_network_cidr %>"
+  netmask: "<%= @admin_network_netmask %>"
+  size: "<%= @admin_network_size %>"
   first: "<%= @admin_network_first %>"
   last: "<%= @admin_network_last %>"
-  netmask: "<%= @admin_network_netmask %>"
 
 VLANS_RANGE_START: "100"
 VLANS_RANGE_END: "1000"
@@ -41,8 +43,8 @@ RABBITMQ:
   password: "<%= rabbitmq_naily_password %>"
   virtual_host: "/"
 
-CUSTOM_LOG: "/var/log/nailgun.log"
-ACCESS_LOG: "/var/log/nailgun_access.log"
+APP_LOG: "/var/log/nailgun/app.log"
+API_LOG: "/var/log/nailgun/api.log"
 
 PATH_TO_SSH_KEY: "/root/.ssh/id_rsa"
 PATH_TO_BOOTSTRAP_SSH_KEY: "/root/.ssh/bootstrap.rsa"
@@ -52,7 +54,7 @@ MASTER_IP: "<%= ipaddress %>"
 COBBLER_URL: "<%= scope.lookupvar('nailgun::cobbler_url') %>"
 COBBLER_USER: "<%= cobbler_user %>"
 COBBLER_PASSWORD: "<%= cobbler_password %>"
-COBBLER_PROFILE: "rhel63-x86_64"
+COBBLER_PROFILE: "<%= slave_profile %>"
 
 MCO_PSKEY: "<%= mco_pskey %>"
 MCO_VHOST: "<%= mco_vhost %>"

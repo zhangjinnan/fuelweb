@@ -51,6 +51,7 @@ class nailgun(
   Class["nailgun::nginx-repo"] ->
   Exec["start_nginx_repo"] ->
   Class["nailgun::user"] ->
+  Class["nailgun::logrotate"] ->
   Class["nailgun::venv"] ->
   Class["nailgun::naily"] ->
   Class["nailgun::nginx-nailgun"] ->
@@ -173,6 +174,8 @@ class nailgun(
   }
 
   class { "nailgun::nginx-service": }
+
+  class { "nailgun::logrotate": }
 
   nailgun::sshkeygen { "/root/.ssh/id_rsa":
     homedir => "/root",

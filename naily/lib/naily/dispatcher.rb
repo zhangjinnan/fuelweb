@@ -14,7 +14,89 @@ module Naily
       args
     end
 
+    def provision(data)
+      Naily.logger.info("'provision' method called with data: #{data.inspect}")
+
+      reporter = Naily::Reporter.new(@producer, data['respond_to'], data['args']['task_uuid'])
+
+      begin
+        Naily.logger.info("Trying to instantiate cobbler engine: #{data['args']['engine'].inspect}")
+        engine = Astute::Provision::Cobbler.new(data['args']['engine'])
+      rescue
+        Naily.logger.error("Error occured during cobbler initializing")
+        reporter.report({
+                          'status' => 'error',
+                          'error' => 'Cobbler can not be initialized',
+                          'progress' => 100
+                        })
+        return
+      end
+      
+      failed_nodes = []
+      begin
+        reboot_events = {}
+        data['args']['nodes'].each do |node|
+          begin
+            Naily.logger.info("Adding #{node['name']} into cobbler")
+            engine.item_from_hash('system', node['name'], node,
+                             :item_preremove => true)
+          rescue RuntimeError => e
+            Naily.logger.error("Error occured while adding system #{node['name']} to cobbler")
+            raise e
+          end
+          Naily.logger.debug("Trying to reboot node: #{node['name']}")
+          reboot_events[node['name']] = engine.power_reboot(node['name'])
+        end
+        begin
+          Naily.logger.debug("Waiting for reboot to be complete: nodes: #{reboot_events.keys}")
+          failed_nodes = []
+          Timeout::timeout(120) do
+            while not reboot_events.empty?
+              reboot_events.each do |node_name, event_id|
+                event_status = engine.event_status(event_id)
+                Naily.logger.debug("Reboot task status: node: #{node_name} status: #{event_status}")
+                if event_status[2] =~ /^failed$/
+                  Naily.logger.error("Error occured while trying to reboot: #{node_name}")
+                  reboot_events.delete(node_name)
+                  failed_nodes << node_name
+                elsif event_status[2] =~ /^complete$/
+                  Naily.logger.debug("Successfully rebooted: #{node_name}")
+                  reboot_events.delete(node_name)
+                end
+              end
+              sleep(5)
+            end
+          end
+        rescue Timeout::Error => e
+          Naily.logger.debug("Reboot timeout: reboot tasks not completed for nodes #{reboot_events.keys}")
+          raise e
+        end
+      rescue RuntimeError => e
+        Naily.logger.error("Error occured while provisioning: #{e.inspect}")
+        reporter.report({
+                          'status' => 'error',
+                          'error' => 'Cobbler error',
+                          'progress' => 100
+                        })
+        engine.sync
+        return
+      end
+      engine.sync
+      if failed_nodes.empty?
+        report_result({}, reporter)
+      else
+        reporter.report({
+                          'status' => 'error',
+                          'error' => "Nodes failed to reboot: #{failed_nodes.inspect}",
+                          'progress' => 100
+                        })
+      end
+      return
+    end
+
     def deploy(data)
+      Naily.logger.info("'deploy' method called with data: #{data.inspect}")
+
       # Following line fixes issues with uids: it should always be string
       data['args']['nodes'].map { |x| x['uid'] = x['uid'].to_s }
       reporter = Naily::Reporter.new(@producer, data['respond_to'], data['args']['task_uuid'])
@@ -35,11 +117,17 @@ module Naily
           while true
             time = Time::now.to_f
             types = @orchestrator.node_type(reporter, data['args']['task_uuid'], nodes, 2)
+            types.each do |t|
+              Naily.logger.debug("Got node types: uid=#{t['uid']} type=#{t['node_type']}")
+            end
+            Naily.logger.debug("Not target nodes will be rejected")
             target_uids = types.reject{|n| n['node_type'] != 'target'}.map{|n| n['uid']}
             Naily.logger.debug "Not provisioned: #{nodes_not_booted.join(',')}, got target OSes: #{target_uids.join(',')}"
             if nodes.length == target_uids.length
               Naily.logger.info "All nodes #{target_uids.join(',')} are provisioned."
               break
+            else
+              Naily.logger.debug("Nodes list length is not equal to target nodes list length: #{nodes.length} != #{target_uids.length}")
             end
             nodes_not_booted = nodes_uids - types.map { |n| n['uid'] }
             begin
@@ -77,7 +165,15 @@ module Naily
       end
       reporter.report({'nodes' => nodes_progress})
 
-      result = @orchestrator.deploy(reporter, data['args']['task_uuid'], nodes, data['args']['attributes'])
+      begin
+        result = @orchestrator.deploy(reporter, data['args']['task_uuid'], nodes, data['args']['attributes'])
+      rescue Timeout::Error
+        msg = "Timeout of deployment is exceeded."
+        Naily.logger.error msg
+        reporter.report({'status' => 'error', 'error' => msg})
+        return
+      end
+
       report_result(result, reporter)
     end
 
@@ -91,6 +187,22 @@ module Naily
     def remove_nodes(data)
       reporter = Naily::Reporter.new(@producer, data['respond_to'], data['args']['task_uuid'])
       nodes = data['args']['nodes']
+      provision_engine = Astute::Provision::Cobbler.new(data['args']['engine'])
+      data['args']['engine_nodes'].each do |name|
+        if provision_engine.system_exists(name)
+          Naily.logger.info("Removing system from cobbler: #{name}")
+          provision_engine.remove_system(name)
+          if not provision_engine.system_exists(name)
+            Naily.logger.info("System has been successfully removed from cobbler: #{name}")
+          else
+            Naily.logger.error("Cannot remove node from cobbler: #{name}")
+          end
+        else
+          Naily.logger.info("System is not in cobbler: #{name}")
+        end
+      end
+      Naily.logger.debug("Cobbler syncing")
+      provision_engine.sync
       result = @orchestrator.remove_nodes(reporter, data['args']['task_uuid'], nodes)
       report_result(result, reporter)
     end

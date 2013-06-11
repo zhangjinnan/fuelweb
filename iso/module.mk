@@ -67,14 +67,18 @@ $(BUILD_DIR)/iso/isoroot-files.done: \
 $(ISOROOT)/.discinfo: $(SOURCE_DIR)/iso/.discinfo ; $(ACTION.COPY)
 $(ISOROOT)/.treeinfo: $(SOURCE_DIR)/iso/.treeinfo ; $(ACTION.COPY)
 $(ISOROOT)/isolinux/isolinux.cfg: $(SOURCE_DIR)/iso/isolinux/isolinux.cfg ; $(ACTION.COPY)
-$(ISOROOT)/ks.cfg: $(SOURCE_DIR)/iso/ks.cfg ; $(ACTION.COPY)
+$(ISOROOT)/ks.cfg: $(call depv,KSYAML)
+$(ISOROOT)/ks.cfg: $(SOURCE_DIR)/iso/ks.template $(SOURCE_DIR)/iso/ks.py $(KSYAML)
+	python $(SOURCE_DIR)/iso/ks.py -t $(SOURCE_DIR)/iso/ks.template -c $(KSYAML) -o $@
 $(ISOROOT)/bootstrap_admin_node.sh: $(SOURCE_DIR)/iso/bootstrap_admin_node.sh ; $(ACTION.COPY)
 $(ISOROOT)/bootstrap_admin_node.conf: $(SOURCE_DIR)/iso/bootstrap_admin_node.conf ; $(ACTION.COPY)
 $(ISOROOT)/version.yaml: $(call depv,COMMIT_SHA)
 $(ISOROOT)/version.yaml: $(call depv,PRODUCT_VERSION)
+$(ISOROOT)/version.yaml: $(call depv,FUEL_COMMIT_SHA)
 $(ISOROOT)/version.yaml:
 	echo "COMMIT_SHA: $(COMMIT_SHA)" > $@
 	echo "PRODUCT_VERSION: $(PRODUCT_VERSION)" >> $@
+	echo "FUEL_COMMIT_SHA: $(FUEL_COMMIT_SHA)" >> $@
 
 $(ISOROOT)/puppet-nailgun.tgz: \
 		$(call find-files,$(SOURCE_DIR)/puppet) \
@@ -180,7 +184,7 @@ $(BUILD_DIR)/iso/img.done: $(BUILD_DIR)/iso/iso.done
 	sudo cp -r $(BUILD_DIR)/iso/isoroot/isolinux $(BUILD_DIR)/iso/imgroot
 	sudo mv $(BUILD_DIR)/iso/imgroot/isolinux $(BUILD_DIR)/iso/imgroot/syslinux
 	sudo rm $(BUILD_DIR)/iso/imgroot/syslinux/isolinux.cfg
-	sudo cp $(SOURCE_DIR)/iso/syslinux/syslinux.cfg $(BUILD_DIR)/iso/imgroot/syslinux
+	sudo cp $(SOURCE_DIR)/iso/syslinux/syslinux.cfg $(BUILD_DIR)/iso/imgroot/syslinux  # NOTE(mihgen): Is it used for IMG file? Comments needed!
 	sudo sed -i -e "s/will_be_substituted_with_actual_uuid/`cat $(BUILD_DIR)/iso/img_loop_uuid`/g" $(BUILD_DIR)/iso/imgroot/syslinux/syslinux.cfg
 	sudo cp $(SOURCE_DIR)/iso/ks.cfg $(BUILD_DIR)/iso/imgroot/ks.cfg
 	sudo sed -i -e "s/will_be_substituted_with_actual_uuid/`cat $(BUILD_DIR)/iso/img_loop_uuid`/g" $(BUILD_DIR)/iso/imgroot/ks.cfg

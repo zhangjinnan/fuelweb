@@ -8,13 +8,13 @@ import traceback
 import web
 
 from nailgun.db import orm
+import nailgun.rpc as rpc
 from nailgun.logger import logger
 from nailgun.errors import errors
-from nailgun.settings import settings
 from nailgun.api.models import Cluster
 from nailgun.api.models import Task
 from nailgun.api.models import Network
-from nailgun.task.helpers import update_task_status
+from nailgun.task.task import TaskHelper
 
 from nailgun.task import task as tasks
 
@@ -24,11 +24,12 @@ class TaskManager(object):
     def __init__(self, cluster_id):
         self.cluster = orm().query(Cluster).get(cluster_id)
 
-    def _run_silently(self, task, instance, *args, **kwargs):
+    def _call_silently(self, task, instance, *args, **kwargs):
+        method = getattr(instance, kwargs.pop('method_name', 'execute'))
         if task.status == 'error':
             return
         try:
-            task.execute(instance, *args, **kwargs)
+            return method(task, *args, **kwargs)
         except Exception as exc:
             err = str(exc)
             if any([
@@ -36,7 +37,7 @@ class TaskManager(object):
                 hasattr(exc, "log_traceback") and exc.log_traceback
             ]):
                 logger.error(traceback.format_exc())
-            update_task_status(
+            TaskHelper.update_task_status(
                 task.uuid,
                 status="error",
                 progress=100,
@@ -64,23 +65,12 @@ class DeploymentTaskManager(TaskManager):
                     orm().delete(subtask)
                 orm().delete(task)
                 orm().commit()
-        nodes_to_delete = filter(
-            lambda n: any([
-                n.pending_deletion,
-                n.needs_redeletion
-            ]),
-            self.cluster.nodes
-        )
-        nodes_to_deploy = filter(
-            lambda n: any([
-                n.pending_addition,
-                n.needs_reprovision,
-                n.needs_redeploy
-            ]),
-            self.cluster.nodes
-        )
 
-        if not any([nodes_to_deploy, nodes_to_delete]):
+        nodes_to_delete = TaskHelper.nodes_to_delete(self.cluster)
+        nodes_to_deploy = TaskHelper.nodes_to_deploy(self.cluster)
+        nodes_to_provision = TaskHelper.nodes_to_provision(self.cluster)
+
+        if not any([nodes_to_provision, nodes_to_deploy, nodes_to_delete]):
             raise errors.WrongNodeStatus("No changes to deploy")
 
         self.cluster.status = 'deployment'
@@ -93,30 +83,59 @@ class DeploymentTaskManager(TaskManager):
         )
         orm().add(supertask)
         orm().commit()
+        task_deletion, task_provision, task_deployment = None, None, None
 
-        task_deletion, task_deployment = None, None
         if nodes_to_delete:
             task_deletion = supertask.create_subtask("node_deletion")
-        if nodes_to_deploy:
-            task_deployment = supertask.create_subtask("deployment")
-
-        if task_deletion:
-            self._run_silently(
+            logger.debug("Launching deletion task: %s", task_deletion.uuid)
+            self._call_silently(
                 task_deletion,
                 tasks.DeletionTask
             )
-        if task_deployment:
-            self._run_silently(
-                task_deployment,
-                tasks.DeploymentTask
+
+        task_messages = []
+        if nodes_to_provision:
+            TaskHelper.update_slave_nodes_fqdn(nodes_to_provision)
+            logger.debug("There are nodes to provision: %s",
+                         " ".join([n.fqdn for n in nodes_to_provision]))
+            task_provision = supertask.create_subtask("provision")
+            # we assume here that task_provision just adds system to
+            # cobbler and reboots it, so it has extremely small weight
+            task_provision.weight = 0.05
+            provision_message = self._call_silently(
+                task_provision,
+                tasks.ProvisionTask,
+                method_name='message'
             )
+            task_provision.cache = provision_message
+            orm().add(task_provision)
+            orm().commit()
+            task_messages.append(provision_message)
+
+        if nodes_to_deploy:
+            TaskHelper.update_slave_nodes_fqdn(nodes_to_deploy)
+            logger.debug("There are nodes to deploy: %s",
+                         " ".join([n.fqdn for n in nodes_to_deploy]))
+            task_deployment = supertask.create_subtask("deployment")
+            deployment_message = self._call_silently(
+                task_deployment,
+                tasks.DeploymentTask,
+                method_name='message'
+            )
+            task_deployment.cache = deployment_message
+            orm().add(task_deployment)
+            orm().commit()
+            task_messages.append(deployment_message)
+
+        if task_messages:
+            rpc.cast('naily', task_messages)
+
         logger.debug(
             u"Deployment: task to deploy cluster '{0}' is {1}".format(
                 self.cluster.name or self.cluster.id,
                 supertask.uuid
             )
         )
-
         return supertask
 
 
@@ -129,14 +148,14 @@ class CheckNetworksTaskManager(TaskManager):
         )
         orm().add(task)
         orm().commit()
-        self._run_silently(
+        self._call_silently(
             task,
             tasks.CheckNetworksTask,
             data
         )
         orm().refresh(task)
         if task.status == 'running':
-            update_task_status(
+            TaskHelper.update_task_status(
                 task.uuid,
                 status="ready",
                 progress=100
@@ -153,7 +172,7 @@ class VerifyNetworksTaskManager(TaskManager):
         )
         orm().add(task)
         orm().commit()
-        self._run_silently(
+        self._call_silently(
             task,
             tasks.CheckNetworksTask,
             nets
@@ -166,7 +185,7 @@ class VerifyNetworksTaskManager(TaskManager):
             task.name = "verify_networks"
             orm().add(task)
             orm().commit()
-            self._run_silently(
+            self._call_silently(
                 task,
                 tasks.VerifyNetworksTask,
                 vlan_ids
@@ -218,7 +237,7 @@ class ClusterDeletionManager(TaskManager):
         task = Task(name="cluster_deletion", cluster=self.cluster)
         orm().add(task)
         orm().commit()
-        self._run_silently(
+        self._call_silently(
             task,
             tasks.ClusterDeletionTask
         )

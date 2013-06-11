@@ -3,10 +3,11 @@ LISTEN_PORT: "8000"
 DEVELOPMENT: 1
 
 COMMIT_SHA: "Unknown build"
-PRODUCT_VERSION: "0.1-beta"
+FUEL_COMMIT_SHA: "Unknown build"
+PRODUCT_VERSION: "3.0"
 
 FIXTURES_TO_UPLOAD:
-  - "openstack_folsom.json"
+  - "openstack.json"
   - "start_notification.json"
   - "admin_network.json"
 
@@ -18,9 +19,10 @@ DATABASE:
   user: "nailgun"
   passwd: "nailgun"
 
+# Check timeouts for offline-online nodes detection
 KEEPALIVE:
-  interval: 30
-  timeout: 180
+  interval: 30  # How often to check if node went offline. If node powered on, it is immediately switched to online state.
+  timeout: 180  # Node will be switched to offline if there are no updates from agent for this period of time
 
 STATIC_DIR: "/var/tmp/nailgun_static"
 TEMPLATE_DIR: "/var/tmp/nailgun_static"
@@ -38,9 +40,11 @@ NET_EXCLUDE:
   - "10.20.0.0/24"
 
 ADMIN_NETWORK:
-  first: "10.20.0.128"
-  last: "10.20.0.254"
+  cidr: "10.20.0.0/24"
   netmask: "255.255.255.0"
+  size: "256"
+  first: "10.20.0.129"
+  last: "10.20.0.254"
 
 VLANS_RANGE_START: "100"
 VLANS_RANGE_END: "1000"
@@ -49,8 +53,8 @@ RABBITMQ:
   fake: "0"
   hostname: "127.0.0.1"
 
-CUSTOM_LOG: &nailgun_log "/var/log/nailgun.log"
-ACCESS_LOG: "/var/log/nailgun_access.log"
+APP_LOG: &nailgun_log "/var/log/nailgun/app.log"
+API_LOG: &api_log "/var/log/nailgun/api.log"
 SYSLOG_DIR: &remote_syslog_dir "/var/log/remote/"
 
 PATH_TO_SSH_KEY: = "/root/.ssh/id_rsa"
@@ -61,7 +65,7 @@ MASTER_IP: "127.0.0.1"
 COBBLER_URL: "http://localhost/cobbler_api"
 COBBLER_USER: "cobbler"
 COBBLER_PASSWORD: "cobbler"
-COBBLER_PROFILE: "centos63-x86_64"
+COBBLER_PROFILE: "centos-x86_64"
 
 TRUNCATE_LOG_ENTRIES: 100
 UI_LOG_DATE_FORMAT: '%Y-%m-%d %H:%M:%S'
@@ -118,11 +122,16 @@ LOG_GROUPS:
 
 LOGS:
 # Master node logs.
-  - id: nailgun
+  - id: app
     name: "FuelWeb"
     <<: *local_log_type
     <<: *python_log_format
     path: *nailgun_log
+  - id: api
+    name: "FuelWeb API"
+    <<: *local_log_type
+    <<: *python_log_format
+    path: *api_log
   - id: naily
     name: "Orchestrator"
     <<: *local_log_type

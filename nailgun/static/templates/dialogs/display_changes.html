@@ -7,9 +7,7 @@
   <!-- Nodes changes -->
   <% var warnings = {
     'controller': 'Environment will not contain the necessary number of controllers after deployment. Thus, it will not be usable.',
-    'compute': 'Compute nodes are recommended for deployment.',
-    'cinder': 'Cinder nodes are recommended for deployment.',
-    'compute-cinder': 'Compute and cinder nodes are recommended for deployment.',
+    'compute': 'Compute nodes are recommended for deployment.'
   } %>
   <% var warning = null, canDeploy = true, roles = cluster.availableRoles() %>
 
@@ -40,7 +38,7 @@
     <% var settingsChangesDescriptions = {
       'attributes': 'OpenStack settings',
       'networks': 'Network settings',
-      'disks': 'Volume groups were reconfigured on the following nodes:'
+      'disks': 'Disk configuration has been changed on following nodes:'
     } %>
     <% var nodes = [] %>
     <% _.each(cluster.get('changes'), function(change) { %>
@@ -71,7 +69,8 @@
     } else {
       _.each(roles, function(role) {
         if (warning != 'controller' && !_.filter(cluster.get('nodes').nodesAfterDeployment(), function(node) {return node.get('role') == role}).length) {
-          role == 'controller' ? warning = 'controller' : role == 'compute' ? warning = 'compute' : warning == 'compute' ? warning = 'compute-cinder' : warning = 'cinder';
+          if (role == 'controller') { warning = 'controller' }
+          if (role == 'compute') { warning = 'compute' }
         }
       })
     }

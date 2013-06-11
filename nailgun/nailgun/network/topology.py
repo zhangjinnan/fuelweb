@@ -3,7 +3,6 @@
 import web
 
 from nailgun.api.models import Node
-from nailgun.api.models import NetworkGroup
 from nailgun.api.models import NetworkAssignment
 from nailgun.api.models import NodeNICInterface
 
@@ -41,27 +40,6 @@ class TopoChecker(object):
 
 
 class NICUtils(object):
-    def get_nics_from_meta(self, node):
-        nics = []
-        if node.meta and node.meta.get('interfaces'):
-            for i in node.meta['interfaces']:
-                if 'name' not in i or 'mac' not in i:
-                    logger.debug('Some node NIC interface in "meta" doesn\'t'
-                                 ' have name or mac')
-                    continue
-                nic = NodeNICInterface()
-                nic.node_id = node.id
-                for key in ('name', 'mac', 'current_speed', 'max_speed'):
-                    if key in i:
-                        setattr(nic, key, i[key])
-                # Skip duplicated interfaces.
-                if filter(lambda k: k.mac == nic.mac, nics):
-                    logger.debug('Duplicated interface with MAC %r for node %r'
-                                 ' (id: %s)',
-                                 nic.mac, node.name, node.id)
-                    continue
-                nics.append(nic)
-        return nics
 
     def _update_attrs(self, node):
         db_node = self.db.query(Node).filter_by(id=node['id']).first()
@@ -107,7 +85,9 @@ class NICUtils(object):
             return node.interfaces[0]
 
     def get_all_cluster_networkgroups(self, node):
-        return node.cluster.network_groups
+        if node.cluster:
+            return node.cluster.network_groups
+        return []
 
     def get_default_nic_networkgroups(self, node, nic):
         main_nic = self.get_main_nic(node)
@@ -118,6 +98,11 @@ class NICUtils(object):
         return self.get_all_cluster_networkgroups(node)
 
     def allow_network_assignment_to_all_interfaces(self, node):
+        """
+        Add all network groups from cluster
+        to allowed_networks list for all interfaces
+        of specified node
+        """
         for nic in node.interfaces:
             for net_group in self.get_all_cluster_networkgroups(node):
                 nic.allowed_networks.append(net_group)

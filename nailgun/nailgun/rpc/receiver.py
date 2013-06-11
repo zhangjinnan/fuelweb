@@ -17,7 +17,7 @@ from nailgun.logger import logger
 from nailgun.db import engine, NoCacheQuery
 from nailgun.network.manager import NetworkManager
 from nailgun.settings import settings
-from nailgun.task.helpers import update_task_status
+from nailgun.task.helpers import TaskHelper
 from nailgun.api.models import Node, Network, NetworkGroup
 from nailgun.api.models import IPAddr, Task
 from nailgun.notifier import notifier
@@ -96,7 +96,7 @@ class NailgunReceiver(object):
         if not error_msg:
             error_msg = ". ".join([success_msg, err_msg])
 
-        update_task_status(task_uuid, status, progress, error_msg)
+        TaskHelper.update_task_status(task_uuid, status, progress, error_msg)
 
     @classmethod
     def remove_cluster_resp(cls, **kwargs):
@@ -258,7 +258,26 @@ class NailgunReceiver(object):
         elif status in ('ready',):
             cls._success_action(task, status, progress)
         else:
-            update_task_status(task.uuid, status, progress, message)
+            TaskHelper.update_task_status(task.uuid, status, progress, message)
+
+    @classmethod
+    def provision_resp(cls, **kwargs):
+        # For now provision task is nothing more than just adding
+        # system into cobbler and rebooting node. Then we think task
+        # is ready. We don't wait for end of node provisioning.
+        logger.info("RPC method provision_resp received: %s" % kwargs)
+        task_uuid = kwargs.get('task_uuid')
+        nodes = kwargs.get('nodes') or []
+        message = kwargs.get('error')
+        status = kwargs.get('status')
+        progress = kwargs.get('progress')
+
+        task = cls.db.query(Task).filter_by(uuid=task_uuid).first()
+        if not task:
+            logger.warning(u"No task with uuid %s found", task_uuid)
+            return
+
+        TaskHelper.update_task_status(task.uuid, status, progress, message)
 
     @classmethod
     def _generate_error_message(cls, task, error_types, names_only=False):
@@ -311,7 +330,7 @@ class NailgunReceiver(object):
             message,
             task.cluster_id
         )
-        update_task_status(task.uuid, status, progress, message)
+        TaskHelper.update_task_status(task.uuid, status, progress, message)
 
     @classmethod
     def _success_action(cls, task, status, progress):
@@ -342,8 +361,8 @@ class NailgunReceiver(object):
                     horizon_ip = public_net[0]['ip'].split('/')[0]
                     message = (
                         u"Deployment of environment '{0}' is done. "
-                        "Access WebUI of OpenStack at http://{1}/ or via "
-                        "internal network at http://{2}/"
+                        "Access the OpenStack dashboard (Horizon) at "
+                        "http://{1}/ or via internal network at http://{2}/"
                     ).format(
                         task.cluster.name,
                         horizon_ip,
@@ -373,7 +392,7 @@ class NailgunReceiver(object):
                 vip = args['attributes']['public_vip']
                 message = (
                     u"Deployment of environment '{0}' is done. "
-                    "Access WebUI of OpenStack at http://{1}/"
+                    "Access the OpenStack dashboard (Horizon) at http://{1}/"
                 ).format(
                     task.cluster.name,
                     vip
@@ -398,7 +417,7 @@ class NailgunReceiver(object):
             message,
             task.cluster_id
         )
-        update_task_status(task.uuid, status, progress, message)
+        TaskHelper.update_task_status(task.uuid, status, progress, message)
 
     @classmethod
     def verify_networks_resp(cls, **kwargs):
@@ -423,56 +442,99 @@ class NailgunReceiver(object):
             # If no nodes in kwargs then we update progress or status only.
             pass
         elif isinstance(nodes, list):
-            if len(nodes) < 2:
+            cached_nodes = task.cache['args']['nodes']
+            node_uids = [str(n['uid']) for n in nodes]
+            cached_node_uids = [str(n['uid']) for n in cached_nodes]
+            forgotten_uids = set(cached_node_uids) - set(node_uids)
+
+            if forgotten_uids:
+                absent_nodes = cls.db.query(Node).filter(
+                    Node.id.in_(forgotten_uids)
+                ).all()
+                absent_node_names = []
+                for n in absent_nodes:
+                    if n.name:
+                        absent_node_names.append(n.name)
+                    else:
+                        absent_node_names.append('id: %s' % n.id)
+                if not error_msg:
+                    error_msg = 'Node(s) {0} didn\'t return data.'.format(
+                        ', '.join(absent_node_names)
+                    )
+                status = 'error'
+            elif len(nodes) < 2:
                 status = 'error'
                 if not error_msg:
-                    error_msg = 'Please add more nodes to the environment ' \
-                                'before performing network verification.'
+                    error_msg = 'At least two nodes are required to be in '\
+                                'the environment for network verification.'
             else:
                 error_nodes = []
                 for node in nodes:
-                    sent_nodes_filtered = filter(
+                    cached_nodes_filtered = filter(
                         lambda n: str(n['uid']) == str(node['uid']),
-                        task.cache['args']['nodes']
+                        cached_nodes
                     )
 
-                    if not sent_nodes_filtered:
+                    if not cached_nodes_filtered:
                         logger.warning(
-                            "verify_networks_resp: arguments contain data "
-                            "which is not in task cache uid=%s",
-                            node['uid']
+                            "verify_networks_resp: arguments contain node "
+                            "data which is not in the task cache: %r",
+                            node
                         )
                         continue
 
-                    sent_node = sent_nodes_filtered[0]
+                    cached_node = cached_nodes_filtered[0]
 
-                    for network in node['networks']:
-                        sent_networks_filtered = filter(
-                            lambda n: n['iface'] == network['iface'],
-                            sent_node.get('networks', [])
+                    for cached_network in cached_node['networks']:
+                        received_networks_filtered = filter(
+                            lambda n: n['iface'] == cached_network['iface'],
+                            node.get('networks', [])
                         )
 
-                        if not sent_networks_filtered:
-                            logger.warning(
-                                "verify_networks_resp: arguments contain data "
-                                "which is not in task cache uid=%s iface=%s",
-                                node['uid'], network['iface']
+                        if received_networks_filtered:
+                            received_network = received_networks_filtered[0]
+                            absent_vlans = list(
+                                set(cached_network['vlans']) -
+                                set(received_network['vlans'])
                             )
-                            continue
+                        else:
+                            logger.warning(
+                                "verify_networks_resp: arguments don't contain"
+                                " data for interface: uid=%s iface=%s",
+                                node['uid'], cached_network['iface']
+                            )
+                            absent_vlans = cached_network['vlans']
 
-                        sent_network = sent_networks_filtered[0]
-
-                        absent_vlans = list(
-                            set(sent_network['vlans']) - set(network['vlans']))
                         if absent_vlans:
                             data = {'uid': node['uid'],
-                                    'interface': network['iface'],
+                                    'interface': received_network['iface'],
                                     'absent_vlans': absent_vlans}
                             node_db = cls.db.query(Node).get(node['uid'])
                             if node_db:
-                                data.update({'name': node_db.name,
-                                             'mac': node_db.mac})
+                                data['name'] = node_db.name
+                                db_nics = filter(
+                                    lambda i:
+                                    i.name == received_network['iface'],
+                                    node_db.interfaces
+                                )
+                                if db_nics:
+                                    data['mac'] = db_nics[0].mac
+                                else:
+                                    logger.warning(
+                                        "verify_networks_resp: can't find "
+                                        "interface %r for node %r in DB",
+                                        received_network['iface'], node_db.id
+                                    )
+                                    data['mac'] = 'unknown'
+                            else:
+                                logger.warning(
+                                    "verify_networks_resp: can't find node "
+                                    "%r in DB",
+                                    node['uid']
+                                )
+
                             error_nodes.append(data)
+
                 if error_nodes:
                     result = error_nodes
                     status = 'error'
@@ -483,4 +545,5 @@ class NailgunReceiver(object):
             status = 'error'
             logger.error(error_msg)
 
-        update_task_status(task_uuid, status, progress, error_msg, result)
+        TaskHelper.update_task_status(task_uuid, status,
+                                      progress, error_msg, result)

@@ -35,7 +35,11 @@ class TestTaskManagers(BaseHandlers):
         supertask = self.env.launch_deployment()
         self.assertEquals(supertask.name, 'deploy')
         self.assertIn(supertask.status, ('running', 'ready'))
-        self.assertEquals(len(supertask.subtasks), 2)
+        # we have three subtasks here
+        # deletion
+        # provision
+        # deployment
+        self.assertEquals(len(supertask.subtasks), 3)
 
         self.env.wait_for_nodes_status([self.env.nodes[0]], 'provisioning')
         self.env.wait_ready(
@@ -512,7 +516,7 @@ class TestTaskManagers(BaseHandlers):
         self.env.launch_deployment()
         self.env.refresh_nodes()
         for node in self.env.nodes:
-            fqdn = "slave-%s.%s" % (node.id, settings.DNS_DOMAIN)
+            fqdn = "%s-%s.%s" % (node.role, node.id, settings.DNS_DOMAIN)
             self.assertEquals(fqdn, node.fqdn)
 
     @fake_tasks()

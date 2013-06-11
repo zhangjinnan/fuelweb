@@ -14,10 +14,11 @@ LOCAL_MIRROR?=$(TOP_DIR)/local_mirror
 LOCAL_MIRROR:=$(abspath $(LOCAL_MIRROR))
 
 COMMIT_SHA:=$(shell git rev-parse --verify HEAD)
-PRODUCT_VERSION:=1.0-rc1
+PRODUCT_VERSION:=3.0
+FUEL_COMMIT_SHA:=$(shell cd fuel && git rev-parse --verify HEAD)
 
 CENTOS_MAJOR:=6
-CENTOS_MINOR:=3
+CENTOS_MINOR:=4
 CENTOS_RELEASE:=$(CENTOS_MAJOR).$(CENTOS_MINOR)
 CENTOS_ARCH:=x86_64
 
@@ -37,7 +38,7 @@ LOCAL_MIRROR_SRC:=$(LOCAL_MIRROR)/src
 LOCAL_MIRROR_EGGS:=$(LOCAL_MIRROR)/eggs
 LOCAL_MIRROR_GEMS:=$(LOCAL_MIRROR)/gems
 LOCAL_MIRROR_CENTOS:=$(LOCAL_MIRROR)/centos
-LOCAL_MIRROR_CENTOS_OS_BASEURL:=$(LOCAL_MIRROR_CENTOS)/$(CENTOS_RELEASE)/os/$(CENTOS_ARCH)
+LOCAL_MIRROR_CENTOS_OS_BASEURL:=$(LOCAL_MIRROR_CENTOS)/os/$(CENTOS_ARCH)
 LOCAL_MIRROR_RHEL:=$(LOCAL_MIRROR)/rhel
 
 BUILD_MIRROR_GEMS:=$(BUILD_DIR)/packages/gems
@@ -48,7 +49,7 @@ BUILD_MIRROR_GEMS:=$(BUILD_DIR)/packages/gems
 USE_MIRROR?=srv08
 ifeq ($(USE_MIRROR),srv08)
 YUM_REPOS?=proprietary
-MIRROR_BASE?=http://srv08-srt.srt.mirantis.net/fwm/2.2
+MIRROR_BASE?=http://srv08-srt.srt.mirantis.net/fwm/3.0
 MIRROR_CENTOS?=$(MIRROR_BASE)/centos
 MIRROR_EGGS?=$(MIRROR_BASE)/eggs
 MIRROR_GEMS?=$(MIRROR_BASE)/gems
@@ -56,7 +57,7 @@ MIRROR_SRC?=$(MIRROR_BASE)/src
 endif
 ifeq ($(USE_MIRROR),msk)
 YUM_REPOS?=proprietary
-MIRROR_BASE?=http://172.18.8.209/fwm/2.2
+MIRROR_BASE?=http://172.18.8.209/fwm/3.0
 MIRROR_CENTOS?=$(MIRROR_BASE)/centos
 MIRROR_EGGS?=$(MIRROR_BASE)/eggs
 MIRROR_GEMS?=$(MIRROR_BASE)/gems
@@ -64,15 +65,15 @@ MIRROR_SRC?=$(MIRROR_BASE)/src
 endif
 ifeq ($(USE_MIRROR),msk2)
 YUM_REPOS?=proprietary
-MIRROR_BASE?=http://172.18.8.207/fwm/2.2
+MIRROR_BASE?=http://172.18.8.207/fwm/3.0
 MIRROR_CENTOS?=$(MIRROR_BASE)/centos
 MIRROR_EGGS?=$(MIRROR_BASE)/eggs
 MIRROR_GEMS?=$(MIRROR_BASE)/gems
 MIRROR_SRC?=$(MIRROR_BASE)/src
 endif
 
-MIRROR_CENTOS?=http://archive.kernel.org/centos
-MIRROR_CENTOS_OS_BASEURL:=$(MIRROR_CENTOS)/$(CENTOS_RELEASE)/os/$(CENTOS_ARCH)
+MIRROR_CENTOS?=http://mirror.yandex.ru/centos/$(CENTOS_RELEASE)
+MIRROR_CENTOS_OS_BASEURL:=$(MIRROR_CENTOS)/os/$(CENTOS_ARCH)
 MIRROR_RHEL?=http://srv11-msk.msk.mirantis.net/rhel6/rhel-6-server-rpms
 MIRROR_RHEL_BOOT?=http://srv11-msk.msk.mirantis.net/rhel6/rhel-server-6.4-x86_64
 # It can be any a list of links (--find-links) or a pip index (--index-url).
@@ -89,7 +90,7 @@ REQUIRED_SRCS:=$(shell grep -v ^\\s*\# $(SOURCE_DIR)/requirements-src.txt)
 # The actual name will be constracted wich prepending "yum_repo_" prefix.
 # Example: YUM_REPOS?=official epel => yum_repo_official and yum_repo_epel
 # will be used.
-YUM_REPOS?=official fuel_folsom_2_1 puppetlabs
+YUM_REPOS?=official fuel
 ifeq ($(NO_RHEL),0)
 YUM_REPOS:=$(YUM_REPOS) rhel
 endif
@@ -100,3 +101,7 @@ MIRROR_SRC?=internet
 
 # INTEGRATION TEST CONFIG
 NOFORWARD:=1
+
+# Path to yaml configuration file to build ISO ks.cfg
+KSYAML?=$(SOURCE_DIR)/iso/ks.yaml
+

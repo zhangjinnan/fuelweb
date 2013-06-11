@@ -9,10 +9,21 @@
     </div>
 
     <div class="logical-network-box">
-      <% ifc.get('assigned_networks').each(function(network) { %>
-        <div class="logical-network-item" data-name="<%- network.get('name') %>"><%- network.get('name') %></div>
-      <% }) %>
-      <div class="network-help-message hide">Use drag-and-drop for placing logical interfaces here</div>
+      <div class="logical-network-group">
+        <% var previousVlan %>
+        <% ifc.get('assigned_networks').each(function(network) { %>
+          <% var currentVlan = network.vlanStart() %>
+          <% if (previousVlan && previousVlan != currentVlan) { %>
+            </div><div class="logical-network-group">
+          <% } %>
+          <% previousVlan = currentVlan %>
+          <div class="logical-network-item" data-name="<%- network.get('name') %>">
+            <div class="name"><%- network.get('name') %></div>
+            <div class="id">VLAN ID<%- network.amount() == 1 ? '' : 's'%>: <%- network.vlanLabel() %></div>
+          </div>
+        <% }) %>
+      </div>
+      <div class="network-help-message hide">Use drag and drop to move logical networks between physical interfaces</div>
     </div>
   </div>
 </div>

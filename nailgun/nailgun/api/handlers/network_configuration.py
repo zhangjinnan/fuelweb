@@ -10,7 +10,7 @@ from nailgun.api.models import Cluster
 from nailgun.api.models import NetworkGroup
 from nailgun.api.models import NetworkConfiguration
 from nailgun.api.handlers.tasks import TaskHandler
-from nailgun.task.helpers import update_task_status
+from nailgun.task.helpers import TaskHelper
 from nailgun.network.manager import NetworkManager
 from nailgun.task.manager import CheckNetworksTaskManager
 from nailgun.task.manager import VerifyNetworksTaskManager
@@ -40,8 +40,18 @@ class NetworkConfigurationVerifyHandler(JSONHandler):
 
 
 class NetworkConfigurationHandler(JSONHandler):
-    fields = ('id', 'cluster_id', 'name', 'cidr',
-              'vlan_start', 'network_size', 'amount')
+    fields = ('id', 'cluster_id', 'name', 'cidr', 'netmask',
+              'gateway', 'vlan_start', 'network_size', 'amount')
+
+    @classmethod
+    def render(cls, instance, fields=None):
+        json_data = JSONHandler.render(instance, fields=cls.fields)
+        json_data["ip_ranges"] = [
+            [ir.first, ir.last] for ir in instance.ip_ranges
+        ]
+        json_data.setdefault("netmask", "")
+        json_data.setdefault("gateway", "")
+        return json_data
 
     validator = NetworkConfigurationValidator
 
@@ -51,7 +61,6 @@ class NetworkConfigurationHandler(JSONHandler):
         result = {}
         result['net_manager'] = cluster.net_manager
         result['networks'] = map(self.render, cluster.network_groups)
-
         return result
 
     def PUT(self, cluster_id):
@@ -69,7 +78,7 @@ class NetworkConfigurationHandler(JSONHandler):
                 NetworkConfiguration.update(cluster, data)
             except Exception as exc:
                 err = str(exc)
-                update_task_status(
+                TaskHelper.update_task_status(
                     task.uuid,
                     status="error",
                     progress=100,
@@ -80,7 +89,6 @@ class NetworkConfigurationHandler(JSONHandler):
         data = build_json_response(TaskHandler.render(task))
         if task.status == 'error':
             self.db.rollback()
-            raise web.badrequest(message=data)
-
-        self.db.commit()
+        else:
+            self.db.commit()
         raise web.accepted(data=data)

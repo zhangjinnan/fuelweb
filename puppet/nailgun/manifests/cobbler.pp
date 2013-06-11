@@ -77,7 +77,18 @@ class nailgun::cobbler(
     require => Class["cobbler::server"],
   }
 
-  file { "/var/lib/cobbler/kickstarts/centos63-x86_64.ks":
+file {"/var/lib/cobbler/snippets/dhclient_ignore_routers_opt":
+    content => template("nailgun/cobbler/dhclient_ignore_routers_opt.snippet.erb"),
+    owner => root,
+    group => root,
+    mode => 0644,
+    require => Class["cobbler::server"],
+  }
+
+  # THIS VARIABLE IS NEEDED FOR TEMPLATING centos-x86_64.ks
+  $ks_repo = $centos_repos
+
+  file { "/var/lib/cobbler/kickstarts/centos-x86_64.ks":
     content => template("nailgun/cobbler/centos.ks.erb"),
     owner => root,
     group => root,
@@ -85,23 +96,23 @@ class nailgun::cobbler(
     require => Class["cobbler::server"],
   } ->
 
-  cobbler_distro { "centos63-x86_64":
-    kernel => "${repo_root}/centos/6.3/nailgun/x86_64/isolinux/vmlinuz",
-    initrd => "${repo_root}/centos/6.3/nailgun/x86_64/isolinux/initrd.img",
+  cobbler_distro { "centos-x86_64":
+    kernel => "${repo_root}/centos/fuelweb/x86_64/isolinux/vmlinuz",
+    initrd => "${repo_root}/centos/fuelweb/x86_64/isolinux/initrd.img",
     arch => "x86_64",
     breed => "redhat",
     osversion => "rhel6",
-    ksmeta => "tree=http://@@server@@:8080/centos/6.3/nailgun/x86_64",
+    ksmeta => "tree=http://@@server@@:8080/centos/fuelweb/x86_64/",
     require => Class["cobbler::server"],
   }
 
-  cobbler_profile { "centos63-x86_64":
-    kickstart => "/var/lib/cobbler/kickstarts/centos63-x86_64.ks",
+  cobbler_profile { "centos-x86_64":
+    kickstart => "/var/lib/cobbler/kickstarts/centos-x86_64.ks",
     kopts => "",
-    distro => "centos63-x86_64",
+    distro => "centos-x86_64",
     ksmeta => "",
     menu => true,
-    require => Cobbler_distro["centos63-x86_64"],
+    require => Cobbler_distro["centos-x86_64"],
   }
 
   cobbler_distro { "rhel63-x86_64":
@@ -155,6 +166,14 @@ class nailgun::cobbler(
     onlyif => "test ! -z `cobbler system find --name=default`",
     require => Cobbler_profile["bootstrap"],
   }
+
+  exec { "nailgun_cobbler_sync":
+    command => "cobbler sync",
+    refreshonly => true,
+  }
+
+  Exec["cobbler_system_add_default"] ~> Exec["nailgun_cobbler_sync"]
+  Exec["cobbler_system_edit_default"] ~> Exec["nailgun_cobbler_sync"]
 
   file { "/etc/cobbler/power/fence_ssh.template":
     content => template("nailgun/cobbler/fence_ssh.template.erb"),

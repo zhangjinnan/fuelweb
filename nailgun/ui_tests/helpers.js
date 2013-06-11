@@ -34,24 +34,29 @@ casper.createCluster = function(options) {
 }
 
 casper.createNode = function(options) {
+    var mac = '52:54:00:96:81:6E';
+    if('mac' in options) {
+        mac = options['mac'];
+    }
+
     options.meta = {
         "disks": [
             {
                 "model": "TOSHIBA MK3259GS",
                 "disk": "blablabla1",
                 "name": "sda",
-                "size": 100000022933
+                "size": 100010485760
             },
             {
                 "model": "TOSHIBA",
                 "disk": "blablabla2",
                 "name": "vda",
-                "size": 80000022933
+                "size": 80010485760
             }
         ],
         "interfaces": [
             {
-              "mac": "52:54:00:96:81:6E",
+              "mac": mac,
               "name": "eth0",
               "max_speed": 1000,
               "current_speed": 100

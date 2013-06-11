@@ -5,8 +5,6 @@ import itertools
 import traceback
 import subprocess
 import shlex
-import shutil
-import os
 import json
 
 import web
@@ -19,7 +17,6 @@ from nailgun.db import orm
 from nailgun.logger import logger
 from nailgun.settings import settings
 from nailgun.notifier import notifier
-from nailgun.task.helpers import update_task_status
 from nailgun.network.manager import NetworkManager
 from nailgun.api.models import Base
 from nailgun.api.models import Network
@@ -28,30 +25,34 @@ from nailgun.api.models import Node
 from nailgun.api.models import Cluster
 from nailgun.api.models import IPAddr
 from nailgun.api.validators import BasicValidator
-from nailgun.provision.cobbler import Cobbler
 from nailgun.task.fake import FAKE_THREADS
-
 from nailgun.errors import errors
+from nailgun.task.helpers import TaskHelper
 
 
-def fake_cast(queue, message, **kwargs):
-    thread = FAKE_THREADS[message['method']](
-        data=message,
-        params=kwargs
-    )
-    thread.start()
-    thread.name = message['method'].upper()
+def fake_cast(queue, messages, **kwargs):
+    def make_thread(message, join_to=None):
+        thread = FAKE_THREADS[message['method']](
+            data=message,
+            params=kwargs,
+            join_to=join_to
+        )
+        logger.debug("Fake thread called: data: %s, params: %s",
+                     message, kwargs)
+        thread.start()
+        thread.name = message['method'].upper()
+        return thread
+
+    if isinstance(messages, (list,)):
+        thread = None
+        for m in messages:
+            thread = make_thread(m, join_to=thread)
+    else:
+        make_thread(messages)
 
 
 if settings.FAKE_TASKS or settings.FAKE_TASKS_AMQP:
     rpc.cast = fake_cast
-
-
-class TaskHelper(object):
-
-    @classmethod
-    def slave_name_by_id(cls, id):
-        return "slave-%s" % str(id)
 
 
 class DeploymentTask(object):
@@ -89,61 +90,16 @@ class DeploymentTask(object):
 #   those which are prepared for removal.
 
     @classmethod
-    def execute(cls, task):
+    def message(cls, task):
+        logger.debug("DeploymentTask.message(task=%s)" % task.uuid)
         task_uuid = task.uuid
         cluster_id = task.cluster.id
         netmanager = NetworkManager()
 
-        nodes = orm().query(Node).filter_by(
-            cluster_id=task.cluster.id,
-            pending_deletion=False).order_by(Node.id)
+        nodes = TaskHelper.nodes_to_deploy(task.cluster)
 
-        # We should not redeploy all cluster
-        # if we have pending changes which
-        # affect only one node
-        changes = filter(
-            lambda x: x.name != 'disks',
-            task.cluster.changes)
-
-        if len(changes) == 0:
-            nodes = nodes.filter(
-                or_(True == Node.pending_addition,
-                    Node.status != 'ready'))
-
-        for node in nodes:
-            nd_name = TaskHelper.slave_name_by_id(node.id)
-            node.fqdn = ".".join([nd_name, settings.DNS_DOMAIN])
-            orm().add(node)
-            orm().commit()
-        fqdns = ','.join([n.fqdn for n in nodes])
-        logger.info("Associated FQDNs to nodes: %s" % fqdns)
-
-        if not settings.FAKE_TASKS and not settings.FAKE_TASKS_AMQP:
-            logger.info("Entered to processing of 'real' tasks, not 'fake'..")
-            nodes_to_provision = []
-            for node in nodes:
-                if not node.online:
-                    raise errors.NodeOffline(
-                        "Node '%s' (id=%s) is offline."
-                        " Remove it from environment and try again." %
-                        (node.name, node.id)
-                    )
-                if node.status in ('discover', 'provisioning') or \
-                        (node.status == 'error' and
-                         node.error_type == 'provision'):
-                    nodes_to_provision.append(node)
-
-            try:
-                DeploymentTask._provision(nodes_to_provision, netmanager)
-            except Exception as err:
-                error = "Failed to call cobbler: {0}".format(
-                    str(err) or "see logs for details"
-                )
-                logger.error("Provision error: %s\n%s",
-                             error, traceback.format_exc())
-                update_task_status(task.uuid, "error", 100, error)
-                raise errors.FailedProvisioning(error)
-            # /only real tasks
+        logger.info("Associated FQDNs to nodes: %s" %
+                    ', '.join([n.fqdn for n in nodes]))
 
         nodes_ids = [n.id for n in nodes]
         if nodes_ids:
@@ -160,7 +116,6 @@ class DeploymentTask(object):
             n.progress = 0
             orm().add(n)
             orm().commit()
-
             nodes_with_attrs.append(cls.__format_node_for_naily(n))
 
         cluster_attrs = task.cluster.attributes.merged_attrs_values()
@@ -172,18 +127,27 @@ class DeploymentTask(object):
         ng_db = orm().query(NetworkGroup).filter_by(
             cluster_id=cluster_id).all()
         for net in ng_db:
-            cluster_attrs[net.name + '_network_range'] = net.cidr
-
-        fixed_net = orm().query(NetworkGroup).filter_by(
-            cluster_id=cluster_id).filter_by(
-                name='fixed').first()
+            net_name = net.name + '_network_range'
+            if net.name == 'floating':
+                cluster_attrs[net_name] = \
+                    cls.__get_ip_addresses_in_ranges(net)
+            elif net.name == 'public':
+                # We shouldn't pass public_network_range attribute
+                continue
+            else:
+                cluster_attrs[net_name] = net.cidr
 
         cluster_attrs['network_manager'] = task.cluster.net_manager
-        if task.cluster.net_manager == "VlanManager":
-            cluster_attrs['vlan_interface'] = 'eth0'
-            cluster_attrs['network_size'] = fixed_net.network_size
+
+        fixed_net = orm().query(NetworkGroup).filter_by(
+            cluster_id=cluster_id).filter_by(name='fixed').first()
+        # network_size is required for all managers, otherwise
+        #  puppet will use default (255)
+        cluster_attrs['network_size'] = fixed_net.network_size
+        if cluster_attrs['network_manager'] == 'VlanManager':
             cluster_attrs['num_networks'] = fixed_net.amount
             cluster_attrs['vlan_start'] = fixed_net.vlan_start
+            cls.__add_vlan_interfaces(nodes_with_attrs)
 
         if task.cluster.mode == 'ha':
             logger.info("HA mode chosen, creating VIP addresses for it..")
@@ -204,6 +168,13 @@ class DeploymentTask(object):
                 'attributes': cluster_attrs
             }
         }
+
+        return message
+
+    @classmethod
+    def execute(cls, task):
+        logger.debug("DeploymentTask.execute(task=%s)" % task.uuid)
+        message = cls.message(task)
         task.cache = message
         orm().add(task)
         orm().commit()
@@ -221,6 +192,23 @@ class DeploymentTask(object):
         }
 
     @classmethod
+    def __add_vlan_interfaces(cls, nodes):
+        """
+        We shouldn't pass to orchetrator fixed network
+        when network manager is VlanManager, but we should specify
+        fixed_interface (private_interface in terms of fuel) as result
+        we just pass vlan_interface as node attribute.
+        """
+        netmanager = NetworkManager()
+        for node in nodes:
+            node_db = orm().query(Node).get(node['id'])
+
+            fixed_interface = netmanager._get_interface_by_network_name(
+                node_db, 'fixed')
+
+            node['vlan_interface'] = fixed_interface.name
+
+    @classmethod
     def __controller_nodes(cls, cluster_id):
         nodes = orm().query(Node).filter_by(
             cluster_id=cluster_id,
@@ -230,66 +218,84 @@ class DeploymentTask(object):
         return map(cls.__format_node_for_naily, nodes)
 
     @classmethod
-    def _prepare_syslog_dir(cls, node, prefix=None):
-        if not prefix:
-            prefix = settings.SYSLOG_DIR
+    def __get_ip_addresses_in_ranges(cls, network_group):
+        """
+        Get array of all possibale ip addresses in all ranges
+        """
+        ranges = []
+        for ip_range in network_group.ip_ranges:
+            ranges += map(lambda ip: str(ip),
+                          list(netaddr.IPRange(ip_range.first, ip_range.last)))
 
-        old = os.path.join(prefix, node.ip)
-        bak = os.path.join(prefix, "%s.bak" % node.fqdn)
-        new = os.path.join(prefix, node.fqdn)
-        admin_net_id = NetworkManager().get_admin_network_id()
-        links = map(
-            lambda i: os.path.join(prefix, i.ip_addr),
-            orm().query(IPAddr.ip_addr).
-            filter_by(node=node.id).
-            filter_by(network=admin_net_id).all()
-        )
-        # backup directory if it exists
-        if os.path.isdir(new):
-            if os.path.islink(bak):
-                os.unlink(bak)
-            elif os.path.isdir(bak):
-                shutil.rmtree(bak)
-            os.rename(new, bak)
-        # rename bootstrap directory into fqdn
-        if os.path.islink(old):
-            os.unlink(old)
-        if os.path.isdir(old):
-            os.rename(old, new)
-        else:
-            os.makedirs(new)
-        # creating symlinks
-        for l in links:
-            if os.path.islink(l) or os.path.isfile(l):
-                os.unlink(l)
-            if os.path.isdir(l):
-                shutil.rmtree(l)
-            os.symlink(new, l)
-        os.system("/usr/bin/pkill -HUP rsyslog")
+        # Return only uniq ip addresses
+        return sorted(list(set(ranges)))
 
+
+class ProvisionTask(object):
     @classmethod
-    def _provision(cls, nodes, netmanager):
-        logger.info("Requested to provision nodes: %s",
-                    ','.join([str(n.id) for n in nodes]))
-        pd = Cobbler(
-            settings.COBBLER_URL,
-            settings.COBBLER_USER,
-            settings.COBBLER_PASSWORD,
-            logger=logger
-        )
-        nd_dict = {
-            'profile': settings.COBBLER_PROFILE,
-            'power_type': 'ssh',
-            'power_user': 'root',
-        }
+    def message(cls, task):
+        logger.debug("ProvisionTask.message(task=%s)" % task.uuid)
+        # this variable is used to set 'auth_key' in cobbler ks_meta
+        cluster_attrs = task.cluster.attributes.merged_attrs_values()
+        nodes = TaskHelper.nodes_to_provision(task.cluster)
+        netmanager = NetworkManager()
 
+        USE_FAKE = settings.FAKE_TASKS or settings.FAKE_TASKS_AMQP
+        # TODO: For now we send nodes data to orchestrator
+        # which is cobbler oriented. But for future we
+        # need to use more abstract data structure.
+        nodes_data = []
         for node in nodes:
+            if not node.online:
+                if not USE_FAKE:
+                    raise Exception(
+                        u"Node '%s' (id=%s) is offline."
+                        " Remove it from environment and try again." %
+                        (node.name, node.id)
+                    )
+                else:
+                    logger.warning(
+                        u"Node '%s' (id=%s) is offline."
+                        " Remove it from environment and try again." %
+                        (node.name, node.id)
+                    )
+
+            node_data = {
+                'profile': settings.COBBLER_PROFILE,
+                'power_type': 'ssh',
+                'power_user': 'root',
+                'power_address': node.ip,
+                'name': TaskHelper.make_slave_name(node.id, node.role),
+                'hostname': node.fqdn,
+                'name_servers': '\"%s\"' % settings.DNS_SERVERS,
+                'name_servers_search': '\"%s\"' % settings.DNS_SEARCH,
+                'netboot_enabled': '1',
+                'ks_meta': {
+                    'puppet_auto_setup': 1,
+                    'puppet_master': settings.PUPPET_MASTER_HOST,
+                    'puppet_version': settings.PUPPET_VERSION,
+                    'puppet_enable': 0,
+                    'mco_auto_setup': 1,
+                    'install_log_2_syslog': 1,
+                    'mco_pskey': settings.MCO_PSKEY,
+                    'mco_vhost': settings.MCO_VHOST,
+                    'mco_host': settings.MCO_HOST,
+                    'mco_user': settings.MCO_USER,
+                    'mco_password': settings.MCO_PASSWORD,
+                    'mco_connector': settings.MCO_CONNECTOR,
+                    'mco_enable': 1,
+                    'auth_key': "\"%s\"" % cluster_attrs.get('auth_key', ''),
+                    'ks_spaces': "\"%s\"" % json.dumps(
+                        node.attributes.volumes).replace("\"", "\\\"")
+                }
+            }
+
             if node.status == "discover":
                 logger.info(
                     "Node %s seems booted with bootstrap image",
                     node.id
                 )
-                nd_dict['power_pass'] = settings.PATH_TO_BOOTSTRAP_SSH_KEY
+                node_data['power_pass'] = settings.PATH_TO_BOOTSTRAP_SSH_KEY
             else:
                 # If it's not in discover, we expect it to be booted
                 #   in target system.
@@ -298,20 +304,16 @@ class DeploymentTask(object):
                     "Node %s seems booted with real system",
                     node.id
                 )
-                nd_dict['power_pass'] = settings.PATH_TO_SSH_KEY
+                node_data['power_pass'] = settings.PATH_TO_SSH_KEY
 
-            nd_dict['power_address'] = node.ip
+            # FIXME: move this code (updating) into receiver.provision_resp
+            if not USE_FAKE:
+                node.status = "provisioning"
+                orm().add(node)
+                orm().commit()
 
-            node.status = "provisioning"
-            orm().add(node)
-            orm().commit()
-
-            nd_name = node.fqdn.split('.')[0]
-
-            nd_dict['hostname'] = node.fqdn
-            nd_dict['name_servers'] = '\"%s\"' % settings.DNS_SERVERS
-            nd_dict['name_servers_search'] = '\"%s\"' % settings.DNS_SEARCH
-
+            # here we assign admin network IPs for node
+            # one IP for every node interface
             netmanager.assign_admin_ips(
                 node.id,
                 len(node.meta.get('interfaces', []))
@@ -321,9 +323,9 @@ class DeploymentTask(object):
                             filter_by(node=node.id).
                             filter_by(network=admin_net_id)])
             for i in node.meta.get('interfaces', []):
-                if 'interfaces' not in nd_dict:
-                    nd_dict['interfaces'] = {}
-                nd_dict['interfaces'][i['name']] = {
+                if 'interfaces' not in node_data:
+                    node_data['interfaces'] = {}
+                node_data['interfaces'][i['name']] = {
                     'mac_address': i['mac'],
                     'static': '0',
                     'netmask': settings.ADMIN_NETWORK['netmask'],
@@ -336,9 +338,9 @@ class DeploymentTask(object):
                 # have 'peerdns' field, but we need this field
                 # to be configured. So we use interfaces_extra
                 # branch in order to set this unsupported field.
-                if 'interfaces_extra' not in nd_dict:
-                    nd_dict['interfaces_extra'] = {}
-                nd_dict['interfaces_extra'][i['name']] = {
+                if 'interfaces_extra' not in node_data:
+                    node_data['interfaces_extra'] = {}
+                node_data['interfaces_extra'][i['name']] = {
                     'peerdns': 'no',
                     'onboot': 'no'
                 }
@@ -350,67 +352,47 @@ class DeploymentTask(object):
                 # because we don't completely support multiinterface
                 # configuration yet.
                 if i['mac'] == node.mac:
-                    nd_dict['interfaces'][i['name']]['dns_name'] = node.fqdn
-                    nd_dict['interfaces_extra'][i['name']]['onboot'] = 'yes'
+                    node_data['interfaces'][i['name']]['dns_name'] = node.fqdn
+                    node_data['interfaces_extra'][i['name']]['onboot'] = 'yes'
 
-            cluster_attrs = node.cluster.attributes.merged_attrs_values()
+            nodes_data.append(node_data)
+            if not USE_FAKE:
+                TaskHelper.prepare_syslog_dir(node)
 
-            nd_dict['netboot_enabled'] = '1'
-            nd_dict['ks_meta'] = """
-puppet_auto_setup=1
-puppet_master=%(puppet_master_host)s
-puppet_version=%(puppet_version)s
-puppet_enable=0
-mco_auto_setup=1
-install_log_2_syslog=1
-mco_pskey=%(mco_pskey)s
-mco_vhost=%(mco_vhost)s
-mco_host=%(mco_host)s
-mco_user=%(mco_user)s
-mco_password=%(mco_password)s
-mco_connector=%(mco_connector)s
-mco_enable=1
-auth_key="%(auth_key)s"
-ks_spaces="%(ks_spaces)s"
-            """ % {'puppet_master_host': settings.PUPPET_MASTER_HOST,
-                   'puppet_version': settings.PUPPET_VERSION,
-                   'mco_pskey': settings.MCO_PSKEY,
-                   'mco_host': settings.MCO_HOST,
-                   'mco_vhost': settings.MCO_VHOST,
-                   'mco_user': settings.MCO_USER,
-                   'mco_connector': settings.MCO_CONNECTOR,
-                   'mco_password': settings.MCO_PASSWORD,
-                   'auth_key': cluster_attrs.get('auth_key', ''),
-                   'ks_spaces': json.dumps(
-                       node.attributes.volumes).replace("\"", "\\\""),
-                   }
+        message = {
+            'method': 'provision',
+            'respond_to': 'provision_resp',
+            'args': {
+                'task_uuid': task.uuid,
+                'engine': {
+                    'url': settings.COBBLER_URL,
+                    'username': settings.COBBLER_USER,
+                    'password': settings.COBBLER_PASSWORD,
+                },
+                'nodes': nodes_data
+            }
+        }
+        return message
 
-            logger.debug("Node %s\nks_meta without extra params: %s" %
-                         (nd_name, nd_dict['ks_meta']))
-            logger.debug(
-                "Trying to save node %s into provision system: profile: %s ",
-                node.id,
-                nd_dict.get('profile', 'unknown')
-            )
-            pd.item_from_dict('system', nd_name, nd_dict, False, False)
-            logger.debug(
-                "Trying to reboot node %s using %s "
-                "in order to launch provisioning",
-                node.id,
-                nd_dict.get('power_type', 'unknown')
-            )
-            pd.power_reboot(nd_name)
-            cls._prepare_syslog_dir(node)
-        pd.sync()
+    @classmethod
+    def execute(cls, task):
+        logger.debug("ProvisionTask.execute(task=%s)" % task.uuid)
+        message = cls.message(task)
+        task.cache = message
+        orm().add(task)
+        orm().commit()
+        rpc.cast('naily', message)
 
 
 class DeletionTask(object):
 
     @classmethod
     def execute(self, task, respond_to='remove_nodes_resp'):
+        logger.debug("DeletionTask.execute(task=%s)" % task.uuid)
         task_uuid = task.uuid
         logger.debug("Nodes deletion task is running")
         nodes_to_delete = []
+        nodes_to_delete_constant = []
         nodes_to_restore = []
 
         USE_FAKE = settings.FAKE_TASKS or settings.FAKE_TASKS_AMQP
@@ -431,7 +413,8 @@ class DeletionTask(object):
             if node.pending_deletion:
                 nodes_to_delete.append({
                     'id': node.id,
-                    'uid': node.id
+                    'uid': node.id,
+                    'role': node.role
                 })
 
                 if USE_FAKE:
@@ -456,73 +439,71 @@ class DeletionTask(object):
                     nodes_to_restore.append(new_node)
                     # /only fake tasks
 
-        # Deletion offline nodes from db
-        if nodes_to_delete:
-            for node in list(nodes_to_delete):
-                node_db = orm().query(Node).get(node['id'])
+        # this variable is used to iterate over it
+        # and be able to delete node from nodes_to_delete safely
+        nodes_to_delete_constant = list(nodes_to_delete)
 
-                if not node_db.online:
-                    slave_name = TaskHelper.slave_name_by_id(node['id'])
-                    logger.info(
-                        "Node %s is offline, removing node from db" %
-                        slave_name)
-                    orm().delete(node_db)
-                    orm().commit()
+        for node in nodes_to_delete_constant:
+            node_db = orm().query(Node).get(node['id'])
 
-                    nodes_to_delete.remove(node)
+            slave_name = TaskHelper.make_slave_name(
+                node['id'], node['role']
+            )
+            logger.debug("Removing node from database and pending it "
+                         "to clean its MBR: %s", slave_name)
+            if not node_db.online:
+                logger.info(
+                    "Node is offline, can't MBR clean: %s", slave_name)
+                orm().delete(node_db)
+                orm().commit()
+
+                nodes_to_delete.remove(node)
 
         # only real tasks
+        engine_nodes = []
         if not USE_FAKE:
-            if nodes_to_delete:
-                logger.debug("There are nodes to delete")
-                pd = Cobbler(
-                    settings.COBBLER_URL,
-                    settings.COBBLER_USER,
-                    settings.COBBLER_PASSWORD
+            for node in nodes_to_delete_constant:
+                slave_name = TaskHelper.make_slave_name(
+                    node['id'], node['role']
                 )
-                for node in nodes_to_delete:
-                    slave_name = TaskHelper.slave_name_by_id(node['id'])
-
-                    if pd.system_exists(slave_name):
-                        logger.debug("Removing system "
-                                     "from cobbler: %s" % slave_name)
-                        pd.remove_system(slave_name)
-                    try:
-                        logger.info("Deleting old certs from puppet..")
-                        node_db = orm().query(Node).get(node['id'])
-                        if node_db and node_db.fqdn:
-                            node_hostname = node_db.fqdn
-                        else:
-                            node_hostname = '.'.join([
-                                slave_name, settings.DNS_DOMAIN])
-                        cmd = "puppet cert clean {0}".format(node_hostname)
-                        proc = subprocess.Popen(
-                            shlex.split(cmd),
-                            shell=False,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE
+                logger.debug("Pending node to be removed from cobbler %s",
+                             slave_name)
+                engine_nodes.append(slave_name)
+                try:
+                    node_db = orm().query(Node).get(node['id'])
+                    if node_db and node_db.fqdn:
+                        node_hostname = node_db.fqdn
+                    else:
+                        node_hostname = TaskHelper.make_slave_fqdn(
+                            node['id'], node['role'])
+                    logger.info("Removing node cert from puppet: %s",
+                                node_hostname)
+                    cmd = "puppet cert clean {0}".format(node_hostname)
+                    proc = subprocess.Popen(
+                        shlex.split(cmd),
+                        shell=False,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE
+                    )
+                    p_stdout, p_stderr = proc.communicate()
+                    logger.info(
+                        "'{0}' executed, STDOUT: '{1}',"
+                        " STDERR: '{2}'".format(
+                            cmd,
+                            p_stdout,
+                            p_stderr
                         )
-                        p_stdout, p_stderr = proc.communicate()
-                        logger.info(
-                            "'{0}' executed, STDOUT: '{1}',"
-                            " STDERR: '{2}'".format(
-                                cmd,
-                                p_stdout,
-                                p_stderr
-                            )
+                    )
+                except OSError:
+                    logger.warning(
+                        "'{0}' returned non-zero exit code".format(
+                            cmd
                         )
-                    except OSError:
-                        logger.warning(
-                            "'{0}' returned non-zero exit code".format(
-                                cmd
-                            )
-                        )
-                    except Exception as e:
-                        logger.warning("Exception occurred while trying to \
-                                remove the system from Cobbler: '{0}'".format(
-                            e.message))
-
-        # /only real tasks
+                    )
+                except Exception as e:
+                    logger.warning("Exception occurred while trying to \
+                            remove the system from Cobbler: '{0}'".format(
+                        e.message))
 
         msg_delete = {
             'method': 'remove_nodes',
@@ -530,6 +511,12 @@ class DeletionTask(object):
             'args': {
                 'task_uuid': task.uuid,
                 'nodes': nodes_to_delete,
+                'engine': {
+                    'url': settings.COBBLER_URL,
+                    'username': settings.COBBLER_USER,
+                    'password': settings.COBBLER_PASSWORD,
+                },
+                'engine_nodes': engine_nodes
             }
         }
         # only fake tasks

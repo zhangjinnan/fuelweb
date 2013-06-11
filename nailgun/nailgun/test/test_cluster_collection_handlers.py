@@ -43,7 +43,6 @@ class TestHandlers(BaseHandlers):
             {"name": "fixed", "access": "private10"},
             {"name": "storage", "access": "private192"},
             {"name": "management", "access": "private172"},
-            {"name": "other_172", "access": "private172"},
         ]
         release.attributes_metadata = {
             "editable": {
@@ -114,14 +113,6 @@ class TestHandlers(BaseHandlers):
                 'cidr': '172.16.0.0/24',
                 'gateway': '172.16.0.1'
             },
-            {
-                'release': release.id,
-                'name': u'other_172',
-                'access': 'private172',
-                'vlan_id': 104,
-                'cidr': '172.16.1.0/24',
-                'gateway': '172.16.1.1'
-            },
         ]
         self.assertItemsEqual(expected, obtained)
 
@@ -137,7 +128,9 @@ class TestHandlers(BaseHandlers):
             headers=self.default_headers,
             expect_errors=True
         )
-        self.assertEquals(400, resp.status)
+        self.assertEquals(202, resp.status)
+        task = json.loads(resp.body)
+        self.assertEquals(task['status'], 'error')
 
     @patch('nailgun.rpc.cast')
     def test_verify_networks(self, mocked_rpc):
@@ -148,4 +141,6 @@ class TestHandlers(BaseHandlers):
             json.dumps(self.env.generate_ui_networks(cluster["id"])),
             headers=self.default_headers
         )
-        self.assertEquals(resp.status, 202)
+        self.assertEquals(202, resp.status)
+        task = json.loads(resp.body)
+        self.assertEquals(task['status'], 'ready')

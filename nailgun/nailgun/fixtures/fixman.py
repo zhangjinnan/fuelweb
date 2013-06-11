@@ -2,9 +2,12 @@
 
 import sys
 import json
+import Queue
 import os.path
 import itertools
 from datetime import datetime
+import jinja2
+import StringIO
 
 import sqlalchemy.types
 from nailgun.settings import settings
@@ -12,7 +15,7 @@ from nailgun.api import models
 from sqlalchemy import orm
 from nailgun.db import orm as ormgen
 from nailgun.logger import logger
-from sqlalchemy.exc import IntegrityError
+from nailgun.network.manager import NetworkManager
 
 db = ormgen()
 
@@ -21,11 +24,19 @@ def capitalize_model_name(model_name):
     return ''.join(map(lambda s: s.capitalize(), model_name.split('_')))
 
 
+def template_fixture(fileobj, config=None):
+    if not config:
+        config = settings
+    t = jinja2.Template(fileobj.read())
+    return StringIO.StringIO(t.render(settings=config))
+
+
 def upload_fixture(fileobj):
     db.expunge_all()
-    fixture = json.load(fileobj)
+    fixture = json.load(template_fixture(fileobj))
 
-    known_objects = []
+    queue = Queue.Queue()
+    keys = {}
 
     for obj in fixture:
         pk = obj["pk"]
@@ -41,6 +52,7 @@ def upload_fixture(fileobj):
             raise Exception("Couldn't find model {0}".format(model_name))
 
         obj['model'] = getattr(models, capitalize_model_name(model_name))
+        keys[obj['model'].__tablename__] = {}
 
         # Check if it's already uploaded
         obj_from_db = db.query(obj['model']).get(pk)
@@ -48,10 +60,16 @@ def upload_fixture(fileobj):
             logger.info("Fixture model '%s' with pk='%s' already"
                         " uploaded. Skipping", model_name, pk)
             continue
+        queue.put(obj)
 
-        known_objects.append(obj)
+    pending_objects = []
 
-    for obj in known_objects:
+    while True:
+        try:
+            obj = queue.get_nowait()
+        except:
+            break
+
         new_obj = obj['model']()
 
         fk_fields = {}
@@ -64,6 +82,24 @@ def upload_fixture(fileobj):
                     fk_model = f.comparator.prop.argument()
                 else:
                     fk_model = f.comparator.prop.argument.class_
+
+            if fk_model:
+                if value not in keys[fk_model.__tablename__]:
+                    if obj not in pending_objects:
+                        queue.put(obj)
+                        pending_objects.append(obj)
+                        continue
+                    else:
+                        logger.error(
+                            u"Can't resolve foreign key "
+                            "'{0}' for object '{1}'".format(
+                                field,
+                                obj["model"]
+                            )
+                        )
+                        break
+                else:
+                    value = keys[fk_model.__tablename__][value].id
 
             if isinstance(impl, orm.attributes.ScalarObjectAttributeImpl):
                 if value:
@@ -99,12 +135,16 @@ def upload_fixture(fileobj):
                     )
         db.add(new_obj)
         db.commit()
+        keys[obj['model'].__tablename__][obj["pk"]] = new_obj
+
         # UGLY HACK for testing
         if new_obj.__class__.__name__ == 'Node':
             new_obj.attributes = models.NodeAttributes()
             db.commit()
             new_obj.attributes.volumes = \
                 new_obj.volume_manager.gen_default_volumes_info()
+            network_manager = NetworkManager(db)
+            network_manager.update_interfaces_info(new_obj)
             db.commit()
 
 

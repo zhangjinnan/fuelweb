@@ -12,8 +12,7 @@ class TestHandlers(BaseHandlers):
 
     def test_attrs_creation(self):
         node = self.env.create_node(
-            api=True,
-            meta=self.env.default_metadata()
+            api=True
         )
         node_db = self.env.nodes[0]
         resp = self.app.get(
@@ -30,10 +29,7 @@ class TestHandlers(BaseHandlers):
         )
 
     def test_attrs_creation_put(self):
-        node = self.env.create_node(
-            api=True,
-            meta=self.env.default_metadata()
-        )
+        node = self.env.create_node(api=True)
         node_db = self.env.nodes[0]
         resp = self.app.put(
             reverse('NodeAttributesHandler', kwargs={'node_id': node_db.id}),
@@ -65,10 +61,7 @@ class TestHandlers(BaseHandlers):
         self.assertNotEquals(response["volumes"], [])
 
     def test_get_default_attrs(self):
-        node = self.env.create_node(
-            api=True,
-            meta=self.env.default_metadata()
-        )
+        node = self.env.create_node(api=True)
         node_db = self.env.nodes[0]
         resp = self.app.get(
             reverse('NodeAttributesDefaultsHandler',
@@ -83,10 +76,7 @@ class TestHandlers(BaseHandlers):
         )
 
     def test_get_default_attrs_volumes(self):
-        node = self.env.create_node(
-            api=True,
-            meta=self.env.default_metadata()
-        )
+        node = self.env.create_node(api=True)
         node_db = self.env.nodes[0]
         resp = self.app.get(
             reverse('NodeAttributesByNameDefaultsHandler',
@@ -104,12 +94,9 @@ class TestHandlers(BaseHandlers):
         )
 
     def test_reset_attrs_to_default(self):
-        node = self.env.create_node(
-            api=True,
-            meta=self.env.default_metadata()
-        )
+        node = self.env.create_node(api=True)
         node_db = self.env.nodes[0]
-        test_data = {"volumes": "test"}
+        test_data = {"volumes": []}
         resp = self.app.put(
             reverse('NodeAttributesHandler', kwargs={'node_id': node_db.id}),
             json.dumps(test_data),
@@ -134,10 +121,7 @@ class TestHandlers(BaseHandlers):
         )
 
     def test_attrs_updating(self):
-        node = self.env.create_node(
-            api=True,
-            meta=self.env.default_metadata()
-        )
+        node = self.env.create_node(api=True)
         node_db = self.env.nodes[0]
         test_data = {"volumes": "test"}
         resp = self.app.put(
@@ -154,7 +138,6 @@ class TestHandlers(BaseHandlers):
         cluster = self.env.create_cluster(api=False)
         node = self.env.create_node(
             api=True,
-            meta=self.env.default_metadata(),
             role="compute",  # vgs: os, vm
             cluster_id=cluster.id
         )
@@ -268,10 +251,7 @@ class TestHandlers(BaseHandlers):
         self.assertEquals(os_pv_sum, os_lv_sum)
 
     def test_attrs_get_by_name(self):
-        node = self.env.create_node(
-            api=True,
-            meta=self.env.default_metadata()
-        )
+        node = self.env.create_node(api=True)
         node_db = self.env.nodes[0]
         resp = self.app.get(
             reverse('NodeAttributesByNameHandler',
@@ -288,10 +268,7 @@ class TestHandlers(BaseHandlers):
         )
 
     def test_attrs_get_by_name_type(self):
-        node = self.env.create_node(
-            api=True,
-            meta=self.env.default_metadata()
-        )
+        node = self.env.create_node(api=True)
         node_db = self.env.nodes[0]
         resp = self.app.get(
             reverse('NodeAttributesByNameHandler',
@@ -301,17 +278,14 @@ class TestHandlers(BaseHandlers):
         )
         self.assertEquals(200, resp.status)
         response = json.loads(resp.body)
-        self.assertEquals(len(response), 2)
+        self.assertEquals(len(response), 1)
         self.assertEquals(
             len(filter(lambda v: (v["type"] == "vg"), response)),
-            2
+            1
         )
 
     def test_attrs_update_by_name(self):
-        node = self.env.create_node(
-            api=True,
-            meta=self.env.default_metadata()
-        )
+        node = self.env.create_node(api=True)
         node_db = self.env.nodes[0]
         test_data = [
             {
@@ -335,10 +309,7 @@ class TestHandlers(BaseHandlers):
         )
 
     def test_attrs_update_by_name_type(self):
-        node = self.env.create_node(
-            api=True,
-            meta=self.env.default_metadata()
-        )
+        node = self.env.create_node(api=True)
         node_db = self.env.nodes[0]
         test_data1 = [
             {

@@ -21,21 +21,25 @@ from paste.fixture import TestApp, AppError
 
 import nailgun
 from nailgun.api.models import Node
+from nailgun.api.models import NodeNICInterface
 from nailgun.api.models import Release
 from nailgun.api.models import Cluster
 from nailgun.api.models import Notification
 from nailgun.api.models import Attributes
 from nailgun.api.models import Network
 from nailgun.api.models import NetworkGroup
+from nailgun.api.models import NodeAttributes
 from nailgun.api.models import Task
 from nailgun.api.models import IPAddr
 from nailgun.api.models import Vlan
+from nailgun.logger import logger
 from nailgun.api.urls import urls
 from nailgun.wsgi import build_app
 from nailgun.db import engine, NoCacheQuery
 from nailgun.db import dropdb, syncdb, flush, orm
 from nailgun.fixtures.fixman import upload_fixture
 from nailgun.network.manager import NetworkManager
+from nailgun.network.topology import TopoChecker, NICUtils
 
 
 class TimeoutError(Exception):
@@ -148,14 +152,19 @@ class Environment(object):
             exclude=None, expect_http=201,
             expect_message=None,
             **kwargs):
+        default_metadata = self.default_metadata()
+        mac = self._generate_random_mac()
+        default_metadata['interfaces'][0]['mac'] = mac
+
         node_data = {
-            'mac': self._generate_random_mac(),
+            'mac': mac,
             'role': 'controller',
             'status': 'discover',
-            'meta': self.default_metadata()
+            'meta': default_metadata
         }
         if kwargs:
             node_data.update(kwargs)
+
         if exclude and isinstance(exclude, list):
             for ex in exclude:
                 try:
@@ -176,18 +185,34 @@ class Environment(object):
                 return None
             self.tester.assertEquals(resp.status, expect_http)
             node = json.loads(resp.body)
-            self.nodes.append(
-                self.db.query(Node).get(node['id'])
-            )
+            node_db = self.db.query(Node).get(node['id'])
+            self._set_interfaces_if_not_set_in_meta(
+                node_db,
+                kwargs.get('meta', None))
+            self.nodes.append(node_db)
         else:
             node = Node()
             node.timestamp = datetime.now()
+            if not node_data.get('meta'):
+                node_data['meta'] = default_metadata
+            else:
+                node_data['meta'].update(default_metadata)
             for key, value in node_data.iteritems():
                 setattr(node, key, value)
+            node.attributes = self.create_attributes()
+            node.attributes.volumes = node.volume_manager.gen_volumes_info()
             self.db.add(node)
             self.db.commit()
+            self._set_interfaces_if_not_set_in_meta(
+                node,
+                kwargs.get('meta', None))
+
             self.nodes.append(node)
+
         return node
+
+    def create_attributes(self):
+        return NodeAttributes()
 
     def create_notification(self, **kwargs):
         notif_data = {
@@ -229,17 +254,48 @@ class Environment(object):
             )
         return {'interfaces': nics}
 
+    def _set_interfaces_if_not_set_in_meta(self, node, meta):
+        if not meta or not 'interfaces' in meta:
+            self._add_interfaces_to_node(node)
+
+    def _add_interfaces_to_node(self, node, count=1):
+        interfaces = []
+        nic_utils = NICUtils()
+        allowed_networks = nic_utils.get_all_cluster_networkgroups(node)
+
+        for i in xrange(count):
+            nic_dict = {
+                'node_id': node.id,
+                'name': 'eth{0}'.format(i),
+                'mac': self._generate_random_mac(),
+                'current_speed': 100,
+                'max_speed': 1000,
+                'allowed_networks': allowed_networks,
+                'assigned_networks': allowed_networks
+            }
+
+            interface = NodeNICInterface()
+            for k, v in nic_dict.iteritems():
+                setattr(interface, k, v)
+
+            self.db.add(interface)
+            self.db.commit()
+
+            interfaces.append(interface)
+
+        return interfaces
+
     def generate_ui_networks(self, cluster_id):
         start_id = self.db.query(NetworkGroup.id).order_by(
             NetworkGroup.id
         ).first()
         start_id = 0 if not start_id else start_id[-1] + 1
         net_names = (
-            "floating_test",
-            "public_test",
-            "management_test",
-            "storage_test",
-            "fixed_test"
+            "floating",
+            "public",
+            "management",
+            "storage",
+            "fixed"
         )
         net_cidrs = (
             "240.0.0.0/24",
@@ -365,7 +421,7 @@ class Environment(object):
                 "admin_tenant": {
                     "value": "admin",
                     "label": "Admin tenant",
-                    "description": "Tenant(project) name for Administrator"
+                    "description": "Tenant (project) name for Administrator"
                 },
                 "common": {
                     "auto_assign_floating_ip": {
@@ -504,6 +560,7 @@ class Environment(object):
     def refresh_nodes(self):
         for n in self.nodes[:]:
             try:
+                self.db.add(n)
                 self.db.refresh(n)
             except:
                 self.nodes.remove(n)
@@ -603,6 +660,7 @@ class BaseHandlers(TestCase):
         )
         cls.app = TestApp(build_app().wsgifunc())
         nailgun.task.task.DeploymentTask._prepare_syslog_dir = mock.Mock()
+        # dropdb()
         syncdb()
 
     @classmethod
@@ -623,7 +681,9 @@ class BaseHandlers(TestCase):
         self.db.close()
 
 
-def fake_tasks(fake_rpc=True, **kwargs):
+def fake_tasks(fake_rpc=True,
+               mock_rpc=True,
+               **kwargs):
     def wrapper(func):
         func = mock.patch(
             'nailgun.task.task.settings.FAKE_TASKS',
@@ -650,7 +710,7 @@ def fake_tasks(fake_rpc=True, **kwargs):
                     **kwargs
                 )
             )(func)
-        else:
+        elif mock_rpc:
             func = mock.patch(
                 'nailgun.task.task.rpc.cast'
             )(func)
@@ -673,3 +733,61 @@ def reverse(name, kwargs=None):
         )
     url = re.sub(r"\??\$", "", url)
     return "/api" + url
+
+
+# this method is for development and troubleshooting purposes
+def datadiff(data1, data2, branch, p=True):
+    def iterator(data1, data2):
+        if isinstance(data1, (list,)) and isinstance(data2, (list,)):
+            return xrange(max(len(data1), len(data2)))
+        elif isinstance(data1, (dict,)) and isinstance(data2, (dict,)):
+            return (set(data1.keys()) | set(data2.keys()))
+        else:
+            raise TypeError
+
+    diff = []
+    if data1 != data2:
+        try:
+            it = iterator(data1, data2)
+        except:
+            return [(branch, data1, data2)]
+
+        for k in it:
+            newbranch = branch[:]
+            newbranch.append(k)
+
+            if p:
+                print "Comparing branch: %s" % newbranch
+            try:
+                try:
+                    v1 = data1[k]
+                except (KeyError, IndexError):
+                    if p:
+                        print "data1 seems does not have key = %s" % k
+                    diff.append((newbranch, None, data2[k]))
+                    continue
+                try:
+                    v2 = data2[k]
+                except (KeyError, IndexError):
+                    if p:
+                        print "data2 seems does not have key = %s" % k
+                    diff.append((newbranch, data1[k], None))
+                    continue
+
+            except Exception as e:
+                if p:
+                    print("data1 and data2 cannot be compared on "
+                          "branch: %s" % newbranch)
+                return diff.append((newbranch, data1, data2))
+
+            else:
+                if v1 != v2:
+                    if p:
+                        print("data1 and data2 do not match "
+                              "each other on branch: %s" % newbranch)
+                        # print("data1 = %s" % data1)
+                        print("v1 = %s" % v1)
+                        # print("data2 = %s" % data2)
+                        print("v2 = %s" % v2)
+                    diff.extend(datadiff(v1, v2, newbranch))
+    return diff

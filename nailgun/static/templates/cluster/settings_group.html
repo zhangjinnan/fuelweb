@@ -1,8 +1,8 @@
-<% var disabled = cluster.task('deploy', 'running') ? 'disabled' : '' %>
+<% var disabled = locked ? 'disabled' : '' %>
 
 <legend class="openstack-settings"><%- legend %></legend>
 <div>
-  <% var sortedSettings = _.sortBy(_.keys(settings), function(setting) {return setting;}) %>
+  <% var sortedSettings = _.sortBy(_.keys(settings), function(setting) {return settings[setting].weight;}) %>
   <% _.each(sortedSettings, function(setting) { %>
     <% var settingDetails = settings[setting] %>
     <% if (_.isBoolean(settingDetails.value)) { %>
@@ -10,10 +10,11 @@
         <div class="parameter-control">
           <div class="custom-tumbler">
             <input type="checkbox" name="checkbox" <%= settingDetails.value ? 'checked' : '' %> <%= disabled %> />
-            <!--[if !IE |(gte IE 9)]>--><span>&nbsp;</span><!--<![endif]-->
+            <!-- [if !IE |(gte IE 9)]> --><span>&nbsp;</span><!-- <![endif] -->
           </div>
         </div>
         <div class="openstack-sub-title parameter-name"><%- settingDetails.label %></div>
+        <div class="global-weight weight"><input type="hidden" value="<%- settingDetails.weight %>" /></div>
       </label>
       <div class="global-description description"><%- settingDetails.description %></div>
     <% } else if (settingDetails.values) { %>
@@ -24,12 +25,13 @@
           <div class="parameter-control">
             <div class="custom-tumbler">
               <input type="radio" name="<%- setting %>" value="<%- option['data'] %>" <%= option['data'] == settingDetails.value ? 'checked' : '' %> <%= disabled %> />
-              <!--[if !IE |(gte IE 9)]>--><span>&nbsp;</span><!--<![endif]-->
+              <!-- [if !IE |(gte IE 9)]> --><span>&nbsp;</span><!-- <![endif] -->
             </div>
           </div>
           <div class="parameter-name"><%- option['display_name'] %></div>
         </label>
         <div class="global-description description"><%- option['description'] %></div>
+        <div class="global-weight weight"><input type="hidden" value="<%- settingDetails.weight %>" /></div>
       <% }) %>
       </div>
       <div class="parameter-spacer"></div>
@@ -42,6 +44,7 @@
           </div>
         </div>
         <div class="parameter-description description"><%- settingDetails.description %></div>
+        <div class="parameter-weight weight"><input type="hidden" value="<%- settingDetails.weight %>" /></div>
       </label>
     <% } %>
   <% }) %>

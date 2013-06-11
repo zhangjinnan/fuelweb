@@ -2,15 +2,12 @@ class osnailyfacter::cluster_ha {
 
 $controller_internal_addresses = parsejson($ctrl_management_addresses)
 $controller_public_addresses = parsejson($ctrl_public_addresses)
+$controller_storage_addresses = parsejson($ctrl_storage_addresses)
 $controller_hostnames = keys($controller_internal_addresses)
 $galera_nodes = values($controller_internal_addresses)
 
 $create_networks = true
-if $network_manager == 'VlanManager' {
-  $private_interface = $vlan_interface
-}else{
-  $private_interface = $fixed_interface
-}
+
 $network_config = {
   'vlan_start'     => $vlan_start,
 }
@@ -31,6 +28,7 @@ $keystone_hash = parsejson($keystone)
 $swift_hash    = parsejson($swift)
 $cinder_hash   = parsejson($cinder)
 $access_hash   = parsejson($access)
+$floating_hash = parsejson($floating_network_range)
 
 if $::hostname == $master_hostname {
   $primary_proxy = true
@@ -72,7 +70,6 @@ $quantum_host            = $management_vip # Quantum is turned off
 
 $mirror_type = 'external'
 $quantum_sql_connection  = "mysql://${quantum_db_user}:${quantum_db_password}@${quantum_host}/${quantum_db_dbname}" # Quantum is turned off
-$controller_node_public  = $management_vip
 $verbose = true
 Exec { logoutput => true }
 
@@ -83,11 +80,11 @@ class compact_controller {
     internal_address              => $internal_address,
     public_interface              => $public_interface,
     internal_interface            => $management_interface,
-    private_interface             => $private_interface,
+    private_interface             => $fixed_interface,
     internal_virtual_ip           => $management_vip,
     public_virtual_ip             => $public_vip,
     primary_controller            => $primary_controller,
-    floating_range                => $floating_network_range,
+    floating_range                => false,
     fixed_range                   => $fixed_network_range,
     multi_host                    => $multi_host,
     network_manager               => $network_manager,
@@ -153,9 +150,10 @@ class compact_controller {
       class { compact_controller: }
       class { 'openstack::swift::storage_node':
         storage_type          => 'loopback',
+        loopback_size         => '5243780',
         swift_zone            => $uid,
-        swift_local_net_ip    => $internal_address,
-        master_swift_proxy_ip => $controller_internal_addresses[$master_hostname],
+        swift_local_net_ip    => $storage_address,
+        master_swift_proxy_ip => $controller_storage_addresses[$master_hostname],
         sync_rings            => ! $primary_proxy
       }
       if $primary_proxy {
@@ -174,23 +172,23 @@ class compact_controller {
       nova_config { 'DEFAULT/start_guests_on_host_boot': value => $start_guests_on_host_boot }
       nova_config { 'DEFAULT/use_cow_images': value => $use_cow_images }
       nova_config { 'DEFAULT/compute_scheduler_driver': value => $compute_scheduler_driver }
+      nova_config { 'DEFAULT/debug': value => 'true' }
+
       if $hostname == $master_hostname {
         class { 'openstack::img::cirros':
-          os_username => $access_hash[user],
-          os_password => $access_hash[password],
-          os_tenant_name => $access_hash[tenant],
+          os_username => shellescape($access_hash[user]),
+          os_password => shellescape($access_hash[password]),
+          os_tenant_name => shellescape($access_hash[tenant]),
           os_auth_url => "http://${management_vip}:5000/v2.0/",
           img_name    => "TestVM",
+          stage          => 'glance-image',
         }
+        nova::manage::floating{$floating_hash:}
         Class[glance::api]                    -> Class[openstack::img::cirros]
         Class[openstack::swift::storage_node] -> Class[openstack::img::cirros]
         Class[openstack::swift::proxy]        -> Class[openstack::img::cirros]
         Service[swift-proxy]                  -> Class[openstack::img::cirros]
       }
-
-      Class[osnailyfacter::network_setup]   -> Class[openstack::controller_ha]
-      Class[osnailyfacter::network_setup]   -> Class[openstack::swift::storage_node]
-      Class[osnailyfacter::network_setup]   -> Class[openstack::swift::proxy]
     }
 
     "compute" : {
@@ -198,7 +196,7 @@ class compact_controller {
 
       class { 'openstack::compute':
         public_interface       => $public_interface,
-        private_interface      => $private_interface,
+        private_interface      => $fixed_interface,
         internal_address       => $internal_address,
         libvirt_type           => $libvirt_type,
         fixed_range            => $fixed_network_range,
@@ -241,8 +239,7 @@ class compact_controller {
       nova_config { 'DEFAULT/start_guests_on_host_boot': value => $start_guests_on_host_boot }
       nova_config { 'DEFAULT/use_cow_images': value => $use_cow_images }
       nova_config { 'DEFAULT/compute_scheduler_driver': value => $compute_scheduler_driver }
-
-      Class[osnailyfacter::network_setup] -> Class[openstack::compute]
+      nova_config { 'DEFAULT/debug': value => 'true' }
     }
 
     "cinder" : {
@@ -259,7 +256,7 @@ class compact_controller {
         manage_volumes       => true,
         enabled              => true,
         auth_host            => $service_endpoint,
-        iscsi_bind_host      => $internal_address,
+        iscsi_bind_host      => $storage_address,
         cinder_user_password => $cinder_hash[user_password],
         use_syslog           => true,
       }

@@ -66,28 +66,6 @@ define(function() {
             var nodes = this.get('nodes');
             return !(nodes.currentNodes().length || nodes.where({role: 'controller'}).length > 1 || (newMode && newMode == 'singlenode' && (nodes.length > 1 || (nodes.length == 1 && !nodes.where({role: 'controller'}).length))));
         },
-        canChangeType: function(newType) {
-            // FIXME: algorithmic complexity is very high
-            var canChange;
-            var nodes = this.get('nodes');
-            if (!newType) {
-                canChange = false;
-                _.each(this.availableTypes(), function(type) {
-                    if (type == this.get('type')) {return;}
-                    canChange = canChange || this.canChangeType(type);
-                }, this);
-            } else {
-                canChange = true;
-                var clusterTypesToNodesRoles = {'both': [], 'compute': ['cinder'], 'cinder': ['compute']};
-                _.each(clusterTypesToNodesRoles[newType], function(nodeRole) {
-                    if (nodes.where({role: nodeRole}).length) {
-                        canChange = false;
-                    }
-                }, this);
-                canChange = canChange && !nodes.currentNodes().length;
-            }
-            return canChange;
-        },
         canAddNodes: function(role) {
             // forbid adding when tasks are running
             if (this.task('deploy', 'running') || this.task('verify_networks', 'running')) {
@@ -112,9 +90,6 @@ define(function() {
         },
         availableModes: function() {
             return ['multinode', 'ha'];
-        },
-        availableTypes: function() {
-            return ['compute', 'both'];
         },
         availableRoles: function() {
             var roles = ['controller'];
@@ -251,10 +226,10 @@ define(function() {
             var volume = _.find(attrs.volumes, {vg: options.group});
             if (_.isNaN(volume.size) || volume.size < 0) {
                 errors[volume.vg] = 'Invalid size';
-            } else if (volume.size > options.unallocated ) {
-                errors[volume.vg] = 'Too large';
+            } else if (volume.size > options.unallocated) {
+                errors[volume.vg] = 'Maximal size is ' + options.unallocated + ' GB';
             } else if (volume.size < options.min) {
-                errors[volume.vg] = 'Too small';
+                errors[volume.vg] = 'Minimal size is ' + options.min + ' GB';
             }
             return _.isEmpty(errors) ? null : errors;
         }
@@ -294,10 +269,7 @@ define(function() {
 
     models.InterfaceNetworks = Backbone.Collection.extend({
         constructorName: 'InterfaceNetworks',
-        model: models.InterfaceNetwork,
-        comparator: function(network) {
-            return network.get('name');
-        }
+        model: models.InterfaceNetwork
     });
 
     models.NodeInterfaceConfiguration = Backbone.Model.extend({
@@ -316,51 +288,108 @@ define(function() {
 
     models.Network = Backbone.Model.extend({
         constructorName: 'Network',
+        getAttributes: function() {
+            var attributes = {
+                'floating': ['ip_ranges', 'vlan_start'],
+                'public': ['ip_ranges', 'vlan_start', 'netmask', 'gateway'],
+                'management': ['cidr', 'vlan_start'],
+                'storage': ['cidr', 'vlan_start'],
+                'fixed': ['cidr', 'amount', 'network_size', 'vlan_start']
+            };
+            return attributes[this.get('name')] || ['vlan_start'];
+        },
+        validateIP: function(value) {
+            var ipRegexp = /^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$/;
+            return _.isString(value) && !value.match(ipRegexp);
+        },
         validate: function(attrs) {
             var errors = {};
             var match;
-            if (_.isString(attrs.cidr)) {
-                var cidrRegexp = /^(?:(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\/([1-9]|[1-2]\d|3[0-2])$/;
-                match = attrs.cidr.match(cidrRegexp);
-                if (match) {
-                    var prefix = parseInt(match[1], 10);
-                    if (prefix < 2) {
-                        errors.cidr = 'Network is too large';
+            _.each(this.getAttributes(), _.bind(function(attribute) {
+                if (attribute == 'ip_ranges') {
+                    if (!_.isEqual(attrs.ip_ranges, [])){
+                        _.each(attrs.ip_ranges, _.bind(function(range, index) {
+                            if (_.first(range) || _.last(range)) {
+                                var rangeErrors = {index: index};
+                                var start = _.first(range);
+                                var end = _.last(range);
+                                if (start && this.validateIP(start)) {
+                                    rangeErrors.start = 'Invalid IP range start';
+                                }
+                                if (end && this.validateIP(end)) {
+                                    rangeErrors.end = 'Invalid IP range end';
+                                }
+                                if (start == '') {
+                                    rangeErrors.start = 'Empty IP range start';
+                                }
+                                if (end == '') {
+                                    rangeErrors.end = 'Empty IP range end';
+                                }
+                                if (start == '' && end == '') {
+                                    rangeErrors.start = rangeErrors.end = 'Empty IP range';
+                                }
+                                if (rangeErrors.start || rangeErrors.end) {
+                                    errors.ip_ranges = _.compact(_.union([rangeErrors], errors.ip_ranges));
+                                }
+                            }
+                        }, this));
+                    } else {
+                        var rangeErrors = {index: 0};
+                        var emptyRangeError = 'Please specify at least one IP range';
+                        rangeErrors.start = rangeErrors.end = emptyRangeError;
+                        errors.ip_ranges = _.compact(_.union([rangeErrors], errors.ip_ranges));
                     }
-                    if (prefix > 30) {
-                        errors.cidr = 'Network is too small';
+                } else if (attribute == 'cidr') {
+                    var cidrRegexp = /^(?:(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\/([1-9]|[1-2]\d|3[0-2])$/;
+                    if (_.isString(attrs.cidr)) {
+                        match = attrs.cidr.match(cidrRegexp);
+                        if (match) {
+                            var prefix = parseInt(match[1], 10);
+                            if (prefix < 2) {
+                                errors.cidr = 'Network is too large';
+                            }
+                            if (prefix > 30) {
+                                errors.cidr = 'Network is too small';
+                            }
+                        } else {
+                            errors.cidr = 'Invalid CIDR';
+                        }
+                    } else {
+                        errors.cidr = 'Invalid CIDR';
                     }
-                } else {
-                    errors.cidr = 'Invalid CIDR';
+                } else if (attribute == 'vlan_start') {
+                    if (_.isString(attrs.vlan_start)) {
+                        match = attrs.vlan_start.match(/^[0-9]+$/);
+                        if (match) {
+                            attrs.vlan_start = parseInt(match[0], 10);
+                        } else {
+                            errors.vlan_start = 'Invalid VLAN ID';
+                        }
+                    }
+                    if (_.isNaN(attrs.vlan_start) || !_.isNumber(attrs.vlan_start) || attrs.vlan_start < 1 || attrs.vlan_start > 4094) {
+                        errors.vlan_start = 'Invalid VLAN ID';
+                    }
+                } else if (attribute == 'netmask' && this.validateIP(attrs.netmask)) {
+                    errors.netmask = 'Invalid netmask';
+                } else if (attribute == 'gateway' && this.validateIP(attrs.gateway)) {
+                    errors.gateway = 'Invalid gateway';
+                } else if (attribute == 'amount') {
+                    if (_.isString(attrs.amount)) {
+                        match = attrs.amount.match(/^[0-9]+$/);
+                        if (match) {
+                            attrs.amount = parseInt(match[0], 10);
+                        } else {
+                            errors.amount = 'Invalid amount of networks';
+                        }
+                    }
+                    if (!attrs.amount || (attrs.amount && (!_.isNumber(attrs.amount) || attrs.amount < 1))) {
+                        errors.amount = 'Invalid amount of networks';
+                    }
+                    if (attrs.amount && attrs.amount > 4095 - attrs.vlan_start) {
+                        errors.amount = 'Number of networks needs more VLAN IDs than available. Check VLAN ID Range field.';
+                    }
                 }
-            } else {
-                errors.cidr = 'Invalid CIDR';
-            }
-            if (_.isString(attrs.vlan_start)) {
-                match = attrs.vlan_start.match(/^[0-9]+$/);
-                if (match) {
-                    attrs.vlan_start = parseInt(match[0], 10);
-                } else {
-                    errors.vlan_start = 'Invalid VLAN ID';
-                }
-            }
-            if (_.isNaN(attrs.vlan_start) || !_.isNumber(attrs.vlan_start) || attrs.vlan_start < 1 || attrs.vlan_start > 4094) {
-                errors.vlan_start = 'Invalid VLAN ID';
-            }
-            if (_.isString(attrs.amount)) {
-                match = attrs.amount.match(/^[0-9]+$/);
-                if (match) {
-                    attrs.amount = parseInt(match[0], 10);
-                } else {
-                    errors.amount = 'Invalid amount of networks';
-                }
-            }
-            if (!attrs.amount || (attrs.amount && (!_.isNumber(attrs.amount) || attrs.amount < 1))) {
-                errors.amount = 'Invalid amount of networks';
-            }
-            if (attrs.amount && attrs.amount > 4095 - attrs.vlan_start) {
-                errors.amount = 'Unable to fit requested amount of networks to available VLANs. Lower VLAN start range or amount of networks.';
-            }
+            }, this));
             return _.isEmpty(errors) ? null : errors;
         }
     });
@@ -369,7 +398,7 @@ define(function() {
         constructorName: 'Networks',
         model: models.Network,
         comparator: function(network) {
-            return network.id;
+            return network.id && network.get('name') != 'public';
         }
     });
 

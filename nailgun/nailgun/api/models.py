@@ -9,9 +9,9 @@ from random import choice
 from copy import deepcopy
 
 import web
-import netaddr
+from netaddr import IPNetwork
 from sqlalchemy import Column, UniqueConstraint, Table
-from sqlalchemy import Integer, String, Unicode, Text, Boolean
+from sqlalchemy import Integer, String, Unicode, Text, Boolean, Float
 from sqlalchemy import ForeignKey, Enum, DateTime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import relationship, backref
@@ -67,7 +67,7 @@ class Cluster(Base):
     type = Column(
         Enum(*TYPES, name='cluster_type'),
         nullable=False,
-        default='compute'
+        default='both'
     )
     mode = Column(
         Enum(*MODES, name='cluster_mode'),
@@ -203,7 +203,8 @@ class Node(Base):
     def network_data(self):
         # It is required for integration tests; to get info about nets
         #   which must be created on target node
-        from nailgun.network import manager as netmanager
+        from nailgun.network.manager import NetworkManager
+        netmanager = NetworkManager()
         return netmanager.get_node_networks(self.id)
 
     @property
@@ -220,18 +221,23 @@ class Node(Base):
         if self.cluster is not None:
             def check_change(change):
                 return change.name != 'disks' or change.node_id == self.id
-
             changes = filter(check_change, self.cluster.changes)
-
         cases = [
             self.status == 'error' and self.error_type == 'deploy',
             changes != []
         ]
-        return any(cases)
+        and_cases = [
+            not self.pending_deletion
+        ]
+        return any(cases) and all(and_cases)
 
     @property
     def needs_redeletion(self):
         return self.status == 'error' and self.error_type == 'deletion'
+
+    @property
+    def human_readable_name(self):
+        return self.name or self.mac
 
 
 class NodeAttributes(Base):
@@ -256,7 +262,6 @@ class IPAddrRange(Base):
     network_group_id = Column(Integer, ForeignKey('network_groups.id'))
     first = Column(String(25), nullable=False)
     last = Column(String(25), nullable=False)
-    netmask = Column(String(25), nullable=False)
 
 
 class Vlan(Base):
@@ -269,7 +274,7 @@ class Vlan(Base):
 class Network(Base):
     __tablename__ = 'networks'
     id = Column(Integer, primary_key=True)
-     # can be nullable only for fuelweb admin net
+    # can be nullable only for fuelweb admin net
     release = Column(Integer, ForeignKey('releases.id'))
     name = Column(Unicode(100), nullable=False)
     access = Column(String(20), nullable=False)
@@ -285,20 +290,36 @@ class Network(Base):
 
 class NetworkGroup(Base):
     __tablename__ = 'network_groups'
+    NAMES = (
+        # Node networks
+        'fuelweb_admin',
+        'storage',
+        # internal in terms of fuel
+        'management',
+        'public',
+
+        # VM networks
+        'floating',
+        # private in terms of fuel
+        'fixed'
+    )
+
     id = Column(Integer, primary_key=True)
-    name = Column(Unicode(100), nullable=False)
+    name = Column(Enum(*NAMES, name='network_group_name'), nullable=False)
     access = Column(String(20), nullable=False)
     # can be nullable only for fuelweb admin net
     release = Column(Integer, ForeignKey('releases.id'))
     # can be nullable only for fuelweb admin net
     cluster_id = Column(Integer, ForeignKey('clusters.id'))
-    cidr = Column(String(25), nullable=False)
     network_size = Column(Integer, default=256)
     amount = Column(Integer, default=1)
     vlan_start = Column(Integer, default=1)
-    gateway_ip_index = Column(Integer)
     networks = relationship("Network", cascade="delete",
-                            backref="network_groups")
+                            backref="network_group")
+    cidr = Column(String(25))
+    gateway = Column(String(25))
+
+    netmask = Column(String(25), nullable=False)
     ip_ranges = relationship(
         "IPAddrRange",
         backref="network_group"
@@ -331,10 +352,32 @@ class NetworkConfiguration(object):
                 ng_db = orm().query(NetworkGroup).get(ng['id'])
 
                 for key, value in ng.iteritems():
-                    setattr(ng_db, key, value)
+                    if key == "ip_ranges":
+                        cls.__set_ip_ranges(ng['id'], value)
+                    else:
+                        if key == 'cidr' and \
+                                not ng['name'] in ('public', 'floating'):
+                            network_manager.update_ranges_from_cidr(
+                                ng_db, value)
+
+                        setattr(ng_db, key, value)
 
                 network_manager.create_networks(ng_db)
                 ng_db.cluster.add_pending_changes('networks')
+
+    @classmethod
+    def __set_ip_ranges(cls, network_group_id, ip_ranges):
+        # deleting old ip ranges
+        orm().query(IPAddrRange).filter_by(
+            network_group_id=network_group_id).delete()
+
+        for r in ip_ranges:
+            new_ip_range = IPAddrRange(
+                first=r[0],
+                last=r[1],
+                network_group_id=network_group_id)
+            orm().add(new_ip_range)
+        orm().commit()
 
 
 class AttributesGenerators(object):
@@ -429,6 +472,7 @@ class Task(Base):
         'super',
         'deploy',
         'deployment',
+        'provision',
         'node_deletion',
         'cluster_deletion',
         'check_networks',
@@ -461,6 +505,10 @@ class Task(Base):
         "Notification",
         backref=backref('task', remote_side=[id])
     )
+    # Task weight is used to calculate supertask progress
+    # sum([t.progress * t.weight for t in supertask.subtasks]) /
+    # sum([t.weight for t in supertask.subtasks])
+    weight = Column(Float, default=1.0)
 
     def __repr__(self):
         return "<Task '{0}' {1} ({2}) {3}>".format(
@@ -469,9 +517,6 @@ class Task(Base):
             self.cluster_id,
             self.status
         )
-
-    def execute(self, instance, *args, **kwargs):
-        return instance.execute(self, *args, **kwargs)
 
     def create_subtask(self, name):
         if not name:

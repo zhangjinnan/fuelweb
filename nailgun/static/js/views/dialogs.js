@@ -87,7 +87,7 @@ function(utils, models, simpleMessageTemplate, createClusterDialogTemplate, chan
                 deferred
                     .done(_.bind(function() {
                         this.$el.modal('hide');
-                        this.collection.fetch();
+                        this.collection.add(cluster);
                     }, this))
                     .fail(_.bind(function(response) {
                         if (response.status == 409) {
@@ -325,7 +325,7 @@ function(utils, models, simpleMessageTemplate, createClusterDialogTemplate, chan
         render: function() {
             this.constructor.__super__.render.call(this, _.extend({
                 node: this.node,
-                deployment: this.deployment
+                configurationPossible: this.configurationPossible
             }, this.templateHelpers));
             this.$('.accordion-body').collapse({
                 parent: this.$('.accordion'),
@@ -343,25 +343,14 @@ function(utils, models, simpleMessageTemplate, createClusterDialogTemplate, chan
 
     views.DiscardSettingsChangesDialog = views.Dialog.extend({
         template: _.template(disacardSettingsChangesTemplate),
-        defaultMessage: 'Settings were modified but not saved. Changes will be lost. Do you want to proceed without saving?',
+        defaultMessage: 'Settings were modified but not saved. Do you want to discard your changes and leave the page?',
         verificationMessage: 'Network verification is in progress. You should save changes or stay on the tab.',
         events: {
-            'click .proceed-btn': 'proceed',
-            'click .save-btn': 'save'
+            'click .proceed-btn': 'proceed'
         },
         proceed: function() {
             this.$el.modal('hide');
-            app.page.removeVerificationTask().done(_.bind(this.cb, this));
-        },
-        save: function() {
-            this.$('.btn').attr('disabled', true);
-            app.page.tab.applyChanges()
-                .done(_.bind(function(task) {
-                    if (!(task && task.status == 'error')) {
-                        this.cb();
-                    }
-                }, this))
-                .always(_.bind(function() {this.$el.modal('hide');}, this));
+            app.page.removeVerificationTask().always(_.bind(this.cb, this));
         },
         render: function() {
             if (this.verification) {

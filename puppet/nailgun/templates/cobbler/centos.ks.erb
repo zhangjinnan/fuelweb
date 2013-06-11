@@ -95,22 +95,26 @@ $SNIPPET('pre_install_partition_lvm')
 # FIXME --ignoremissing
 %packages --nobase --ignoremissing
 @Core
-yum
-openssh-server
-openssh
-openssh-clients
-curl
-wget
-crontabs
+authconfig
+bind-utils
 cronie
-ruby-augeas
-ntp
-ruby-devel
-make
+crontabs
+curl
 gcc
+make
+mlocate
 nailgun-agent
 nailgun-mcagents
 nailgun-net-check
+ntp
+openssh
+openssh-clients
+openssh-server
+ruby-augeas
+ruby-devel
+system-config-firewall-base
+wget
+yum
 
 # COBBLER EMBEDDED SNIPPET: 'puppet_install_if_enabled'
 # LISTS puppet PACKAGE IF puppet_auto_setup VARIABLE IS SET TO 1
@@ -184,9 +188,9 @@ $SNIPPET('nailgun_repo')
 # FROM /etc/ssh/sshd_config
 $SNIPPET('ssh_disable_gssapi')
 
-# COBBLER EMBEDDED SNIPPET: 'ssh_disable_dns'
-# ADDS 'UseDNS no' TO /etc/ssh/sshd_config
-$SNIPPET('ssh_disable_dns')
+# Let's not wait forewer when ssh'ing:
+sed -i --follow-symlinks -e '/UseDNS/d' /etc/ssh/sshd_config
+echo 'UseDNS no' >> /etc/ssh/sshd_config
 
 # COBBLER EMBEDDED SNIPPET: 'sshd_auth_pubkey_only'
 # DISABLE PASSWORD AUTH. ALLOW PUBKEY AUTH ONLY IN /etc/ssh/sshd_config
@@ -197,6 +201,9 @@ cp -f /etc/skel/.bash* /root/
 
 # Rsyslogd should send all messages to master node
 $SNIPPET('target_logs_to_master')
+
+# Dhclient should ignore option 'routers' on all interfaces.
+$SNIPPET('dhclient_ignore_routers_opt')
 
 # COBBLER EMBEDDED SNIPPET: 'kickstart_done'
 # DISABLES PXE BOOTING

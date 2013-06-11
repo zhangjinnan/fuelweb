@@ -26,6 +26,9 @@ function(utils, models, commonViews, dialogViews, settingsTabTemplate, settingsG
         disableControls: function() {
             this.$('.btn, input, select').attr('disabled', true);
         },
+        isLocked: function() {
+            return this.model.get('status') != 'new' || !!this.model.task('deploy', 'running');
+        },
         collectData: function() {
             var data = {};
             _.each(this.$('legend.openstack-settings'), function(legend) {
@@ -37,6 +40,7 @@ function(utils, models, commonViews, dialogViews, settingsTabTemplate, settingsG
                     if ($(settingDom).hasClass('openstack-sub-title')) {
                         data[param][setting].label = $(settingDom).text();
                         data[param][setting].value = $(settingDom).next().find('input[type=radio]:checked').val();
+                        data[param][setting].weight = $(settingDom).next().find('.weight > input').val();
                         data[param][setting].values = [];
                         _.each($(settingDom).next().find('input[type=radio]'), function(input) {
                             var option = {};
@@ -49,6 +53,7 @@ function(utils, models, commonViews, dialogViews, settingsTabTemplate, settingsG
                         data[param][setting].label = $(settingDom).find('.openstack-sub-title').text();
                         data[param][setting].description = $(settingDom).find('.description').text() || $(settingDom).next('.description').text();
                         data[param][setting].value = $(settingDom).find('input[type=text]').val();
+                        data[param][setting].weight = $(settingDom).find('.weight > input').val();
                         if ($(settingDom).find('input[type=checkbox]').length) {
                             data[param][setting].value = !!$(settingDom).find('input[type=checkbox]:checked').length;
                         }
@@ -90,7 +95,7 @@ function(utils, models, commonViews, dialogViews, settingsTabTemplate, settingsG
             this.tearDownRegisteredSubViews();
             this.$('.settings').html('');
             _.each(_.keys(settings), function(setting) {
-                var settingsGroupView = new SettingsGroup({legend: setting, settings: settings[setting], model: this.model, tab: this});
+                var settingsGroupView = new SettingsGroup({legend: setting, settings: settings[setting], tab: this});
                 this.registerSubView(settingsGroupView);
                 this.$('.settings').append(settingsGroupView.render().el);
             }, this);
@@ -109,7 +114,7 @@ function(utils, models, commonViews, dialogViews, settingsTabTemplate, settingsG
             }, this));
         },
         render: function() {
-            this.$el.html(this.template({cluster: this.model}));
+            this.$el.html(this.template({cluster: this.model, locked: this.isLocked()}));
             if (this.model.get('settings').deferred.state() != 'pending') {
                 this.parseSettings(this.model.get('settings').get('editable'));
                 this.hasChanges = false;
@@ -123,6 +128,7 @@ function(utils, models, commonViews, dialogViews, settingsTabTemplate, settingsG
             return this.bindTaskEvents(task) && this.render();
         },
         initialize: function(options) {
+            this.model.on('change:status', this.render, this);
             this.model.get('tasks').each(this.bindTaskEvents, this);
             this.model.get('tasks').on('add', this.onNewTask, this);
             if (!this.model.get('settings')) {
@@ -147,7 +153,11 @@ function(utils, models, commonViews, dialogViews, settingsTabTemplate, settingsG
             _.defaults(this, options);
         },
         render: function() {
-            this.$el.html(this.template({settings: this.settings, legend: this.legend, cluster: this.model}));
+            this.$el.html(this.template({
+                settings: this.settings,
+                legend: this.legend,
+                locked: this.tab.isLocked()
+            }));
             return this;
         }
     });

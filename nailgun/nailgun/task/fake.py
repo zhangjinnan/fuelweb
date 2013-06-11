@@ -15,17 +15,17 @@ from nailgun.logger import logger
 from nailgun.errors import errors
 from nailgun.notifier import notifier
 from nailgun.api.models import Network, Node
-from nailgun.network import manager as netmanager
 from nailgun.rpc.receiver import NailgunReceiver
 
 
 class FakeThread(threading.Thread):
     def __init__(self, data=None, params=None, group=None, target=None,
-                 name=None, verbose=None):
+                 name=None, verbose=None, join_to=None):
         threading.Thread.__init__(self, group=group, target=target, name=name,
                                   verbose=verbose)
         self.data = data
         self.params = params
+        self.join_to = join_to
         self.tick_count = int(settings.FAKE_TASKS_TICK_COUNT) or 20
         self.low_tick_count = self.tick_count - 10
         if self.low_tick_count < 0:
@@ -37,6 +37,10 @@ class FakeThread(threading.Thread):
         )
         self.respond_to = data['respond_to']
         self.stoprequest = threading.Event()
+
+    def run(self):
+        if self.join_to:
+            self.join_to.join()
 
     def rude_join(self, timeout=None):
         self.stoprequest.set()
@@ -170,6 +174,7 @@ class FakeDeploymentThread(FakeThread):
             self.sleep(self.tick_interval)
 
     def run(self):
+        super(FakeDeploymentThread, self).run()
         if settings.FAKE_TASKS_AMQP:
             nailgun_exchange = Exchange(
                 'nailgun',
@@ -202,8 +207,32 @@ class FakeDeploymentThread(FakeThread):
             receiver.stop()
 
 
+class FakeProvisionThread(FakeThread):
+    def run(self):
+        super(FakeProvisionThread, self).run()
+        receiver = NailgunReceiver
+        receiver.initialize()
+
+        # Since we just add systems to cobbler and reboot nodes
+        # We think this task is always successful if it is launched.
+        kwargs = {
+            'task_uuid': self.task_uuid,
+            'status': 'ready',
+            'progress': 100
+        }
+
+        tick_interval = int(settings.FAKE_TASKS_TICK_INTERVAL) or 3
+        resp_method = getattr(receiver, self.respond_to)
+        resp_method(**kwargs)
+        orm = scoped_session(
+            sessionmaker(bind=engine, query_cls=NoCacheQuery)
+        )
+        receiver.stop()
+
+
 class FakeDeletionThread(FakeThread):
     def run(self):
+        super(FakeDeletionThread, self).run()
         receiver = NailgunReceiver
         receiver.initialize()
         kwargs = {
@@ -240,6 +269,7 @@ class FakeDeletionThread(FakeThread):
 
 class FakeVerificationThread(FakeThread):
     def run(self):
+        super(FakeVerificationThread, self).run()
         receiver = NailgunReceiver
         receiver.initialize()
         kwargs = {
@@ -284,6 +314,7 @@ class FakeVerificationThread(FakeThread):
 
 
 FAKE_THREADS = {
+    'provision': FakeProvisionThread,
     'deploy': FakeDeploymentThread,
     'remove_nodes': FakeDeletionThread,
     'verify_networks': FakeVerificationThread

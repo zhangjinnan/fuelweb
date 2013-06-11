@@ -1,7 +1,7 @@
 install
 text
 %include /tmp/source.ks
-reboot --eject
+{{reboot}}
 lang en_US.UTF-8
 keyboard us
 rootpw r00tme
@@ -69,20 +69,24 @@ echo "partition swap --recommended --ondisk=${tgtdrive}" >> /tmp/partition.ks
 %end
 
 %packages --nobase --excludedocs
-wget
-curl
-crontabs
-cronie
-puppet-2.7.19
-man
-yum
-openssh-clients
-ntp
-vim-enhanced
+@Core
 authconfig
-system-config-firewall-base
+bind-utils
+cronie
+crontabs
+curl
+man
+mlocate
+ntp
+openssh-clients
 policycoreutils
+puppet-2.7.19
 selinux-policy-targeted
+system-config-firewall-base
+tcpdump
+vim-enhanced
+wget
+yum
 
 %post --log=/root/anaconda-post.log
 #!/bin/sh
@@ -174,7 +178,7 @@ clear
 endconf=0
 show
 echo -n "Press any key to make changes in network configuration"
-read -n 1 -t 5 answer
+read -n 1 -t 10 answer
 if [ $? -gt 128 ]; then
     save_cfg
 else
@@ -214,12 +218,12 @@ fi
 
 # Copying Repo to the nailgun /var/www directory
 repodir="/var/www/nailgun"
-mkdir -p ${repodir}/centos/6.3/nailgun/x86_64
-cp -r ${SOURCE}/images ${repodir}/centos/6.3/nailgun/x86_64
-cp -r ${SOURCE}/isolinux ${repodir}/centos/6.3/nailgun/x86_64
-cp -r ${SOURCE}/repodata ${repodir}/centos/6.3/nailgun/x86_64
-cp -r ${SOURCE}/Packages ${repodir}/centos/6.3/nailgun/x86_64
-cp ${SOURCE}/.treeinfo ${repodir}/centos/6.3/nailgun/x86_64
+mkdir -p ${repodir}/centos/fuelweb/x86_64
+cp -r ${SOURCE}/images ${repodir}/centos/fuelweb/x86_64
+cp -r ${SOURCE}/isolinux ${repodir}/centos/fuelweb/x86_64
+cp -r ${SOURCE}/repodata ${repodir}/centos/fuelweb/x86_64
+cp -r ${SOURCE}/Packages ${repodir}/centos/fuelweb/x86_64
+cp ${SOURCE}/.treeinfo ${repodir}/centos/fuelweb/x86_64
 mkdir -p ${repodir}/rhel
 cp -r ${SOURCE}/rhel/* ${repodir}/rhel
 
@@ -244,14 +248,14 @@ tar zxf ${SOURCE}/puppet-nailgun.tgz -C /opt/nailgun_puppet
 tar zxf ${SOURCE}/puppet-slave.tgz -C /etc/puppet/modules
 mkdir -p /etc/puppet/manifests/
 cp /etc/puppet/modules/osnailyfacter/examples/site.pp /etc/puppet/manifests/site.pp
-ln -s /etc/puppet/modules/puppetdb/ /etc/puppet/modules/postgresql/ /etc/puppet/modules/inifile/ /opt/nailgun_puppet/
+ln -s /etc/puppet/modules/puppetdb/ /etc/puppet/modules/postgresql/ /etc/puppet/modules/inifile/ /etc/puppet/modules/sysctl/ /opt/nailgun_puppet/
 
 # Prepare local repository specification
 rm /etc/yum.repos.d/CentOS*.repo
 cat > /etc/yum.repos.d/nailgun.repo << EOF
 [nailgun]
 name=Nailgun Local Repo
-baseurl=file:/var/www/nailgun/centos/6.3/nailgun/x86_64
+baseurl=file:/var/www/nailgun/centos/fuelweb/x86_64
 gpgcheck=0
 EOF
 

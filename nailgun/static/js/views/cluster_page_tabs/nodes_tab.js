@@ -21,6 +21,9 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
     NodesTab = commonViews.Tab.extend({
         screen: null,
         scrollPositions: {},
+        hasChanges: function() {
+            return this.screen && _.result(this.screen, 'hasChanges');
+        },
         changeScreen: function(NewScreenView, screenOptions) {
             var options = _.extend({model: this.model, tab: this, screenOptions: screenOptions || []});
             var newScreen = new NewScreenView(options);
@@ -46,6 +49,9 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
         },
         initialize: function(options) {
             _.defaults(this, options);
+            this.revertChanges = _.bind(function() {
+                return this.screen && this.screen.revertChanges();
+            }, this);
         },
         routeScreen: function(options) {
             var screens = {
@@ -141,6 +147,7 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
     EditNodesScreen = Screen.extend({
         className: 'edit-nodes-screen',
         constructorName: 'EditNodesScreen',
+        nodeSelector: '.nodebox',
         keepScrollPosition: false,
         template: _.template(editNodesScreenTemplate),
         events: {
@@ -158,21 +165,21 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
             this.calculateSelectAllTumblerState();
             this.calculateNotChosenNodesAvailability();
             this.calculateApplyButtonAvailability();
-            utils.forceWebkitRedraw(this.$('.nodebox'));
+            utils.forceWebkitRedraw(this.$(this.nodeSelector));
         },
         selectAll: function(e) {
             var checked = $(e.currentTarget).is(':checked');
-            this.$('.nodebox').toggleClass('node-to-' + this.action + '-checked', checked).toggleClass('node-to-' + this.action + '-unchecked', !checked);
+            this.$(this.nodeSelector).toggleClass('node-to-' + this.action + '-checked', checked).toggleClass('node-to-' + this.action + '-unchecked', !checked);
             this.calculateApplyButtonAvailability();
-            utils.forceWebkitRedraw(this.$('.nodebox'));
+            utils.forceWebkitRedraw(this.$(this.nodeSelector));
         },
         calculateSelectAllTumblerState: function() {
-            this.$('.select-all-tumbler').attr('checked', this.nodes.length == this.$('.node-to-' + this.action + '-checked').length);
+            this.$('.select-all-tumbler').prop('checked', this.$(this.nodeSelector).length == this.$('.node-to-' + this.action + '-checked').length);
         },
         calculateNotChosenNodesAvailability: function() {
             if (this.limit !== null) {
                 var chosenNodesCount = this.$('.node-to-' + this.action + '-checked').length;
-                var notChosenNodes = this.$('.nodebox:not(.node-to-' + this.action + '-checked)');
+                var notChosenNodes = this.$(this.nodeSelector + ':not(.node-to-' + this.action + '-checked)');
                 notChosenNodes.toggleClass('node-not-checkable', chosenNodesCount >= this.limit);
             }
         },
@@ -189,7 +196,8 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
             this.modifyNodes(nodes);
             nodes.sync('update', nodes).done(_.bind(function() {
                 app.navigate('#cluster/' + this.model.id + '/nodes', {trigger: true});
-                this.model.get('nodes').fetch({data: {cluster_id: this.model.id}});
+                this.model.fetch();
+                this.model.fetchRelated('nodes');
                 app.navbar.refresh();
                 app.page.removeVerificationTask();
             }, this))
@@ -229,7 +237,10 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
                     this.registerSubView(nodeView);
                     nodesContainer.append(nodeView.render().el);
                     if (node.get(this.flag)) {
-                        nodeView.$('.nodebox[data-node-id=' + node.id + ']').addClass('node-to-' + this.action + '-checked').removeClass('node-to-' + this.action + '-unchecked');
+                        nodeView.$('.nodebox').addClass('node-to-' + this.action + '-checked').removeClass('node-to-' + this.action + '-unchecked');
+                    }
+                    if (this.action == 'add' && !node.get('online')) {
+                        nodeView.$('.nodebox').addClass('node-not-checkable');
                     }
                 }, this);
             } else {
@@ -250,6 +261,7 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
         constructorName: 'AddNodesScreen',
         action: 'add',
         flag: 'pending_addition',
+        nodeSelector: '.nodebox:not(.node-offline)',
         initialize: function(options) {
             this.constructor.__super__.initialize.apply(this, arguments);
             this.limit = null;
@@ -261,6 +273,23 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
                 this.nodes.add(this.model.get('nodes').where({role: this.role, pending_deletion: true}), {at: 0});
                 this.render();
             }, this));
+            this.nodes.on('change:online', this.onNodeStateChange, this);
+        },
+        onNodeStateChange: function(node) {
+            var el = this.$('.nodebox[data-node-id=' + node.id + ']');
+            if (!node.get('online')) {
+                el.toggleClass('node-to-' + this.action + '-checked', false).toggleClass('node-to-' + this.action + '-unchecked', true);
+            }
+            el.toggleClass('node-not-checkable', !node.get('online'));
+            this.calculateSelectAllTumblerState();
+            this.calculateNotChosenNodesAvailability();
+            this.calculateApplyButtonAvailability();
+            utils.forceWebkitRedraw(this.$(this.nodeSelector));
+        },
+        toggleNode: function(e) {
+            var currentNode = this.nodes.find({id: $(e.currentTarget).data('node-id')});
+            if (!currentNode.get('online')) {return;}
+            this.constructor.__super__.toggleNode.apply(this, arguments);
         },
         modifyNodes: function(nodes) {
             nodes.each(function(node) {
@@ -334,7 +363,7 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
             if (this.collection.length || placeholders) {
                 var container = this.$('.node-list-container');
                 this.collection.each(function(node) {
-                    var nodeView = new Node({model: node, renameable: !this.collection.cluster.task('deploy', 'running')});
+                    var nodeView = new Node({model: node, renameable: true});
                     this.registerSubView(nodeView);
                     container.append(nodeView.render().el);
                 }, this);
@@ -358,7 +387,7 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
             'click .node-hardware': 'showNodeInfo'
         },
         startNodeRenaming: function() {
-            if (!this.renameable || this.renaming || this.model.collection.cluster.task('deploy', 'running')) {return;}
+            if (!this.renameable || this.renaming) {return;}
             $('html').off(this.eventNamespace);
             $('html').on(this.eventNamespace, _.after(2, _.bind(function(e) {
                 if (!$(e.target).closest(this.$('.node-renameable input')).length) {
@@ -399,6 +428,7 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
             var dialog = new dialogViews.ShowNodeInfoDialog({
                 node: this.model,
                 clusterId: clusterId,
+                configurationPossible: clusterId && !this.selectableForAddition && !this.selectableForDeletion,
                 deployment: deployment
             });
             app.page.tab.registerSubView(dialog);
@@ -415,6 +445,7 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
                 node: this.model,
                 logsLink: this.getLogsLink()
             }));
+            this.$('.nodebox').toggleClass('node-offline', !this.model.get('online'));
             this.updateProgress();
         },
         getLogsLink: function() {
@@ -465,10 +496,17 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
         constructorName: 'EditNodeScreen',
         keepScrollPosition: false,
         disableControls: function(disable) {
-            this.$('.btn, input').attr('disabled', disable);
+            this.$('.btn, input').attr('disabled', disable || this.isLocked());
         },
-        configurationAllowed: function () {
-            return this.node && this.node.get('role') && this.node.get('pending_addition') && !this.model.task('deploy', 'running');
+        returnToNodeList: function() {
+            if (this.hasChanges()) {
+                this.tab.page.discardSettingsChanges({cb: _.bind(this.goToNodeList, this)});
+            } else {
+                this.goToNodeList();
+            }
+        },
+        isLocked: function() {
+            return !this.node.get('pending_addition') || !!this.model.task('deploy', 'running');
         }
     });
 
@@ -481,14 +519,20 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
             'click .btn-defaults': 'loadDefaults',
             'click .btn-revert-changes': 'revertChanges',
             'click .btn-apply:not(:disabled)': 'applyChanges',
-            'click .btn-return:not(:disabled)': 'goToNodeList'
+            'click .btn-return:not(:disabled)': 'returnToNodeList'
         },
         formatFloat: function(value) {
             return parseFloat((value / this.pow).toFixed(2));
         },
+        hasChanges: function() {
+            return !_.isEqual(_.where(this.disks.toJSON(), {'type': 'disk'}), _.where(this.initialData, {'type': 'disk'}));
+        },
+        hasValidationErrors: function() {
+            return _.some(this.disks.models, 'validationError');
+        },
         checkForChanges: function() {
-            var noChanges = _.isEqual(_.where(this.disks.toJSON(), {'type': 'disk'}), _.where(this.initialData, {'type': 'disk'}));
-            var validationErrors = _.some(this.disks.models, 'validationError');
+            var noChanges = !this.hasChanges();
+            var validationErrors = this.hasValidationErrors();
             this.$('.btn-apply').attr('disabled', noChanges || validationErrors);
             this.$('.btn-revert-changes').attr('disabled', noChanges && !validationErrors);
         },
@@ -516,6 +560,9 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
             this.render();
         },
         applyChanges: function() {
+            if (this.hasValidationErrors()) {
+                return (new $.Deferred()).reject();
+            }
             this.disableControls(true);
             // revert sizes to bytes
             _.each(this.getDisks(), _.bind(function(disk) {
@@ -523,7 +570,7 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
                     group.size = Math.round((group.size + this.remainders[disk.id][group.vg]) * this.pow);
                 }, this));
             }, this));
-            Backbone.sync('update', this.disks, {url: _.result(this.node, 'url') + '/attributes/volumes?type=disk'})
+            return Backbone.sync('update', this.disks, {url: _.result(this.node, 'url') + '/attributes/volumes?type=disk'})
                 .done(_.bind(function() {
                     this.model.fetch();
                     this.setRoundedValues();
@@ -583,15 +630,19 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
         initialize: function(options) {
             _.defaults(this, options);
             this.node = this.model.get('nodes').get(this.screenOptions[0]);
-            if (this.configurationAllowed()) {
-                this.disks = new models.Disks();
-                $.when(this.node.fetch(), this.disks.fetch({url: _.result(this.node, 'url') + '/attributes/volumes'}))
+            this.disks = new models.Disks();
+            if (this.node && this.node.get('role')) {
+                this.model.on('change:status', this.revertChanges, this);
+                this.loading = $.when(
+                    this.node.fetch(),
+                    this.disks.fetch({url: _.result(this.node, 'url') + '/attributes/volumes'})
+                )
                 .done(_.bind(function() {
-                        this.setRoundedValues();
-                        this.setMinimalSizes();
-                        this.initialData = _.cloneDeep(this.disks.toJSON());
-                        this.render();
-                    }, this))
+                    this.setRoundedValues();
+                    this.setMinimalSizes();
+                    this.initialData = _.cloneDeep(this.disks.toJSON());
+                    this.render();
+                }, this))
                 .fail(_.bind(this.goToNodeList, this));
             } else {
                 this.goToNodeList();
@@ -618,8 +669,13 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
             }, this));
         },
         render: function() {
-            this.$el.html(this.template({node: this.node}));
-            this.renderDisks();
+            this.$el.html(this.template({
+                node: this.node,
+                locked: this.isLocked()
+            }));
+            if (this.loading && this.loading.state() != 'pending') {
+                this.renderDisks();
+            }
             return this;
         }
     });
@@ -647,6 +703,7 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
             return this.screen.formatFloat(value);
         },
         toggleEditDiskForm: function(e) {
+            if (this.screen.isLocked()) {return;}
             this.$('.disk-edit-volume-group-form').collapse('toggle').toggleClass('hidden');
             _.each(this.volumesToDisplay(), _.bind(function(group) {
                 this.checkForAvailableDeletion(group.vg);
@@ -667,7 +724,12 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
             this.$('input[name=' + group + ']').removeClass('error').parents('.volume-group').next().text('');
             var volumes = _.cloneDeep(this.volumes);
             var volume = _.find(volumes, {vg: group});
-            var unallocated = (this.diskSize - this.countAllocatedSpace() + volume.size).toFixed(2);
+            var allocated = this.countAllocatedSpace();
+            // FIXME: ugly hack for validation until we rewrite all this stuff to operate with bytes
+            if (volumes.length > 1) {
+                allocated -= 0.01;
+            }
+            var unallocated = (this.diskSize - allocated + volume.size).toFixed(2);
             volume.size = allUnallocated ? volume.size + Number(size) : Number(size);
             var min = this.minimalSizes[group] - this.screen.getGroupAllocatedSpace(group) + _.find(this.disk.get('volumes'), {vg: group}).size;
             if (size !== 0) {
@@ -715,7 +777,6 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
             return allocatedSpace;
         },
         useAllUnallocatedSpace: function(e) {
-            e.preventDefault();
             this.makeChanges(e, (this.diskSize - this.countAllocatedSpace()).toFixed(2), true);
         },
         switchBootableDisk: function(e) {
@@ -738,7 +799,7 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
         },
         initialize: function(options) {
             _.defaults(this, options);
-            this.diskSize = this.formatFloat(this.diskMetaData.size - 1000000);
+            this.diskSize = this.formatFloat(this.diskMetaData.size - 10 * 1024 * 1024);
             this.getPartition();
             this.getVolumes();
             this.disk.on('invalid', function(model, errors) {
@@ -759,7 +820,9 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
             _.each(this.volumesToDisplay(), _.bind(function(volume) {
                 var width = 0, size = 0;
                 if (volume) {
-                    width = (volume.size / diskSize * 100).toFixed(2);
+                    width = parseFloat((volume.size / diskSize * 100).toFixed(2));
+                    // fix for possible overflow
+                    width -= 0.01;
                     size = volume.size;
                 }
                 unallocatedWidth -= width; unallocatedSize -= size;
@@ -788,10 +851,13 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
             'click .btn-defaults': 'loadDefaults',
             'click .btn-revert-changes': 'revertChanges',
             'click .btn-apply:not(:disabled)': 'applyChanges',
-            'click .btn-return:not(:disabled)': 'goToNodeList'
+            'click .btn-return:not(:disabled)': 'returnToNodeList'
+        },
+        hasChanges: function() {
+            return !_.isEqual(this.interfaces.toJSON(), this.initialData);
         },
         checkForChanges: function() {
-            this.$('.btn-apply, .btn-revert-changes').attr('disabled', _.isEqual(this.interfaces.toJSON(), this.initialData));
+            this.$('.btn-apply, .btn-revert-changes').attr('disabled', this.isLocked() || !this.hasChanges());
         },
         loadDefaults: function() {
             this.disableControls(true);
@@ -811,7 +877,7 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
         applyChanges: function() {
             this.disableControls(true);
             var configuration = new models.NodeInterfaceConfiguration({id: this.node.id, interfaces: this.interfaces});
-            Backbone.sync('update', new models.NodeInterfaceConfigurations(configuration))
+            return Backbone.sync('update', new models.NodeInterfaceConfigurations(configuration))
                 .done(_.bind(function() {
                     this.initialData = this.interfaces.toJSON();
                 }, this))
@@ -828,16 +894,45 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
         initialize: function(options) {
             _.defaults(this, options);
             this.node = this.model.get('nodes').get(this.screenOptions[0]);
-            if (this.configurationAllowed()) {
+            if (this.node && this.node.get('role')) {
+                this.model.on('change:status', function() {
+                    this.revertChanges();
+                    this.render();
+                }, this);
+                var networkConfiguration = new models.NetworkConfiguration();
                 this.interfaces = new models.Interfaces();
-                this.interfaces.on('reset', this.renderInterfaces, this);
-                this.interfaces.on('reset', this.checkForChanges, this);
-                this.interfaces.fetch({url: _.result(this.node, 'url') + '/interfaces', reset: true})
-                    .done(_.bind(function() {
-                        this.initialData = this.interfaces.toJSON();
-                        this.checkForChanges();
-                    } , this))
-                    .fail(_.bind(this.goToNodeList, this));
+                this.loading = $.when(
+                   this.interfaces.fetch({url: _.result(this.node, 'url') + '/interfaces', reset: true}),
+                   networkConfiguration.fetch({url: _.result(this.model, 'url') + '/network_configuration'})
+                ).done(_.bind(function() {
+                    // FIXME(vk): modifying models prototypes to use vlan data from NetworkConfiguration
+                    // this mean that these models cannot be used safely in places other than this view
+                    // helper function for template to get vlan_start NetworkConfiguration
+                    models.InterfaceNetwork.prototype.vlanStart = function() {
+                        return networkConfiguration.get('networks').findWhere({name: this.get('name')}).get('vlan_start');
+                    };
+                    models.InterfaceNetwork.prototype.amount = function() {
+                        return networkConfiguration.get('networks').findWhere({name: this.get('name')}).get('amount');
+                    };
+                    models.InterfaceNetwork.prototype.vlanLabel = function() {
+                        if (this.amount() == 1) {
+                            return this.vlanStart();
+                        } 
+                        return this.vlanStart() + '-' + (this.vlanStart() + this.amount() - 1);
+                    };
+
+                    this.interfaces.each(function(ifc) {
+                        ifc.get('assigned_networks').models.sort(function(interfaceNetwork) {
+                            return interfaceNetwork.vlanStart() + interfaceNetwork.get('name');
+                        });
+                    }, this);
+                    this.initialData = this.interfaces.toJSON();
+                    this.interfaces.on('reset', this.renderInterfaces, this);
+                    this.interfaces.on('reset', this.checkForChanges, this);
+                    this.checkForChanges();
+                    this.renderInterfaces();
+                }, this))
+                .fail(_.bind(this.goToNodeList, this));
             } else {
                 this.goToNodeList();
             }
@@ -852,8 +947,13 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
             }, this));
         },
         render: function() {
-            this.$el.html(this.template({node: this.node}));
-            this.renderInterfaces();
+            this.$el.html(this.template({
+                node: this.node,
+                locked: this.isLocked()
+            }));
+            if (this.loading && this.loading.state() != 'pending') {
+                this.renderInterfaces();
+            }
             return this;
         }
     });
@@ -869,17 +969,18 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
             'sortstop .logical-network-box': 'dragStop'
         },
         dragStart: function(event, ui) {
-            var network = this.model.get('assigned_networks').findWhere({name: $(ui.item).data('name')});
-            this.model.get('assigned_networks').remove(network);
-            this.screen.draggedNetwork = network;
+            var networkNames = $(ui.item).find('.logical-network-item').map(function(index, el) {return $(el).data('name');}).get();
+            var networks = this.model.get('assigned_networks').filter(function(network) {return _.contains(networkNames, network.get('name'));});
+            this.model.get('assigned_networks').remove(networks);
+            this.screen.draggedNetworks = networks;
         },
         dragStop: function(event, ui) {
-            var network = this.screen.draggedNetwork;
+            var networks = this.screen.draggedNetworks;
             if (event.type == 'sortreceive') {
-                this.model.get('assigned_networks').add(network);
+                this.model.get('assigned_networks').add(networks);
             }
             this.render();
-            this.screen.draggedNetwork = null;
+            this.screen.draggedNetworks = null;
         },
         checkIfEmpty: function() {
             this.$('.network-help-message').toggleClass('hide', !!this.model.get('assigned_networks').length);
@@ -894,9 +995,9 @@ function(utils, models, commonViews, dialogViews, nodesTabSummaryTemplate, editN
             this.checkIfEmpty();
             this.$('.logical-network-box').sortable({
                 connectWith: '.logical-network-box',
-                items: '.logical-network-item',
+                items: '.logical-network-group',
                 containment: this.screen.$('.node-networks'),
-                cursor: 'move'
+                disabled: this.screen.isLocked()
             }).disableSelection();
             return this;
         }

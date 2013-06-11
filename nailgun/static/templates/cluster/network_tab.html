@@ -1,131 +1,47 @@
-<div class="wrapper">
+<div class="network-settings wrapper <%= locked ? 'changes-locked' : '' %>">
   <h3>Network Settings</h3>
 
-  <div class="network-tab-content">
-    <% var disabled = task ? 'disabled' : '' %>
-    <fieldset>
-
-      <% if (networks) { %>
-
-        <% var managers = {'FlatDHCPManager': 'FlatDHCP Manager', 'VlanManager': 'VLAN Manager'} %>
-        <div class="radio-checkbox-group net-manager">
-        <% _.each(_.keys(managers), function(manager) { %>
-          <div class="item-box">
-            <label class="parameter-box clearfix">
-              <div class="parameter-control">
-                <div class="custom-tumbler">
-                  <input type="radio" value="<%= manager %>" name="net-manager" <%= net_manager == manager ? 'checked' : '' %> <%= disabled %>>
-                  <!--[if !IE |(gte IE 9)]>--><span>&nbsp;</span><!--<![endif]-->
-                </div>
+  <% if (net_manager) { %>
+    <% var managers = {'FlatDHCPManager': 'FlatDHCP Manager', 'VlanManager': 'VLAN Manager'} %>
+    <div class="radio-checkbox-group net-manager">
+      <% _.each(_.keys(managers), function(manager) { %>
+        <div class="item-box">
+          <label class="parameter-box clearfix">
+            <div class="parameter-control">
+              <div class="custom-tumbler">
+                <input type="radio" value="<%= manager %>" name="net-manager" <%= net_manager == manager ? 'checked' : '' %> <%= locked ? 'disabled' : '' %>>
+                <!-- [if !IE |(gte IE 9)]> --><span>&nbsp;</span><!-- <![endif] -->
               </div>
-              <div class="parameter-name"><%= managers[manager] %></div>
-            </label>
-          </div>
-        <% }) %>
+            </div>
+            <div class="parameter-name"><%= managers[manager] %></div>
+          </label>
         </div>
-        <hr>
-
-        <form class="form-inline networks-table" onsubmit="return false">
-          <div class="row networks-header">
-            <div class="network">Network</div>
-            <div class="cidr">CIDR</div>
-            <div class="vlan">VLAN ID</div>
-          </div>
-
-          <% _.each(_.filter(networks.models, function(network){return network.get('name') != 'fixed'; }), function(network) { %>
-            <div class="row">
-              <div class="control-group" data-network-id="<%- network.id %>">
-                <div class="name"><%- network.get('name') %></div>
-                <div class="cidr">
-                  <input class="input-medium" type="text" name="<%- network.get('name') %>-cidr" value="<%- network.get('cidr') %>" maxlength="18" <%= disabled %> />
-                </div>
-                <div class="amount hide">
-                  <input class="input-mini" type="text" name="<%- network.get('name') %>-amount" value="<%- network.get('amount') %>" />
-                </div>
-                <div class="network_size hide">
-                  <select name="<%- network.get('name') %>-network_size">
-                    <option value="<%= network.get('network_size') %>" selected><%= network.get('network_size') %></option>
-                  </select>
-                </div>
-                <div class="vlan_start">
-                  <input class="input-mini" type="text" name="<%- network.get('name') %>-vlan_start" value="<%- network.get('name') == 'floating' ? networks.findWhere({name: 'public'}).get('vlan_start') : network.get('vlan_start') %>" maxlength="4" <%= disabled || network.get('name') == 'floating' ? 'disabled' : '' %> />
-                </div>
-                <div class="error">
-                  <span class="help-inline"></span>
-                </div>
-              </div>
-            </div>
-          <% }) %>
-
-          <% var fixedNetwork = networks.findWhere({name: 'fixed'}) %>
-          <% if (fixedNetwork) { %>
-
-            <% var vlan = net_manager == 'VlanManager' ? '' : 'hide' %>
-            <% var range = net_manager == 'VlanManager' && fixedNetwork.get('amount') > 1 ? '' : 'hide' %>
-
-            <div class="row networks-header fixed-header">
-              <div class="network">Network</div>
-              <div class="cidr">CIDR</div>
-              <div class="amount <%= vlan %>">Amount of networks</div>
-              <div class="size <%= vlan %>">Size of network (IPs)</div>
-              <div class="vlan"><%= range ? 'VLAN ID' : 'VLAN ID range' %></div>
-            </div>
-
-            <div class="row fixed-row">
-              <div class="control-group fixed-network" data-network-id="<%- fixedNetwork.id %>">
-                <div class="name">VM networks (fixed)</div>
-                <div class="cidr">
-                  <input class="input-medium" type="text" name="fixed-cidr" value="<%- fixedNetwork.get('cidr') %>" maxlength="18" <%= disabled %> />
-                </div>
-                <div class="amount <%= vlan %>">
-                  <input class="input-mini range" type="text" name="fixed-amount" value="<%- fixedNetwork.get('amount') %>" maxlength="4" <%= disabled %> />
-                </div>
-                <div class="network_size <%= vlan %>">
-                  <select name="fixed-network_size" <%= disabled %>>
-                    <% var network_sizes = [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048] %>
-                    <% _.each(network_sizes, function(size) { %>
-                      <option value="<%= size %>" <%= fixedNetwork.get('network_size') == size ? 'selected' : '' %>><%= size %></option>
-                    <% }) %>
-                  </select>
-                </div>
-                <div class="vlan_start">
-                  <input class="input-mini <%= vlan ? '' : 'range' %>" name="fixed-vlan_start" type="text" value="<%- fixedNetwork.get('vlan_start') %>" maxlength="4" <%= disabled %> />
-                  <% var vlan_end = fixedNetwork.get('vlan_start')+ fixedNetwork.get('amount') - 1 %>
-                  <span class="vlan-end <%= range %>">-</span>
-                  <input class="vlan-end input-mini <%= range %>" name="fixed-vlan-end" type="text" value="<%= vlan_end %>" disabled />
-                </div>
-
-                <div class="error">
-                  <span class="help-inline"></span>
-                </div>
-              </div>
-            </div>
-          <% } %>
-        </form>
-      <% } else { %>
-        <div class="row row-fluid">
-          <div class="span4"></div>
-          <div class="span4">
-            <div class="progress progress-striped progress-success active">
-              <div class="bar" style="width: 100%"></div>
-            </div>
-          </div>
+      <% }) %>
+    </div>
+    <hr>
+    <div class="networks-table"></div>
+  <% } else { %>
+    <div class="row row-fluid">
+      <div class="span4"></div>
+      <div class="span4">
+        <div class="progress progress-striped progress-success active">
+          <div class="bar" style="width: 100%"></div>
         </div>
-      <% } %>
-    </fieldset>
-  </div>
-
-  <hr>
+      </div>
+    </div>
+  <% } %>
 
   <!-- Verification control -->
+  <hr>
   <div class="row verification-control"></div>
+
   <!-- Buttons -->
   <div class="row">
     <div class="page-control-box">
       <div class="page-control-button-placeholder">
-        <button class="btn verify-networks-btn" <%= disabled %>>Verify Networks</button>
-        <button class="btn btn-revert-changes" <%= !hasChanges || disabled ? 'disabled' : '' %>>Cancel Changes</button>
-        <button class="btn btn-success apply-btn" <%= !hasChanges || disabled ? 'disabled' : '' %>>Save Settings</button>
+        <button class="btn verify-networks-btn" <%= verificationLocked ? 'disabled' : '' %>>Verify Networks</button>
+        <button class="btn btn-revert-changes" <%= locked || !hasChanges? 'disabled' : '' %>>Cancel Changes</button>
+        <button class="btn btn-success apply-btn" <%= locked || !hasChanges ? 'disabled' : '' %>>Save Settings</button>
       </div>
     </div>
   </div>

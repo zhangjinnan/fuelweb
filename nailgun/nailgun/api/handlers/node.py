@@ -16,6 +16,7 @@ from nailgun.api.models import NetworkGroup
 from nailgun.network.topology import TopoChecker, NICUtils
 from nailgun.api.validators import NodeValidator, NetAssignmentValidator
 from nailgun.api.validators import NodeAttributesValidator
+from nailgun.api.validators import NodeVolumesValidator
 from nailgun.network.manager import NetworkManager
 from nailgun.volumes.manager import VolumeManager
 from nailgun.api.models import Node, NodeAttributes
@@ -115,6 +116,7 @@ class NodeCollectionHandler(JSONHandler, NICUtils):
         self.db.add(node)
         self.db.commit()
         node.attributes = NodeAttributes()
+
         try:
             node.attributes.volumes = node.volume_manager.gen_volumes_info()
             if node.cluster:
@@ -137,18 +139,20 @@ class NodeCollectionHandler(JSONHandler, NICUtils):
 
         # Add interfaces for node from 'meta'.
         if node.meta and node.meta.get('interfaces'):
-            nics = self.get_nics_from_meta(node)
-            map(self.db.add, nics)
-            self.db.commit()
+            network_manager = NetworkManager()
+            network_manager.update_interfaces_info(node)
+
         if node.cluster_id:
             self.allow_network_assignment_to_all_interfaces(node)
             self.assign_networks_to_main_interface(node)
             self.db.commit()
+
         try:
             ram = str(round(float(
                 node.meta['memory']['total']) / 1073741824, 1))
         except (KeyError, TypeError, ValueError):
             ram = "unknown"
+
         cores = str(node.meta.get('cpu', {}).get('total', "unknown"))
         notifier.notify("discover",
                         "New node with %s CPU core(s) "
@@ -172,6 +176,15 @@ class NodeCollectionHandler(JSONHandler, NICUtils):
                     or self.validator.validate_existent_node_mac(nd)
             else:
                 node = q.get(nd["id"])
+            if is_agent:
+                node.timestamp = datetime.now()
+                if not node.online:
+                    node.online = True
+                    msg = u"Node '{0}' is back online".format(
+                        node.human_readable_name)
+                    logger.info(msg)
+                    notifier.notify("discover", msg, node_id=node.id)
+                self.db.commit()
             if nd.get("cluster_id") is None and node.cluster:
                 node.cluster.clear_pending_changes(node_id=node.id)
             old_cluster_id = node.cluster_id
@@ -226,32 +239,11 @@ class NodeCollectionHandler(JSONHandler, NICUtils):
 
                 self.db.commit()
             if is_agent:
-                node.timestamp = datetime.now()
-                if not node.online:
-                    node.online = True
-                    msg = u"Node '{0}' is back online".format(
-                        node.name or node.mac
-                    )
-                    logger.info(msg)
-                    notifier.notify(
-                        "discover",
-                        msg,
-                        node_id=node.id
-                    )
                 # Update node's NICs.
                 if node.meta and 'interfaces' in node.meta:
-                    db_nics = list(node.interfaces)
-                    nics = self.get_nics_from_meta(node)
-                    for nic in nics:
-                        db_nic = filter(lambda i: i.mac == nic.mac, db_nics)
-                        if not db_nic:
-                            self.db.add(nic)
-                            continue
-                        db_nic = db_nic[0]
-                        for key in ('name', 'current_speed', 'max_speed'):
-                            setattr(db_nic, key, getattr(nic, key))
-                        db_nics.remove(db_nic)
-                    map(self.db.delete, db_nics)
+                    network_manager = NetworkManager()
+                    network_manager.update_interfaces_info(node)
+
             nodes_updated.append(node)
             self.db.commit()
             if 'cluster_id' in nd and nd['cluster_id'] != old_cluster_id:
@@ -372,6 +364,8 @@ class NodeAttributesByNameHandler(JSONHandler):
         node = self.get_object_or_404(Node, node_id)
         # NO serious data validation yet
         data = NodeAttributesValidator.validate_json(web.data())
+        if attr_name == "volumes":
+            data = NodeVolumesValidator.validate(data)
         attr_params = web.input()
         node_attrs = node.attributes
         if not node_attrs or not hasattr(node_attrs, attr_name):
@@ -398,7 +392,15 @@ class NodeAttributesByNameHandler(JSONHandler):
                 for a in data:
                     if a in attr:
                         continue
-                    attr.append(a)
+                    updated = False
+                    for i, e in enumerate(attr):
+                        if (a.get("type") == e.get("type") and
+                                a.get("id") == e.get("id")):
+                            attr[i] = a
+                            updated = True
+                            break
+                    if not updated:
+                        attr.append(a)
 
                 attr = filter(
                     lambda a: a["type"] == attr_params.type,

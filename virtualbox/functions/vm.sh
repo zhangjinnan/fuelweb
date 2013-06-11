@@ -28,12 +28,10 @@ is_vm_running() {
 
 create_vm() {
     name=$1
-    main_network_interface=$2
+    nic=$2
     cpu_cores=$3
     memory_mb=$4
     disk_mb=$5
-    vm_base_path=$(get_vm_base_path)
-    vm_disk_path="$vm_base_path/$name/$name.vdi"
    
     # Create virtual machine with the right name and type (assuming CentOS) 
     VBoxManage createvm --name $name --ostype RedHat_64 --register
@@ -41,18 +39,41 @@ create_vm() {
     # Set the real-time clock (RTC) operate in UTC time
     VBoxManage modifyvm $name --rtcuseutc on --memory $memory_mb --cpus $cpu_cores
 
-    # Configure network interfaces
-    VBoxManage modifyvm $name --nic1 hostonly --hostonlyadapter1 $main_network_interface --nictype1 Am79C973 \
-                        --cableconnected1 on --macaddress1 auto
-    VBoxManage controlvm $name setlinkstate1 on
+    # Configure main network interface
+    add_nic_to_vm $name 1 $nic
 
     # Configure storage controllers
     VBoxManage storagectl $name --name 'IDE' --add ide
     VBoxManage storagectl $name --name 'SATA' --add sata
 
     # Create and attach the main hard drive
-    VBoxManage createhd --filename "$vm_base_path/$name/$name" --size $disk_mb --format VDI
-    VBoxManage storageattach $name --storagectl 'SATA' --port 0 --device 0 --type hdd --medium "$vm_disk_path"
+    add_disk_to_vm $name 0 $disk_mb
+}
+
+add_nic_to_vm() {
+    name=$1
+    id=$2
+    nic=$3
+    echo "Adding NIC to $name and bridging with host NIC $nic..."
+
+    # Configure network interfaces
+    VBoxManage modifyvm $name --nic${id} hostonly --hostonlyadapter${id} $nic --nictype${id} Am79C973 \
+                        --cableconnected${id} on --macaddress${id} auto
+    VBoxManage controlvm $name setlinkstate${id} on
+}
+
+add_disk_to_vm() {
+    vm_name=$1
+    port=$2
+    disk_mb=$3
+
+    echo "Adding disk to $vm_name, with size $disk_mb Mb..."
+
+    vm_disk_path="$(get_vm_base_path)/$vm_name/"
+    disk_name="${vm_name}_${port}"
+    disk_filename="${disk_name}.vdi"
+    VBoxManage createhd --filename "$vm_disk_path/$disk_name" --size $disk_mb --format VDI
+    VBoxManage storageattach $vm_name --storagectl 'SATA' --port $port --device 0 --type hdd --medium "$vm_disk_path/$disk_filename"
 }
 
 delete_vm() {

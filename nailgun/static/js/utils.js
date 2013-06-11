@@ -1,4 +1,4 @@
-define(function() {
+define(['require'], function(require) {
     'use strict';
 
     var utils = {
@@ -66,6 +66,9 @@ define(function() {
         },
         showDiskSize: function(bytes) {
             return utils.showSize(bytes, 1000);
+        },
+        calculateNetworkSize: function(cidr) {
+            return Math.pow(2, 32 - parseInt(_.last(cidr.split('/')), 10));
         }
     };
 
