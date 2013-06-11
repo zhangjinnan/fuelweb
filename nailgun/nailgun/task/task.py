@@ -262,7 +262,7 @@ class ProvisionTask(object):
 
             if cluster_attrs.get('distro', '') == 'rhel':
                 cobbler_profile = settings.COBBLER_RHEL_PROFILE
-            else
+            else:
                 cobbler_profile = settings.COBBLER_CENTOS_PROFILE
 
             node_data = {

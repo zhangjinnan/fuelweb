@@ -97,6 +97,25 @@
             },
             "attributes_metadata": {
                 "editable": {
+                    "os": {
+                        "distro": {
+                            "value": "centos",
+                            "values": [
+                                {
+                                    "data": "centos",
+                                    "display_name": "CentOS",
+                                    "description": "CentOS"
+                                },
+                                {
+                                    "data": "rhel",
+                                    "display_name": "RHEL",
+                                    "description": "RHEL"
+                                }
+                            ],
+                            "label": "Operation System",
+                            "weight": 5
+                        }
+                    },
                     "access": {
                         "user": {
                             "value": "admin",
@@ -181,26 +200,7 @@
                             "label": "Public Key",
                             "description": "Public key(s) to include in authorized_keys on deployed nodes",
                             "weight": 60
-                        },
-                        "distro": {
-                            "value": "centos",
-                            "values": [
-                                {
-                                    "data": "centos",
-                                    "display_name": "CentOS",
-                                    "description": "CentOS"
-                                },
-                                {
-                                    "data": "rhel",
-                                    "display_name": "RHEL",
-                                    "description": "RHEL"
-                                }
-                            ],
-                            "label": "Operation System",
-                            "weight": 5
                         }
-
-
                     },
                     "syslog": {
                         "syslog_transport": {
