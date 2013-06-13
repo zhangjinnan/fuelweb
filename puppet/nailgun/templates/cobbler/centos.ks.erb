@@ -115,6 +115,12 @@ ruby-devel
 system-config-firewall-base
 wget
 yum
+#if $getVar("system_profile","") == "rhel-x86_64"
+subscription-manager
+#end if
+
+$SNIPPET('redhat_register')
+$SNIPPET('rhn_certificate_based_register')
 
 # COBBLER EMBEDDED SNIPPET: 'puppet_install_if_enabled'
 # LISTS puppet PACKAGE IF puppet_auto_setup VARIABLE IS SET TO 1

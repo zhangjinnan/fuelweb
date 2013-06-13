@@ -162,3 +162,6 @@ libthai
 libtiff
 pango
 wxBase
+yum-utils
+mesa-libGL
+mesa-libGLU

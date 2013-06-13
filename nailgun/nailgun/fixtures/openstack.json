@@ -114,7 +114,9 @@
                             ],
                             "label": "Operation System",
                             "weight": 5
-                        }
+                        },
+                        "rh_username": {},
+                        "rh_password": {}
                     },
                     "access": {
                         "user": {
