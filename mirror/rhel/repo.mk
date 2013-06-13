@@ -31,7 +31,7 @@ $(BUILD_DIR)/mirror/rhel/yum-config.done: \
 		$(BUILD_DIR)/mirror/rhel/etc/yum/pluginconf.d/priorities.conf
 	$(ACTION.TOUCH)
 
-$(BUILD_DIR)/mirror/rhel/yum.done: $(call depv,REQUIRED_RHEL_RPMS)
+$(BUILD_DIR)/mirror/rhel/yum.done: $(call depv,REQ_RHEL_RPMS)
 $(BUILD_DIR)/mirror/rhel/yum.done: \
 		$(BUILD_DIR)/mirror/rhel/yum-config.done
 	yum -c $(BUILD_DIR)/mirror/rhel/etc/yum.conf clean all
@@ -39,10 +39,10 @@ $(BUILD_DIR)/mirror/rhel/yum.done: \
 	yumdownloader -q --resolve --archlist=$(CENTOS_ARCH) \
 		-c $(BUILD_DIR)/mirror/rhel/etc/yum.conf \
 		--destdir=$(LOCAL_MIRROR_RHEL)/Packages \
-		`echo $(REQUIRED_RHEL_RPMS) | /bin/sed 's/-[0-9][0-9\.a-zA-Z_-]\+//g'`
+		`echo $(REQ_RHEL_RPMS) | /bin/sed 's/-[0-9][0-9\.a-zA-Z_-]\+//g'`
 	$(ACTION.TOUCH)
 
-show-yum-urls-rhel: $(call depv,REQUIRED_RHEL_RPMS)
+show-yum-urls-rhel: $(call depv,REQ_RHEL_RPMS)
 show-yum-urls-rhel: \
 		$(BUILD_DIR)/mirror/rhel/yum-config.done
 	yum -c $(BUILD_DIR)/mirror/rhel/etc/yum.conf clean all
@@ -50,7 +50,7 @@ show-yum-urls-rhel: \
 	yumdownloader --urls -q --resolve --archlist=$(CENTOS_ARCH) \
 		-c $(BUILD_DIR)/mirror/rhel/etc/yum.conf \
 		--destdir=$(LOCAL_MIRROR_RHEL)/Packages \
-		`echo $(REQUIRED_RHEL_RPMS) | /bin/sed 's/-[0-9][0-9\.a-zA-Z_-]\+//g'`
+		`echo $(REQ_RHEL_RPMS) | /bin/sed 's/-[0-9][0-9\.a-zA-Z_-]\+//g'`
 
 $(LOCAL_MIRROR_RHEL)/repodata/comps.xml: \
 		export COMPSXML=$(shell wget -qO- $(MIRROR_RHEL)/repodata/repomd.xml | grep -m 1 '$(@F)' | awk -F'"' '{ print $$2 }')
