@@ -491,12 +491,30 @@ class NailgunReceiver(object):
                             node.get('networks', [])
                         )
 
+                        cached_network_vlans = {}
+                        received_vlans = {}
                         if received_networks_filtered:
                             received_network = received_networks_filtered[0]
+
+                            def get_vlan_ids(vlans):
+                                ids = {}
+                                for vlan in vlans:
+                                    for i in vlan['vlans']:
+                                        if i in ids:
+                                            ids[i].extend(vlan['name'])
+                                        else:
+                                            ids[i] = [vlan['name']]
+                                return ids
+
+                            cached_network_vlans = \
+                                get_vlan_ids(cached_network['vlans'])
+                            received_vlans = \
+                                get_vlan_ids(received_network['vlans'])
+
                             absent_vlans = list(
-                                set(cached_network['vlans']) -
-                                set(received_network['vlans'])
-                            )
+                                set(cached_network_vlans.keys()) -
+                                set(received_vlans.keys()))
+
                         else:
                             logger.warning(
                                 "verify_networks_resp: arguments don't contain"
@@ -506,9 +524,19 @@ class NailgunReceiver(object):
                             absent_vlans = cached_network['vlans']
 
                         if absent_vlans:
+                            absent_vlans_data = []
+                            for vlan_id in absent_vlans:
+                                if vlan_id in cached_network_vlans:
+                                    absent_vlans_data.append(
+                                        {'name': cached_network_vlans[vlan_id],
+                                         'vlan': vlan_id})
+                                else:
+                                    absent_vlans_data.append(
+                                        {'name': received_vlans[vlan_id],
+                                         'vlan': vlan_id})
                             data = {'uid': node['uid'],
                                     'interface': received_network['iface'],
-                                    'absent_vlans': absent_vlans}
+                                    'absent_vlans': absent_vlans_data}
                             node_db = cls.db.query(Node).get(node['uid'])
                             if node_db:
                                 data['name'] = node_db.name

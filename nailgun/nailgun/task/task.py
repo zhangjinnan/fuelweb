@@ -548,13 +548,13 @@ class VerifyNetworksTask(object):
                 for ng in nic.assigned_networks:
                     # Handle FuelWeb admin network first.
                     if not ng.cluster_id:
-                        vlans.append(0)
+                        vlans.append({'name': 'admin_net', 'vlans': [0]})
                         continue
                     data_ng = filter(
                         lambda i: i['name'] == ng.name,
                         data
                     )[0]
-                    vlans.extend(data_ng['vlans'])
+                    vlans.append(data_ng)
                 if not vlans:
                     continue
                 node_json['networks'].append(
