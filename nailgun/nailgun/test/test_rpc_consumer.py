@@ -39,7 +39,8 @@ class TestVerifyNetworks(BaseHandlers):
         )
         cluster_db = self.env.clusters[0]
         node1, node2 = self.env.nodes
-        nets = [{'iface': 'eth0', 'vlans': range(100, 105)}]
+        nets = [{'iface': 'eth0', 'vlans': [{'name': 'public',
+                                             'vlans': range(100, 105)}]}]
 
         task = Task(
             name="verify_networks",
@@ -73,8 +74,10 @@ class TestVerifyNetworks(BaseHandlers):
         )
         cluster_db = self.env.clusters[0]
         node1, node2 = self.env.nodes
-        nets_sent = [{'iface': 'eth0', 'vlans': range(100, 105)}]
-        nets_resp = [{'iface': 'eth0', 'vlans': range(100, 104)}]
+        nets_sent = [{'iface': 'eth0', 'vlans': [{'name': 'public',
+                                                  'vlans': range(100, 105)}]}]
+        nets_resp = [{'iface': 'eth0', 'vlans': [{'name': 'public',
+                                                  'vlans': range(100, 105)}]}]
 
         task = Task(
             name="super",
@@ -99,7 +102,9 @@ class TestVerifyNetworks(BaseHandlers):
         error_nodes = []
         for node in self.env.nodes:
             error_nodes.append({'uid': node.id, 'interface': 'eth0',
-                                'name': node.name, 'absent_vlans': [104],
+                                'name': node.name,
+                                'absent_vlans': [{'name': 'public',
+                                                  'valns': [104]}],
                                 'mac': node.interfaces[0].mac})
         self.assertEqual(task.message, None)
         self.assertEqual(task.result, error_nodes)
@@ -115,8 +120,10 @@ class TestVerifyNetworks(BaseHandlers):
 
         cluster_db = self.env.clusters[0]
         node1, node2 = self.env.nodes
-        nets_sent = [{'iface': 'eth0', 'vlans': range(100, 105)}]
-        nets_resp = [{'iface': 'eth0', 'vlans': range(100, 104)}]
+        nets_sent = [{'iface': 'eth0', 'vlans': [{'name': 'public',
+                                                  'vlans': range(100, 105)}]}]
+        nets_resp = [{'iface': 'eth0', 'vlans': [{'name': 'public',
+                                                  'vlans': range(100, 104)}]}]
 
         task = Task(
             name="super",
@@ -146,7 +153,9 @@ class TestVerifyNetworks(BaseHandlers):
         task = json.loads(resp.body)
         self.assertEqual(task['status'], "error")
         error_nodes = [{'uid': node1.id, 'interface': 'eth0',
-                        'name': node1.name, 'absent_vlans': [104],
+                        'name': node1.name,
+                        'absent_vlans': [{'name': 'public',
+                                          'vlans': [104]}],
                         'mac': node1.interfaces[0].mac},
                        {'uid': node2.id, 'interface': 'eth0',
                         'absent_vlans': [104]}]
@@ -163,7 +172,8 @@ class TestVerifyNetworks(BaseHandlers):
         )
         cluster_db = self.env.clusters[0]
         node1, node2 = self.env.nodes
-        nets_sent = [{'iface': 'eth0', 'vlans': range(100, 105)}]
+        nets_sent = [{'iface': 'eth0', 'vlans': [{'name': 'public',
+                                                  'vlans': range(100, 105)}]}]
 
         task = Task(
             name="super",
@@ -197,7 +207,8 @@ class TestVerifyNetworks(BaseHandlers):
         )
         cluster_db = self.env.clusters[0]
         node1, node2 = self.env.nodes
-        nets_sent = [{'iface': 'eth0', 'vlans': range(100, 105)}]
+        nets_sent = [{'iface': 'eth0', 'vlans': [{'name': 'public',
+                                                  'vlans': range(100, 105)}]}]
 
         task = Task(
             name="super",
@@ -233,7 +244,8 @@ class TestVerifyNetworks(BaseHandlers):
         cluster_db = self.env.clusters[0]
         node1, node2 = self.env.nodes
         node3 = self.env.create_node(api=False)
-        nets_sent = [{'iface': 'eth0', 'vlans': range(100, 105)}]
+        nets_sent = [{'iface': 'eth0', 'vlans': [{'name': 'public',
+                                                  'vlans': range(100, 105)}]}]
 
         task = Task(
             name="super",
@@ -269,7 +281,8 @@ class TestVerifyNetworks(BaseHandlers):
         )
         cluster_db = self.env.clusters[0]
         node1, node2, node3 = self.env.nodes
-        nets_sent = [{'iface': 'eth0', 'vlans': range(100, 105)}]
+        nets_sent = [{'iface': 'eth0', 'vlans': [{'name': 'public',
+                                                  'vlans': range(100, 105)}]}]
 
         task = Task(
             name="super",
@@ -305,7 +318,8 @@ class TestVerifyNetworks(BaseHandlers):
         )
         cluster_db = self.env.clusters[0]
         node1, node2 = self.env.nodes
-        nets_sent = [{'iface': 'eth0', 'vlans': range(100, 105)}]
+        nets_sent = [{'iface': 'eth0', 'vlans': [{'name': 'public',
+                                                  'vlans': range(100, 105)}]}]
 
         task = Task(
             name="super",
