@@ -254,14 +254,16 @@ class TestNode(Base):
 
         # verify node's role
         node_controller = self._get_node(nodes[0]['id'])
-        self.assertEquals(node_controller['role'], 'controller', 'Node %d is controller' % nodes[0]['id'])
+        self.assertEquals(node_controller['role'], 'controller',
+                          'Node %d is controller' % nodes[0]['id'])
 
         node_controller = self._get_node(nodes[1]['id'])
-        self.assertEquals(node_controller['role'], 'compute', 'Node %d is compute' % nodes[0]['id'])
+        self.assertEquals(node_controller['role'], 'compute',
+                          'Node %d is compute' % nodes[0]['id'])
 
         node_controller = self._get_node(nodes[2]['id'])
-        self.assertEquals(node_controller['role'], 'cinder', 'Node %d is cinder' % nodes[0]['id'])
-
+        self.assertEquals(node_controller['role'], 'cinder',
+                          'Node %d is cinder' % nodes[0]['id'])
 
     @snapshot_errors
     def test_one_node_provisioning(self):
