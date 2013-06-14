@@ -6,7 +6,7 @@ $(BUILD_DIR)/mirror/rhel/etc/yum.conf: $(call depv,rhel_yum_conf)
 $(BUILD_DIR)/mirror/rhel/etc/yum.conf: export contents:=$(rhel_yum_conf)
 $(BUILD_DIR)/mirror/rhel/etc/yum.conf:
 	mkdir -p $(@D)
-	echo -e "$${contents}" > $@
+	/bin/echo -e "$${contents}" > $@
 
 $(BUILD_DIR)/mirror/rhel/etc/yum-plugins/priorities.py: \
 		$(SOURCE_DIR)/mirror/rhel/yum-priorities-plugin.py
@@ -15,14 +15,14 @@ $(BUILD_DIR)/mirror/rhel/etc/yum-plugins/priorities.py: \
 
 $(BUILD_DIR)/mirror/rhel/etc/yum/pluginconf.d/priorities.conf:
 	mkdir -p $(@D)
-	echo -e "[main]\nenabled=1\ncheck_obsoletes=1\nfull_match=1" > $@
+	/bin/echo -e "[main]\nenabled=1\ncheck_obsoletes=1\nfull_match=1" > $@
 
 $(BUILD_DIR)/mirror/rhel/etc/yum.repos.d/base.repo: $(call depv,YUM_REPOS)
 $(BUILD_DIR)/mirror/rhel/etc/yum.repos.d/base.repo: \
 		export contents:=$(foreach repo,$(YUM_REPOS),\n$(rhel_yum_repo_$(repo))\n)
 $(BUILD_DIR)/mirror/rhel/etc/yum.repos.d/base.repo:
 	@mkdir -p $(@D)
-	echo -e "$${contents}" > $@
+	/bin/echo -e "$${contents}" > $@
 
 $(BUILD_DIR)/mirror/rhel/yum-config.done: \
 		$(BUILD_DIR)/mirror/rhel/etc/yum.conf \
