@@ -17,6 +17,7 @@ from nailgun.api.models import NetworkGroup
 from nailgun.api.models import Network
 from nailgun.api.models import Notification
 from nailgun.volumes.manager import VolumeManager
+from netaddr import IPNetwork, AddrFormatError
 
 
 class BasicValidator(object):
@@ -323,6 +324,13 @@ class NetworkConfigurationValidator(BasicValidator):
                 raise web.webapi.badrequest(
                     message="No 'id' param for '{0}'".format(i)
                 )
+
+            if i.get('name') == 'public':
+                try:
+                    IPNetwork('0.0.0.0/' + i['netmask'])
+                except (AddrFormatError, KeyError):
+                    raise web.webapi.badrequest(
+                        message="Invalid netmask for public network")
         return d
 
 

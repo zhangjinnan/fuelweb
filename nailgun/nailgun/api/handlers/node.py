@@ -33,11 +33,14 @@ class NodeHandler(JSONHandler, NICUtils):
 
     @classmethod
     def render(cls, instance, fields=None):
-        json_data = JSONHandler.render(instance, fields=cls.fields)
-        network_manager = NetworkManager()
-        json_data['network_data'] = network_manager.get_node_networks(
-            instance.id
-        )
+        json_data = None
+        try:
+            json_data = JSONHandler.render(instance, fields=cls.fields)
+            network_manager = NetworkManager()
+            json_data['network_data'] = network_manager.get_node_networks(
+                instance.id)
+        except:
+            logger.error(traceback.format_exc())
         return json_data
 
     @content_json
@@ -54,7 +57,7 @@ class NodeHandler(JSONHandler, NICUtils):
         for key, value in data.iteritems():
             setattr(node, key, value)
             if key == 'cluster_id':
-                if key:
+                if value:
                     self.allow_network_assignment_to_all_interfaces(node)
                     self.assign_networks_to_main_interface(node)
                 else:

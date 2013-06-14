@@ -16,7 +16,6 @@ from random import randint
 from datetime import datetime
 from functools import partial, wraps
 
-from sqlalchemy.orm import scoped_session, sessionmaker
 from paste.fixture import TestApp, AppError
 
 import nailgun
@@ -35,8 +34,7 @@ from nailgun.api.models import Vlan
 from nailgun.logger import logger
 from nailgun.api.urls import urls
 from nailgun.wsgi import build_app
-from nailgun.db import engine, NoCacheQuery
-from nailgun.db import dropdb, syncdb, flush, orm
+from nailgun.db import make_session, dropdb, syncdb, flush, orm
 from nailgun.fixtures.fixman import upload_fixture
 from nailgun.network.manager import NetworkManager
 from nailgun.network.topology import TopoChecker, NICUtils
@@ -48,8 +46,8 @@ class TimeoutError(Exception):
 
 class Environment(object):
 
-    def __init__(self, app, db=None):
-        self.db = db or orm()
+    def __init__(self, app, db):
+        self.db = db
         self.app = app
         self.tester = TestCase
         self.tester.runTest = lambda a: None
@@ -313,6 +311,12 @@ class Environment(object):
             "cidr": nd[1],
             "id": start_id + i
         } for i, nd in enumerate(zip(net_names, net_cidrs))]}
+
+        public = filter(
+            lambda net: net['name'] == 'public',
+            nets['networks'])[0]
+        public['netmask'] = '255.255.255.0'
+
         return nets
 
     def get_default_volumes_metadata(self):
@@ -655,9 +659,7 @@ class BaseHandlers(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.db = scoped_session(
-            sessionmaker(bind=engine, query_cls=NoCacheQuery)
-        )
+        cls.db = make_session()
         cls.app = TestApp(build_app().wsgifunc())
         nailgun.task.task.DeploymentTask._prepare_syslog_dir = mock.Mock()
         # dropdb()

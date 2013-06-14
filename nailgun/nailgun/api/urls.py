@@ -102,4 +102,4 @@ urls = (
     'VersionHandler'
 )
 
-api_app = web.application(urls, locals())
+app = web.application(urls, locals())

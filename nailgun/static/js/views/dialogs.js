@@ -34,6 +34,10 @@ function(utils, models, simpleMessageTemplate, createClusterDialogTemplate, chan
             } catch(e) {}
             this.$('.modal-body').html(this.errorMessageTemplate({logsLink: logsLink}));
         },
+        displayInfoMessage: function(options) {
+            this.template = _.template(simpleMessageTemplate);
+            this.render(options);
+        },
         initialize: function(options) {
             _.defaults(this, options);
         },
@@ -47,17 +51,6 @@ function(utils, models, simpleMessageTemplate, createClusterDialogTemplate, chan
                 }, this));
                 this.$el.modal();
                 this.modalBound = true;
-            }
-            return this;
-        }
-    });
-
-    views.SimpleMessage = views.Dialog.extend({
-        template: _.template(simpleMessageTemplate),
-        render: function() {
-            this.constructor.__super__.render.call(this, {title: this.title, message: this.message});
-            if (this.error) {
-                this.displayErrorMessage();
             }
             return this;
         }
@@ -93,6 +86,8 @@ function(utils, models, simpleMessageTemplate, createClusterDialogTemplate, chan
                         if (response.status == 409) {
                             cluster.trigger('invalid', cluster, {name: response.responseText});
                             this.$('.create-cluster-btn').removeClass('disabled');
+                        } else if (response.status == 400) {
+                            this.displayInfoMessage({error: false, title: 'Create a new OpenStack environment error', message: response.responseText});
                         } else {
                             this.displayErrorMessage();
                         }
