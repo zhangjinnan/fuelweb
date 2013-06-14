@@ -237,7 +237,7 @@ class TestNode(Base):
         logging.info(json.dumps(nodes))
 
         # build nodes list for initial deployment.
-        # One controller and one compute
+        # One controller and one compute and one cinder
         nodes_put_data = [{'id': nodes[0]['id'], 'cluster_id': cluster_id,
                           'role': 'controller', 'pending_addition': 'true',
                           'pending_deletion': 'false'},
