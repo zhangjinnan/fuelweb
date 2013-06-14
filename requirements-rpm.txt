@@ -120,3 +120,4 @@ python-ethtool
 libuser
 passwd
 subscription-manager-1.8.9-1.el6
+qpid-cpp-server-cluster-0.14-22.el6_3

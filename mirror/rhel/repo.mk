@@ -63,11 +63,17 @@ $(LOCAL_MIRROR_RHEL)/repodata/comps.xml:
 		wget -O $@ $(MIRROR_RHEL)/$${COMPSXML}; \
 	fi
 
+HACK_PACKAGES:=xinetd-2.3.14-38.el6.x86_64.rpm xfsprogs-3.1.1-10.el6.x86_64.rpm qpid-cpp-server-cluster-0.14-22.el6_3.x86_64.rpm \
+qpid-cpp-server-store-0.14-22.el6_3.x86_64.rpm qpid-tests-0.14-1.el6_2.noarch.rpm qpid-tools-0.14-6.el6_3.noarch.rpm \
+qpid-cpp-server-ssl-0.14-22.el6_3.x86_64.rpm
+HACK_URLS:=$(addprefix http://mirror.yandex.ru/centos/6.4/os/x86_64/Packages/,$(HACK_PACKAGES))
+
 $(BUILD_DIR)/mirror/rhel/fuel.done:
 	mkdir -p $(LOCAL_MIRROR)/mirror/rhel/fuel/Packages
 	-wget -c -i $(SOURCE_DIR)/req-fuel-rhel.txt -B http://download.mirantis.com/epel-fuel-grizzly/x86_64/ -P $(LOCAL_MIRROR)/rhel/fuel/Packages
 	-wget -c -i $(SOURCE_DIR)/req-fuel-rhel.txt -B http://download.mirantis.com/epel-fuel-grizzly/noarch/ -P $(LOCAL_MIRROR)/rhel/fuel/Packages
 	-wget -c -i $(SOURCE_DIR)/req-fuel-rhel.txt -B http://srv11-msk.msk.mirantis.net/rhel6/fuel-rpms/x86_64/ -P $(LOCAL_MIRROR)/rhel/fuel/Packages
+	-wget -c -P $(LOCAL_MIRROR)/rhel/fuel/Packages $(HACK_URLS)
 	$(ACTION.TOUCH)
 
 $(BUILD_DIR)/mirror/rhel/repo.done: \
