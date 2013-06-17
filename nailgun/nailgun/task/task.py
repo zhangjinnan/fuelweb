@@ -90,7 +90,7 @@ class DeploymentTask(object):
 #   those which are prepared for removal.
 
     @classmethod
-    def message(cls, task):
+    def message(cls, task, **kwargs):
         logger.debug("DeploymentTask.message(task=%s)" % task.uuid)
         task_uuid = task.uuid
         cluster_id = task.cluster.id
@@ -162,6 +162,7 @@ class DeploymentTask(object):
         message = {
             'method': 'deploy',
             'respond_to': 'deploy_resp',
+            'fake': kwargs.get('fake', False),
             'args': {
                 'task_uuid': task.uuid,
                 'nodes': nodes_with_attrs,
@@ -172,9 +173,9 @@ class DeploymentTask(object):
         return message
 
     @classmethod
-    def execute(cls, task):
+    def execute(cls, task, **kwargs):
         logger.debug("DeploymentTask.execute(task=%s)" % task.uuid)
-        message = cls.message(task)
+        message = cls.message(task, **kwargs)
         task.cache = message
         orm().add(task)
         orm().commit()
@@ -233,7 +234,7 @@ class DeploymentTask(object):
 
 class ProvisionTask(object):
     @classmethod
-    def message(cls, task):
+    def message(cls, task, **kwargs):
         logger.debug("ProvisionTask.message(task=%s)" % task.uuid)
         # this variable is used to set 'auth_key' in cobbler ks_meta
         cluster_attrs = task.cluster.attributes.merged_attrs_values()
@@ -362,6 +363,7 @@ class ProvisionTask(object):
         message = {
             'method': 'provision',
             'respond_to': 'provision_resp',
+            'fake': kwargs.get('fake', False),
             'args': {
                 'task_uuid': task.uuid,
                 'engine': {
@@ -375,9 +377,9 @@ class ProvisionTask(object):
         return message
 
     @classmethod
-    def execute(cls, task):
+    def execute(cls, task, **kwargs):
         logger.debug("ProvisionTask.execute(task=%s)" % task.uuid)
-        message = cls.message(task)
+        message = cls.message(task, **kwargs)
         task.cache = message
         orm().add(task)
         orm().commit()
@@ -387,7 +389,7 @@ class ProvisionTask(object):
 class DeletionTask(object):
 
     @classmethod
-    def execute(self, task, respond_to='remove_nodes_resp'):
+    def execute(self, task, respond_to='remove_nodes_resp', **kwargs):
         logger.debug("DeletionTask.execute(task=%s)" % task.uuid)
         task_uuid = task.uuid
         logger.debug("Nodes deletion task is running")
@@ -504,6 +506,7 @@ class DeletionTask(object):
         msg_delete = {
             'method': 'remove_nodes',
             'respond_to': respond_to,
+            'fake': kwargs.get('fake', False),
             'args': {
                 'task_uuid': task.uuid,
                 'nodes': nodes_to_delete,

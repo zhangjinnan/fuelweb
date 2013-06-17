@@ -21,7 +21,8 @@ from nailgun.task import task as tasks
 
 class TaskManager(object):
 
-    def __init__(self, cluster_id):
+    def __init__(self, cluster_id, fake=False):
+        self.fake = fake
         self.cluster = orm().query(Cluster).get(cluster_id)
 
     def _call_silently(self, task, instance, *args, **kwargs):
@@ -90,7 +91,8 @@ class DeploymentTaskManager(TaskManager):
             logger.debug("Launching deletion task: %s", task_deletion.uuid)
             self._call_silently(
                 task_deletion,
-                tasks.DeletionTask
+                tasks.DeletionTask,
+                fake=self.fake
             )
 
         task_messages = []
@@ -105,7 +107,8 @@ class DeploymentTaskManager(TaskManager):
             provision_message = self._call_silently(
                 task_provision,
                 tasks.ProvisionTask,
-                method_name='message'
+                method_name='message',
+                fake=self.fake
             )
             task_provision.cache = provision_message
             orm().add(task_provision)
@@ -120,7 +123,8 @@ class DeploymentTaskManager(TaskManager):
             deployment_message = self._call_silently(
                 task_deployment,
                 tasks.DeploymentTask,
-                method_name='message'
+                method_name='message',
+                fake=self.fake
             )
             task_deployment.cache = deployment_message
             orm().add(task_deployment)

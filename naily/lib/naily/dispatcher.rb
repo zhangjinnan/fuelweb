@@ -19,6 +19,12 @@ module Naily
 
       reporter = Naily::Reporter.new(@producer, data['respond_to'], data['args']['task_uuid'])
 
+      if data['fake']
+        Naily.logger.info("'provision' method called with fake=true")
+        report_result({}, reporter)
+        return
+      end
+
       begin
         Naily.logger.info("Trying to instantiate cobbler engine: #{data['args']['engine'].inspect}")
         engine = Astute::Provision::Cobbler.new(data['args']['engine'])
@@ -102,6 +108,14 @@ module Naily
       data['args']['nodes'].map { |x| x['uid'] = x['uid'].to_s }
       reporter = Naily::Reporter.new(@producer, data['respond_to'], data['args']['task_uuid'])
       nodes = data['args']['nodes']
+
+      if data['fake']
+        Naily.logger.info("'deploy' method called with fake=true")
+        result = @orchestrator.deploy(reporter, data['args']['task_uuid'], nodes, data['args']['attributes'], 'fake' => true)
+        report_result(result, reporter)
+        return
+      end
+
       nodes_uids = nodes.map { |n| n['uid'] }
       time = Time::now.to_f
       nodes_not_booted = nodes.map { |n| n['uid'] }
@@ -188,6 +202,14 @@ module Naily
     def remove_nodes(data)
       reporter = Naily::Reporter.new(@producer, data['respond_to'], data['args']['task_uuid'])
       nodes = data['args']['nodes']
+
+      if data['fake']
+        Naily.logger.info("'remove_nodes' method called with fake=true")
+        result = @orchestrator.remove_nodes(reporter, data['args']['task_uuid'], nodes, 'fake' => true)
+        report_result(result, reporter)
+        return
+      end
+
       provision_engine = Astute::Provision::Cobbler.new(data['args']['engine'])
       data['args']['engine_nodes'].each do |name|
         if provision_engine.system_exists(name)

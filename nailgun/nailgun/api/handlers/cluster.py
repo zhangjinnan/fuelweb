@@ -179,6 +179,12 @@ class ClusterChangesHandler(JSONHandler):
 
     @content_json
     def PUT(self, cluster_id):
+        params = web.input()
+        fake = False
+        if hasattr(params, 'fake') and params.fake in ('true', '1', 'yes'):
+            logger.info("ClusterChangesHandler has been called with "
+                        "fake param set to true")
+            fake = True
         cluster = self.get_object_or_404(
             Cluster,
             cluster_id,
@@ -194,7 +200,9 @@ class ClusterChangesHandler(JSONHandler):
             return TaskHandler.render(check_task)
 
         try:
-            task_manager = DeploymentTaskManager(cluster_id=cluster.id)
+            task_manager = DeploymentTaskManager(
+                cluster_id=cluster.id,
+                fake=fake)
             task = task_manager.execute()
         except Exception as exc:
             logger.warn(u'ClusterChangesHandler: error while execution'
