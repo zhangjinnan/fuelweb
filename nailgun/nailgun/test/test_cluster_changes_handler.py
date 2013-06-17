@@ -72,7 +72,7 @@ class TestHandlers(BaseHandlers):
                             if x.name == 'deployment'][0]
 
         msg = {'method': 'deploy', 'respond_to': 'deploy_resp',
-               'args': {}}
+               'args': {}, 'fake': False}
         self.db.add(cluster_db)
         cluster_attrs = cluster_db.attributes.merged_attrs_values()
 
@@ -243,6 +243,7 @@ class TestHandlers(BaseHandlers):
         provision_msg = {
             'method': 'provision',
             'respond_to': 'provision_resp',
+            'fake': False,
             'args': {
                 'task_uuid': provision_task_uuid,
                 'engine': {
