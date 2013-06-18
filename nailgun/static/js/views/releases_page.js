@@ -29,7 +29,7 @@ function(commonViews, dialogViews, releaseListTemplate) {
             if (this.progress <= 100){
                 this.progress++;
                 this.$('.bar').css('width', this.progress+'%');
-                window.setTimeout(_.bind(this.renderProgress, this), 200);
+                window.setTimeout(_.bind(this.renderProgress, this), 1500);
             } else {
                 this.$('#download_progress, .available, .not-available').toggleClass('hide');
 
