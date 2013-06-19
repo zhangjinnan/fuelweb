@@ -4,6 +4,7 @@ import json
 
 from nailgun.db import orm
 from nailgun.logger import logger
+from nailgun.errors import errors
 
 
 class Disk(object):
@@ -143,6 +144,12 @@ class VolumeManager(object):
                     if lv.get("type") == "lv" and lv.get("name") == "libvirt":
                         self.volumes[i]["volumes"][j]["size"] = \
                             self.field_generator("calc_total_vg", "vm")
+            if vg.get("type") == "vg" and vg.get("id") == "os":
+                for j, lv in enumerate(vg.get("volumes", [])):
+                    if lv.get("type") == "lv" and lv.get("name") == "root":
+                        self.volumes[i]["volumes"][j]["size"] += \
+                            self.field_generator(
+                                "calc_total_unallocated_vg", "os")
         return self.volumes
 
     def _traverse(self, cdict):
@@ -211,6 +218,15 @@ class VolumeManager(object):
                                          "calc_lvm_meta_size"))
         return vg_space
 
+    def _calc_total_unallocated_vg(self, vg):
+        logger.debug("_calc_total_unallocated_vg")
+        vg_space = self._calc_total_vg(vg)
+        for v in self.volumes:
+            if v.get("type") == "vg" and v.get("id") == vg:
+                for subv in v.get("volumes", []):
+                    vg_space -= subv.get("size", 0)
+        return vg_space
+
     def field_generator(self, generator, *args):
         generators = {
             # Calculate swap space based on total RAM
@@ -222,7 +238,8 @@ class VolumeManager(object):
             "calc_mbr_size": lambda: 10 * 1024 ** 2,
             "calc_lvm_meta_size": lambda: 1024 ** 2 * 64,
             "calc_all_free": self._calc_all_free,
-            "calc_total_vg": self._calc_total_vg
+            "calc_total_vg": self._calc_total_vg,
+            "calc_total_unallocated_vg": self._calc_total_unallocated_vg
         }
         generators["calc_os_size"] = lambda: sum([
             generators["calc_root_size"](),
@@ -261,18 +278,10 @@ class VolumeManager(object):
 
     def _allocate_os(self):
         logger.debug("_allocate_os")
-        os_size = self.field_generator("calc_os_size")
-        boot_size = self.field_generator("calc_boot_size")
-        mbr_size = self.field_generator("calc_mbr_size")
+        os_vg_size_left = self.field_generator("calc_os_size")
         lvm_meta_size = self.field_generator("calc_lvm_meta_size")
 
-        free_space = sum([d.size - mbr_size for d in self.disks])
-
-        if free_space < (os_size + boot_size):
-            raise Exception("Insufficient disk space for OS")
-
         ready = False
-        os_vg_size_left = os_size
         logger.debug("Iterating over node disks.")
         for i, disk in enumerate(self.disks):
             logger.debug("Found disk: %s", disk.id)
@@ -367,3 +376,19 @@ class VolumeManager(object):
         ])
         logger.debug("Generating values for volumes")
         return self._traverse(self.volumes)
+
+    def check_free_space(self):
+        """
+        Check disks free space for OS installation
+
+        :raises: errors.NotEnoughFreeSpace
+        """
+        os_size = self.field_generator("calc_os_size")
+        boot_size = self.field_generator("calc_boot_size")
+        mbr_size = self.field_generator("calc_mbr_size")
+        free_space = sum([d.size - mbr_size for d in self.disks])
+
+        if free_space < (os_size + boot_size):
+            raise errors.NotEnoughFreeSpace(
+                "Node '%s' has insufficient disk space for OS" %
+                self.node.human_readable_name)

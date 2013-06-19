@@ -108,7 +108,7 @@ file {"/var/lib/cobbler/snippets/dhclient_ignore_routers_opt":
 
   cobbler_profile { "centos-x86_64":
     kickstart => "/var/lib/cobbler/kickstarts/centos-x86_64.ks",
-    kopts => "",
+    kopts => "biosdevname=0",
     distro => "centos-x86_64",
     ksmeta => "",
     menu => true,
@@ -148,7 +148,7 @@ file {"/var/lib/cobbler/snippets/dhclient_ignore_routers_opt":
     distro => "bootstrap",
     menu => true,
     kickstart => "",
-    kopts => "url=http://${ipaddress}:8000/api",
+    kopts => "biosdevname=0 url=http://${ipaddress}:8000/api",
     ksmeta => "",
     require => Cobbler_distro["bootstrap"],
   }

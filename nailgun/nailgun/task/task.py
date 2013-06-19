@@ -579,8 +579,6 @@ class CheckNetworksTask(object):
 
     @classmethod
     def execute(self, task, data):
-        task_uuid = task.uuid
-
         # If not set in data then fetch from db
         if 'net_manager' in data:
             netmanager = data['net_manager']
@@ -639,3 +637,42 @@ class CheckNetworksTask(object):
             orm().commit()
             full_err_msg = "\n".join(err_msgs)
             raise errors.NetworkCheckError(full_err_msg)
+
+
+class CheckBeforeDeploymentTask(object):
+    @classmethod
+    def execute(cls, task):
+        cls.__check_disks(task)
+        cls.__check_network(task)
+
+    @classmethod
+    def __check_disks(cls, task):
+        for node in task.cluster.nodes:
+            node.volume_manager.check_free_space()
+
+    @classmethod
+    def __check_network(cls, task):
+        netmanager = NetworkManager()
+        nodes_count = len(task.cluster.nodes)
+
+        public_network = filter(
+            lambda ng: ng.name == 'public',
+            task.cluster.network_groups)[0]
+        public_network_size = cls.__network_size(public_network)
+
+        if public_network_size < nodes_count:
+            error_message = cls.__format_network_error(nodes_count)
+            raise errors.NetworkCheckError(error_message)
+
+    @classmethod
+    def __network_size(cls, network):
+        size = 0
+        for ip_range in network.ip_ranges:
+            size += len(netaddr.IPRange(ip_range.first, ip_range.last))
+        return size
+
+    @classmethod
+    def __format_network_error(cls, nodes_count):
+        return 'Not enough IP addresses. Public network must have at least '\
+            '{nodes_count} IP addresses '.format(nodes_count=nodes_count) +\
+            'for the current environment.'

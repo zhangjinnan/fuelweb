@@ -389,3 +389,57 @@ class TestHandlers(BaseHandlers):
         self.assertEqual(nodes[0].needs_redeploy, True)
 
         self.env.launch_deployment()
+
+    def test_occurs_error_not_enough_ip_addresses(self):
+        self.env.create(
+            cluster_kwargs={},
+            nodes_kwargs=[
+                {'pending_addition': True},
+                {'pending_addition': True},
+                {'pending_addition': True}])
+
+        cluster = self.env.clusters[0]
+
+        public_network = self.db.query(
+            NetworkGroup).filter_by(name='public').first()
+
+        net_data = {
+            "networks": [{
+                'id': public_network.id,
+                'ip_ranges': [[
+                    '240.0.1.2',
+                    '240.0.1.3']]}]}
+
+        resp = self.app.put(
+            reverse(
+                'NetworkConfigurationHandler',
+                kwargs={'cluster_id': cluster.id}),
+            json.dumps(net_data),
+            headers=self.default_headers)
+
+        task = self.env.launch_deployment()
+
+        self.assertEquals(task.status, 'error')
+        self.assertEquals(
+            task.message,
+            'Not enough IP addresses. Public network must have at least '
+            '3 IP addresses for the current environment.')
+
+    def test_occurs_error_not_enough_free_space(self):
+        meta = self.env.default_metadata()
+        meta['disks'] = [{
+            "model": "TOSHIBA MK1002TS",
+            "name": "sda",
+            "disk": "sda",
+            # 8GB
+            "size": 8000000}]
+
+        node = self.env.create_node(meta=meta)
+        cluster = self.env.create_cluster(nodes=[node.id])
+        task = self.env.launch_deployment()
+
+        self.assertEquals(task.status, 'error')
+        self.assertEquals(
+            task.message,
+            "Node '%s' has insufficient disk space for OS" %
+            node.human_readable_name)
