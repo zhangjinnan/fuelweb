@@ -33,7 +33,6 @@ class Release(Base):
     )
     id = Column(Integer, primary_key=True)
     name = Column(Unicode(100), nullable=False)
-    operation_system = Column(JSON, default=[])
     distribution = Column(JSON, default=[])
     versions = Column(JSON, nullable=False)
     description = Column(Unicode)
@@ -473,12 +472,14 @@ class Task(Base):
     TASK_NAMES = (
         'super',
         'deploy',
+        'check_before_deployment',
         'deployment',
         'provision',
         'node_deletion',
         'cluster_deletion',
         'check_networks',
-        'verify_networks'
+        'verify_networks',
+        'release_download'
     )
     id = Column(Integer, primary_key=True)
     cluster_id = Column(Integer, ForeignKey('clusters.id'))

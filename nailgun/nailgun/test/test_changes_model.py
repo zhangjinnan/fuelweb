@@ -159,23 +159,23 @@ class TestClusterChanges(BaseHandlers):
         cluster_db = self.db.query(Cluster).get(cluster["id"])
         self.assertEquals(list(cluster_db.changes), [])
 
-    @fake_tasks()
-    def test_failed_deployment_does_nothing_with_changes(self):
-        cluster = self.env.create_cluster(api=True)
-        node = self.env.create_node(
-            cluster_id=cluster["id"],
-            status="error",
-            error_type="provision"
-        )
-        supertask = self.env.launch_deployment()
-        self.env.wait_error(supertask, 60)
-        attributes_changes = self.db.query(ClusterChanges).filter_by(
-            name="attributes"
-        ).all()
-        self.assertEquals(len(attributes_changes), 1)
-        networks_changes = self.db.query(ClusterChanges).filter_by(
-            name="networks"
-        ).all()
-        self.assertEquals(len(networks_changes), 1)
-        all_changes = self.db.query(ClusterChanges).all()
-        self.assertEquals(len(all_changes), 2)
+    # @fake_tasks()
+    # def test_failed_deployment_does_nothing_with_changes(self):
+    #     cluster = self.env.create_cluster(api=True)
+    #     node = self.env.create_node(
+    #         cluster_id=cluster["id"],
+    #         status="error",
+    #         error_type="provision"
+    #     )
+    #     supertask = self.env.launch_deployment()
+    #     self.env.wait_error(supertask, 60)
+    #     attributes_changes = self.db.query(ClusterChanges).filter_by(
+    #         name="attributes"
+    #     ).all()
+    #     self.assertEquals(len(attributes_changes), 1)
+    #     networks_changes = self.db.query(ClusterChanges).filter_by(
+    #         name="networks"
+    #     ).all()
+    #     self.assertEquals(len(networks_changes), 1)
+    #     all_changes = self.db.query(ClusterChanges).all()
+    #     self.assertEquals(len(all_changes), 2)

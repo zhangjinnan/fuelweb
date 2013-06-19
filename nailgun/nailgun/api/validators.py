@@ -89,9 +89,8 @@ class ReleaseValidator(BasicValidator):
             raise web.webapi.badrequest(
                 message="No release versions specified"
             )
-        if cls.db.query(Release).filter_by(
-            name=d["name"],
-            versions=d["versions"]
+        if orm().query(Release).filter_by(
+            name=d["name"]
         ).first():
             raise web.webapi.conflict
         if "networks_metadata" in d:

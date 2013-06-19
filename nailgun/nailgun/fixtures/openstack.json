@@ -3,6 +3,7 @@
         "pk": 1,
         "model": "nailgun.release",
         "fields": {
+            "name": "Mirantis OpenStack on CentOS",
             "versions": [{"version": "2013.1.1", "name": "Grizzly", "operating_system": "CentOS 6.4"}],
             "distribution": "Mirantis OpenStack on CentOS",
             "description": "This option will install the OpenStack Grizzly packages using CentOS as a base operating system. With high availability features built in, you are getting a robust, enterprise-grade OpenStack deployment.",
@@ -281,8 +282,9 @@
         "pk": 2,
         "model": "nailgun.release",
         "fields": {
+            "name": "RedHat OpenStack (RHOS) on RHEL",
             "versions": [{"version": "2013.1.1", "name": "Grizzly", "operating_system": "RedHat 6.4"}],
-            "distribution": ["RedHat OpenStack (RHOS) on RHEL"],
+            "distribution": "RedHat OpenStack (RHOS) on RHEL",
             "description": "This option will install the RedHat OpenStack Grizzly packages using RHEL as a base operating system. With high availability features built in, you are getting a robust, enterprise-grade OpenStack deployment.",
             "networks_metadata": [
                 {"name": "floating", "access": "public"},
