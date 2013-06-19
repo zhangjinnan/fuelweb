@@ -78,11 +78,15 @@ class Environment(object):
             )
 
     def create_release(self, api=False, **kwargs):
-        version = str(randint(0, 100000000))
+        ver = str(randint(0, 100000000))
+        version = {'name': 'ver_' + ver,
+                   'version': ver,
+                   'operating_system': 'OS'}
         release_data = {
-            'name': u"release_name_" + version,
-            'version': version,
-            'description': u"release_desc" + version,
+            'name': u"release_name_" + ver,
+            'distribution': u"distribution_name_" + ver,
+            'versions': [version],
+            'description': u"release_desc" + ver,
             'networks_metadata': self.get_default_networks_metadata(),
             'attributes_metadata': self.get_default_attributes_metadata(),
             'volumes_metadata': self.get_default_volumes_metadata()

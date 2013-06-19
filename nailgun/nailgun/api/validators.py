@@ -85,13 +85,13 @@ class ReleaseValidator(BasicValidator):
             raise web.webapi.badrequest(
                 message="No release name specified"
             )
-        if not "version" in d:
+        if not "versions" in d:
             raise web.webapi.badrequest(
-                message="No release version specified"
+                message="No release versions specified"
             )
-        if orm().query(Release).filter_by(
+        if cls.db.query(Release).filter_by(
             name=d["name"],
-            version=d["version"]
+            versions=d["versions"]
         ).first():
             raise web.webapi.conflict
         if "networks_metadata" in d:
@@ -459,3 +459,28 @@ class NetAssignmentValidator(BasicValidator):
                 message="Too few neworks to assign to node '%d'" %
                         node['id']
             )
+
+
+class RedHatAcountValidator(BasicValidator):
+    @classmethod
+    def validate(cls, data):
+        d = cls.validate_json(data)
+        if not "license_type" in d:
+            raise web.webapi.badrequest(
+                message="No License Type specified"
+            )
+        if data["license_type"] not in ["rhsm", "rhn"]:
+            raise web.webapi.badrequest(
+                message="Invalid License Type"
+            )
+        if d["license_type"] == "rhsm":
+            if "username" not in d or "password" not in d:
+                raise web.webapi.badrequest(
+                    message="Username or password not specified"
+                )
+        else:
+            if "hostname" not in d or "activation_key" not in d:
+                raise web.webapi.badrequest(
+                    message="Satellite hostname or activation key "
+                            "not specified"
+                )

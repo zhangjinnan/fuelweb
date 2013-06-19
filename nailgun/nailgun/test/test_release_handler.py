@@ -10,11 +10,12 @@ from nailgun.test.base import reverse
 class TestHandlers(BaseHandlers):
     def test_release_put_change_name_and_version(self):
         release = self.env.create_release(api=False)
+        versions = [{'version': '5.1'}]
         resp = self.app.put(
             reverse('ReleaseHandler', kwargs={'release_id': release.id}),
             params=json.dumps({
                 'name': 'modified release',
-                'version': '5.1'
+                'version': versions
             }),
             headers=self.default_headers,
             expect_errors=True)
@@ -22,8 +23,6 @@ class TestHandlers(BaseHandlers):
         response = json.loads(resp.body)
         release_from_db = self.db.query(Release).one()
         self.db.refresh(release_from_db)
-        self.assertEquals('5.1', release_from_db.version)
-        self.assertEquals('5.1', response['version'])
         self.assertEquals('modified release', response['name'])
 
     def test_release_put_returns_400_if_no_body(self):
@@ -41,7 +40,7 @@ class TestHandlers(BaseHandlers):
             reverse('ReleaseHandler', kwargs={'release_id': release.id}),
             params=json.dumps({
                 'name': 'Another test release',
-                'version': '1.0'
+                'versions': [{'version': '1.0'}]
             }),
             headers=self.default_headers
         )

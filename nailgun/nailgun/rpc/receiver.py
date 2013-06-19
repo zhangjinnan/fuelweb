@@ -554,3 +554,7 @@ class NailgunReceiver(object):
 
         TaskHelper.update_task_status(task_uuid, status,
                                       progress, error_msg, result)
+
+    @classmethod
+    def downloade_release_resp(cls, **kwargs):
+        raise NotImplementedError("Will be implemented later")

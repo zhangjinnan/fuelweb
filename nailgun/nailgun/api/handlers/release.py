@@ -5,7 +5,7 @@ import json
 import web
 
 from nailgun.api.models import Release
-from nailgun.api.validators import ReleaseValidator
+from nailgun.api.validators import ReleaseValidator, RedHatAcountValidator
 from nailgun.api.handlers.base import JSONHandler, content_json
 
 
@@ -13,7 +13,8 @@ class ReleaseHandler(JSONHandler):
     fields = (
         "id",
         "name",
-        "version",
+        "distribution",
+        "versions",
         "description"
     )
     model = Release
@@ -66,3 +67,32 @@ class ReleaseCollectionHandler(JSONHandler):
             ReleaseHandler.render(release),
             indent=4
         ))
+
+
+class RedHatAccountHandler(JSONHandler):
+
+    validator = RedHatAcountValidator
+
+    @content_json
+    def POST(self):
+        data = self.validator.validate(web.data())
+        # TODO: activate and save status
+        raise web.accepted(data=data)
+
+
+class DownloadReleaseHandler(JSONHandler):
+    fields = (
+        "id",
+        "name",
+    )
+
+    @content_json
+    def PUT(self, release_id, version):
+        task_manager = ReleaseDownloadTaskManager(cluster_id=cluster.id)
+        try:
+            task = task_manager.execute()
+        except Exception as exc:
+            logger.warn(u'DownloadReleaseHandler: error while execution'
+                        ' deploy task: {0}'.format(exc.message))
+            raise web.badrequest(exc.message)
+        return TaskHandler.render(task)

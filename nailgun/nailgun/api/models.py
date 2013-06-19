@@ -29,11 +29,13 @@ Base = declarative_base()
 class Release(Base):
     __tablename__ = 'releases'
     __table_args__ = (
-        UniqueConstraint('name', 'version'),
+        UniqueConstraint('name'),
     )
     id = Column(Integer, primary_key=True)
     name = Column(Unicode(100), nullable=False)
-    version = Column(String(30), nullable=False)
+    operation_system = Column(JSON, default=[])
+    distribution = Column(JSON, default=[])
+    versions = Column(JSON, nullable=False)
     description = Column(Unicode)
     networks_metadata = Column(JSON, default=[])
     attributes_metadata = Column(JSON, default={})
@@ -472,7 +474,6 @@ class Task(Base):
         'super',
         'deploy',
         'deployment',
-        'check_before_deployment',
         'provision',
         'node_deletion',
         'cluster_deletion',

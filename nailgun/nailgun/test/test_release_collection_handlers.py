@@ -22,7 +22,7 @@ class TestHandlers(BaseHandlers):
             reverse('ReleaseCollectionHandler'),
             params=json.dumps({
                 'name': 'Another test release',
-                'version': '1.0'
+                'versions': [{'version': '1.0'}]
             }),
             headers=self.default_headers
         )
@@ -30,13 +30,13 @@ class TestHandlers(BaseHandlers):
 
     def test_release_create(self):
         release_name = "OpenStack"
-        release_version = "1.0.0"
+        release_version = {"version": "1.0.0"}
         release_description = "This is test release"
         resp = self.app.post(
             reverse('ReleaseCollectionHandler'),
             json.dumps({
                 'name': release_name,
-                'version': release_version,
+                'versions': [release_version],
                 'description': release_description,
                 'networks_metadata': [
                     {"name": "floating", "access": "public"},
@@ -52,7 +52,7 @@ class TestHandlers(BaseHandlers):
             reverse('ReleaseCollectionHandler'),
             json.dumps({
                 'name': release_name,
-                'version': release_version,
+                'versions': [release_version],
                 'description': release_description,
                 'networks_metadata': [
                     {"name": "fixed", "access": "private10"}
@@ -65,7 +65,7 @@ class TestHandlers(BaseHandlers):
 
         release_from_db = self.db.query(Release).filter_by(
             name=release_name,
-            version=release_version,
+            versions=[release_version],
             description=release_description
         ).all()
         self.assertEquals(len(release_from_db), 1)
@@ -78,7 +78,7 @@ class TestHandlers(BaseHandlers):
             reverse('ReleaseCollectionHandler'),
             json.dumps({
                 'name': release_name,
-                'version': release_version,
+                'versions': [release_version],
                 'description': release_description,
                 'networks_metadata': [
                     {"name": "floating", "access": "public"},
@@ -94,7 +94,7 @@ class TestHandlers(BaseHandlers):
             reverse('ReleaseCollectionHandler'),
             json.dumps({
                 'name': release_name,
-                'version': release_version,
+                'versions': [release_version],
                 'description': release_description,
                 'networks_metadata': [
                     {"name": "fixed", "access": "private10"}
@@ -107,6 +107,6 @@ class TestHandlers(BaseHandlers):
 
         release_from_db = self.db.query(Release).filter(
             Release.name == release_name,
-            Release.version == release_version,
+            Release.versions == [release_version],
             Release.description == release_description
         ).one()

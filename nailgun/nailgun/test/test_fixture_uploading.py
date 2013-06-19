@@ -24,7 +24,7 @@ class TestFixture(BaseHandlers):
             "model": "nailgun.release",
             "fields": {
                 "name": "CustomFixtureRelease",
-                "version": "0.0.1",
+                "versions": [{"version": "0.0.1"}],
                 "description": "Sample release for testing",
                 "networks_metadata": [
                   {"name": "floating", "access": "public"},
@@ -37,6 +37,7 @@ class TestFixture(BaseHandlers):
 
         upload_fixture(cStringIO.StringIO(data))
         check = self.db.query(Release).filter(
-            Release.name == u"CustomFixtureRelease"
+            Release.name == u"CustomFixtureRelease",
+            Release.description == u"Sample release for testing"
         )
         self.assertEqual(len(list(check)), 1)

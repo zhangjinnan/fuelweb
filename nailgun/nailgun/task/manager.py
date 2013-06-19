@@ -260,3 +260,47 @@ class ClusterDeletionManager(TaskManager):
             tasks.ClusterDeletionTask
         )
         return task
+
+
+class VerifyNetworksTaskManager(TaskManager):
+
+    def execute(self, nets, vlan_ids):
+        task = Task(
+            name="check_networks",
+            cluster=self.cluster
+        )
+        orm().add(task)
+        orm().commit()
+        self._call_silently(
+            task,
+            tasks.CheckNetworksTask,
+            nets
+        )
+        orm().refresh(task)
+        if task.status != 'error':
+            # this one is connected with UI issues - we need to
+            # separate if error happened inside nailgun or somewhere
+            # in the orchestrator, and UI does it by task name.
+            task.name = "verify_networks"
+            orm().add(task)
+            orm().commit()
+            self._call_silently(
+                task,
+                tasks.VerifyNetworksTask,
+                vlan_ids
+            )
+        return task
+
+
+class ReleaseDownloadTaskManager(TaskManager):
+
+    def execute(self):
+        logger.debug("Creating cluster deletion task")
+        task = Task(name="release_download", cluster=self.cluster)
+        orm().add(task)
+        orm().commit()
+        self._call_silently(
+            task,
+            tasks.ClusterDeletionTask
+        )
+        return task

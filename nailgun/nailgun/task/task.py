@@ -671,3 +671,24 @@ class CheckBeforeDeploymentTask(object):
         return 'Not enough IP addresses. Public network must have at least '\
             '{nodes_count} IP addresses '.format(nodes_count=nodes_count) +\
             'for the current environment.'
+
+
+class DownloadReleaseTask(object):
+
+    @classmethod
+    def execute(cls, task, data):
+        logger.debug("Cluster deletion task is running")
+
+        message = {
+            'respond_to': 'downloade_release_resp',
+            'args': {
+                'task_uuid': task.uuid,
+                'release_info': {
+                },
+                'nodes': nodes_data
+            }
+        }
+
+        task.cache = data
+        orm().add(task)
+        orm().commit()
