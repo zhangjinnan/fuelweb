@@ -26,16 +26,26 @@ from nailgun.settings import settings
 Base = declarative_base()
 
 
-class Release(Base):
-    __tablename__ = 'releases'
-    __table_args__ = (
-        UniqueConstraint('name'),
-    )
+class Distribution(Base):
+    __tablename__ = 'distributions'
     id = Column(Integer, primary_key=True)
     name = Column(Unicode(100), nullable=False)
-    distribution = Column(JSON, default=[])
-    versions = Column(JSON, nullable=False)
+    operating_system = Column(Unicode(100), nullable=False)
     description = Column(Unicode)
+    releases = relationship("Release", backref="distribution")
+
+
+class Release(Base):
+    __tablename__ = 'releases'
+    # __table_args__ = (
+    #     UniqueConstraint('name'),
+    # )
+    id = Column(Integer, primary_key=True)
+    name = Column(Unicode(100), nullable=False)
+    distribution_id = Column(Integer, ForeignKey("distributions.id"))
+    version = Column(Unicode(100), nullable=False)
+    description = Column(Unicode)
+    available = Column(Boolean, default=False)
     networks_metadata = Column(JSON, default=[])
     attributes_metadata = Column(JSON, default={})
     volumes_metadata = Column(JSON, default={})
@@ -86,6 +96,10 @@ class Cluster(Base):
         default='FlatDHCPManager'
     )
     name = Column(Unicode(50), unique=True, nullable=False)
+    # HACK: dirty hack with default value for testing
+    distribution_id = Column(Integer,
+                             ForeignKey('distributions.id'),
+                             nullable=False, default=1)
     release_id = Column(Integer, ForeignKey('releases.id'), nullable=False)
     nodes = relationship("Node", backref="cluster", cascade="delete")
     tasks = relationship("Task", backref="cluster", cascade="delete")

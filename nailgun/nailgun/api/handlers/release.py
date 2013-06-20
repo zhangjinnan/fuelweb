@@ -14,7 +14,6 @@ class ReleaseHandler(JSONHandler):
         "id",
         "name",
         "distribution",
-        "versions",
         "description"
     )
     model = Release

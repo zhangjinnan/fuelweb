@@ -1,12 +1,29 @@
 [
     {
         "pk": 1,
+        "model": "nailgun.distribution",
+        "fields": {
+            "name": "Mirantis OpenStack",
+            "operating_system": "CentOS 6.4"
+        }
+    },
+    {
+        "pk": 2,
+        "model": "nailgun.distribution",
+        "fields": {
+            "name": "RHOS",
+            "operating_system": "RHEL 6.4"
+        }
+    },
+    {
+        "pk": 1,
         "model": "nailgun.release",
         "fields": {
-            "name": "Mirantis OpenStack on CentOS",
-            "versions": [{"version": "2013.1.1", "name": "Grizzly", "operating_system": "CentOS 6.4"}],
-            "distribution": "Mirantis OpenStack on CentOS",
+            "name": "Grizzly",
+            "version": "2013.1.2",
             "description": "This option will install the OpenStack Grizzly packages using CentOS as a base operating system. With high availability features built in, you are getting a robust, enterprise-grade OpenStack deployment.",
+            "distribution_id": 1,
+            "available": true,
             "networks_metadata": [
                 {"name": "floating", "access": "public"},
                 {"name": "public", "access": "public"},
@@ -282,10 +299,11 @@
         "pk": 2,
         "model": "nailgun.release",
         "fields": {
-            "name": "RedHat OpenStack (RHOS) on RHEL",
-            "versions": [{"version": "2013.1.1", "name": "Grizzly", "operating_system": "RedHat 6.4"}],
-            "distribution": "RedHat OpenStack (RHOS) on RHEL",
+            "name": "Grizzly",
+            "version": "2013.1.2",
             "description": "This option will install the RedHat OpenStack Grizzly packages using RHEL as a base operating system. With high availability features built in, you are getting a robust, enterprise-grade OpenStack deployment.",
+            "available": false,
+            "distribution_id": 2,
             "networks_metadata": [
                 {"name": "floating", "access": "public"},
                 {"name": "public", "access": "public"},
