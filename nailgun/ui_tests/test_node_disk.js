@@ -136,7 +136,10 @@ casper.then(function() {
         this.test.assertEval(function(sdaDisk) {return $(sdaDisk + ' .disk-visual .os').width() > 0}, 'VG size was not changed',{sdaDisk:sdaDisk});
         this.click(vdaDisk + ' .toggle-volume');
         this.test.assertExists(vdaDiskVM + '', 'Virtual Storage group form is presented');
-        this.click(vdaDisk + ' .disk-visual .vm .close-btn');
+        this.fill(vdaDisk + ' .volume-group-box[data-group=vm]', {'vm': '10'});
+        this.evaluate(function(vdaDisk) {
+            $(vdaDisk + ' .volume-group-box[data-group=vm] input').keyup();
+        },{vdaDisk:vdaDisk});
         this.fill(vdaDisk + ' .volume-group-box[data-group=os]', {'os': '20'});
         this.evaluate(function(vdaDisk) {
             $(vdaDisk + ' .volume-group-box[data-group=os] input').keyup();
