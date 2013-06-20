@@ -65,5 +65,23 @@ $use_satellite = false, $sat_hostname = false, $activation_key = false)  {
     require => File['/usr/sbin/build_rpm_cache'],
     logoutput => true,
     timeout => 0
+  } ->
+  cobbler_distro { "rhel-x86_64":
+    kernel => "${repo_root}/rhel/isolinux/vmlinuz",
+    initrd => "${repo_root}/rhel/isolinux/initrd.img",
+    arch => "x86_64",
+    breed => "redhat",
+    osversion => "rhel6",
+    ksmeta => "tree=http://@@server@@:8080/rhel",
+  } ->
+
+  cobbler_profile { "rhel-x86_64":
+    kickstart => "/var/lib/cobbler/kickstarts/centos-x86_64.ks",
+    kopts => "",
+    distro => "rhel-x86_64",
+    ksmeta => "redhat_register_user=${rh_username} redhat_register_password=${rh_password}",
+    menu => true,
+    require => Cobbler_distro["rhel-x86_64"],
   }
+
 }

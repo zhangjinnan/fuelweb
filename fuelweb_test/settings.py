@@ -6,6 +6,7 @@ EMPTY_SNAPSHOT = os.environ.get('EMPTY_SNAPSHOT', 'empty')
 INTERFACE_ORDER = ('internal', 'public', 'private')
 
 PUBLIC_FORWARD = os.environ.get('PUBLIC_FORWARD', None)
+PUBLIC_FORWARD = 'nat'
 
 FORWARDING = {
     'public': PUBLIC_FORWARD,
@@ -14,7 +15,7 @@ FORWARDING = {
 }
 
 DHCP = {
-    'public': False,
+    'public': True,
     'internal': False,
     'private': False,
 }
