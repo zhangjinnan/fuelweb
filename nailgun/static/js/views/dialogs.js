@@ -73,7 +73,9 @@ function(utils, models, simpleMessageTemplate, createClusterDialogTemplate, chan
             }, this);
             var deferred = cluster.save({
                 name: $.trim(this.$('input[name=name]').val()),
-                release: parseInt(this.$('select[name=release]').val(), 10)
+                release: parseInt(this.$('select[name=release]').val(), 10),
+                // HACK: temoporary before new UI will be implemented
+                distribution: 1
             });
             if (deferred) {
                 this.$('.create-cluster-btn').addClass('disabled');

@@ -9,6 +9,7 @@ from nailgun.settings import settings
 from nailgun.logger import logger
 from nailgun.errors import errors
 from nailgun.api.models import Cluster
+from nailgun.api.models import Distribution
 from nailgun.api.models import Node
 from nailgun.api.models import Network, NetworkGroup, Vlan
 from nailgun.api.models import Release
@@ -35,6 +36,7 @@ class ClusterHandler(JSONHandler, NICUtils):
         "type",
         "mode",
         "status",
+        ("distribution", "*"),
         ("release", "*")
     )
     model = Cluster
@@ -127,6 +129,7 @@ class ClusterCollectionHandler(JSONHandler, NICUtils):
 
         cluster = Cluster()
         cluster.release = self.db.query(Release).get(data["release"])
+        cluster.distribution = self.db.query(Distribution).get(data["release"])
         # TODO: use fields
         for field in ('name', 'type', 'mode', 'net_manager'):
             if data.get(field):

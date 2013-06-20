@@ -4,9 +4,22 @@ import json
 
 import web
 
-from nailgun.api.models import Release
+from nailgun.api.models import Distribution, Release
 from nailgun.api.validators import ReleaseValidator, RedHatAcountValidator
 from nailgun.api.handlers.base import JSONHandler, content_json
+
+
+class DistributionHandler(JSONHandler):
+    fields = (
+        "id",
+        "name",
+        "operating_system",
+        "description"
+    )
+    model = Distribution
+    
+    def GET(self, distribution_id):
+        pass
 
 
 class ReleaseHandler(JSONHandler):
