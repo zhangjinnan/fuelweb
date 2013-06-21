@@ -17,6 +17,7 @@ from nailgun.api.handlers.release import DistributionCollectionHandler
 from nailgun.api.handlers.release import DistributionHandler
 from nailgun.api.handlers.release import ReleaseHandler
 from nailgun.api.handlers.release import ReleaseCollectionHandler
+from nailgun.api.handlers.release import RedHatAccountHandler
 
 from nailgun.api.handlers.node import NodeHandler
 from nailgun.api.handlers.node import NodeCollectionHandler

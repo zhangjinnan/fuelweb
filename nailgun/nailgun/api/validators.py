@@ -481,7 +481,7 @@ class RedHatAcountValidator(BasicValidator):
             raise web.webapi.badrequest(
                 message="No License Type specified"
             )
-        if data["license_type"] not in ["rhsm", "rhn"]:
+        if d["license_type"] not in ["rhsm", "rhn"]:
             raise web.webapi.badrequest(
                 message="Invalid License Type"
             )
