@@ -18,7 +18,6 @@ from nailgun.logger import logger
 from nailgun.settings import settings
 from nailgun.notifier import notifier
 from nailgun.network.manager import NetworkManager
-from nailgun.api.models import Base
 from nailgun.api.models import Network
 from nailgun.api.models import NetworkGroup
 from nailgun.api.models import Node

@@ -2,7 +2,6 @@
 
 import traceback
 
-import web
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.orm.query import Query
 from sqlalchemy.exc import ProgrammingError
@@ -10,6 +9,8 @@ from sqlalchemy import create_engine
 
 from nailgun.logger import logger
 from nailgun.settings import settings
+from nailgun.application import application, apps
+
 
 if settings.DATABASE['engine'] == 'sqlite':
     db_str = "{engine}://{path}".format(
@@ -38,46 +39,24 @@ class NoCacheQuery(Query):
 
 def make_session():
     return scoped_session(
-        sessionmaker(bind=engine, query_cls=NoCacheQuery))
-
-
-def orm():
-    if not hasattr(web.ctx, "orm"):
-        web.ctx.orm = make_session()
-
-    return web.ctx.orm
-
-
-def load_db_driver(handler):
-    web.ctx.orm = make_session()
-    try:
-        return handler()
-    except web.HTTPError:
-        web.ctx.orm.commit()
-        raise
-    except:
-        web.ctx.orm.rollback()
-        raise
-    finally:
-        web.ctx.orm.commit()
-        web.ctx.orm.expire_all()
+        sessionmaker(bind=engine, query_cls=NoCacheQuery)
+    )
 
 
 def syncdb():
-    from nailgun.api.models import Base
-    Base.metadata.create_all(engine)
+    from nailgun.api.models import db
+    db.create_all()
 
 
 def dropdb():
-    db = make_session()
-
-    tables = [name for (name,) in db.execute(
+    from nailgun.api.models import db
+    tables = [name for (name,) in db.session.execute(
         "SELECT tablename FROM pg_tables WHERE schemaname = 'public'")]
     for table in tables:
-        db.execute("DROP TABLE IF EXISTS %s CASCADE" % table)
+        db.session.execute("DROP TABLE IF EXISTS %s CASCADE" % table)
 
     # sql query to list all types, equivalent to psql's \dT+
-    types = [name for (name,) in db.execute("""
+    types = [name for (name,) in db.session.execute("""
         SELECT t.typname as type FROM pg_type t
         LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
         WHERE (t.typrelid = 0 OR (
@@ -91,8 +70,8 @@ def dropdb():
         AND n.nspname = 'public'
         """)]
     for type_ in types:
-        db.execute("DROP TYPE IF EXISTS %s CASCADE" % type_)
-    db.commit()
+        db.session.execute("DROP TYPE IF EXISTS %s CASCADE" % type_)
+    db.session.commit()
 
 
 def flush():

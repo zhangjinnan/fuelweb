@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import web
-
 from nailgun.api.handlers.cluster import ClusterHandler
 from nailgun.api.handlers.cluster import ClusterCollectionHandler
 from nailgun.api.handlers.cluster import ClusterChangesHandler
@@ -42,10 +40,16 @@ from nailgun.api.handlers.logs import LogSourceByNodeCollectionHandler
 from nailgun.api.handlers.version import VersionHandler
 
 urls = (
-    r'/releases/?$',
-    'ReleaseCollectionHandler',
-    r'/releases/(?P<release_id>\d+)/?$',
-    'ReleaseHandler',
+    (
+        '/api/releases/',
+        ReleaseCollectionHandler,
+    ),
+    (
+        '/api/releases/<int:item_id>/',
+        ReleaseHandler,
+    ),
+)
+"""
     r'/clusters/?$',
     'ClusterCollectionHandler',
     r'/clusters/(?P<cluster_id>\d+)/?$',
@@ -103,3 +107,4 @@ urls = (
 )
 
 app = web.application(urls, locals())
+"""
