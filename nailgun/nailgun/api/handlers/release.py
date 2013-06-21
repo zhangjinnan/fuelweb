@@ -73,7 +73,8 @@ class ReleaseHandler(JSONHandler):
         "id",
         "name",
         "distribution",
-        "description"
+        "description",
+        "version"
     )
     model = Release
     validator = ReleaseValidator
