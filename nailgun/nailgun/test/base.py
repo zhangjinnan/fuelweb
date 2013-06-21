@@ -84,8 +84,8 @@ class Environment(object):
                    'operating_system': 'OS'}
         release_data = {
             'name': u"release_name_" + ver,
-            'distribution': u"distribution_name_" + ver,
-            'versions': [version],
+            'distribution': 1,
+            'release': 1,
             'description': u"release_desc" + ver,
             'networks_metadata': self.get_default_networks_metadata(),
             'attributes_metadata': self.get_default_attributes_metadata(),

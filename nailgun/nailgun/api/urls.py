@@ -13,6 +13,7 @@ from nailgun.api.handlers.network_configuration \
 from nailgun.api.handlers.network_configuration \
     import NetworkConfigurationVerifyHandler
 
+from nailgun.api.handlers.release import DistributionCollectionHandler
 from nailgun.api.handlers.release import DistributionHandler
 from nailgun.api.handlers.release import ReleaseHandler
 from nailgun.api.handlers.release import ReleaseCollectionHandler
@@ -43,6 +44,8 @@ from nailgun.api.handlers.logs import LogSourceByNodeCollectionHandler
 from nailgun.api.handlers.version import VersionHandler
 
 urls = (
+    r'/distributions/?$',
+    'DistributionCollectionHandler',
     r'/distributions/(?P<distribution_id>\d+)/?$',
     'DistributionHandler',
     r'/releases/?$',

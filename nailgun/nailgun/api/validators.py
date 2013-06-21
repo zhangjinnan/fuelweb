@@ -117,6 +117,19 @@ class ReleaseValidator(BasicValidator):
         return d
 
 
+class DistributionValidator(BasicValidator):
+    @classmethod
+    def validate(cls, data):
+        if not "name" in d:
+            raise web.webapi.badrequest(
+                message="No distribution name specified"
+            )
+        if not "operating_system" in d:
+            raise web.webapi.badrequest(
+                message="No operating system specified"
+            )
+
+
 class ClusterValidator(BasicValidator):
     @classmethod
     def validate(cls, data):

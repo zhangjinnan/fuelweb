@@ -3,7 +3,7 @@
         "pk": 1,
         "model": "nailgun.distribution",
         "fields": {
-            "name": "Mirantis OpenStack",
+            "name": "Vanilla OpenStack",
             "operating_system": "CentOS 6.4"
         }
     },
@@ -301,7 +301,7 @@
         "fields": {
             "name": "Grizzly",
             "version": "2013.1.2",
-            "description": "This option will install the RedHat OpenStack Grizzly packages using RHEL as a base operating system. With high availability features built in, you are getting a robust, enterprise-grade OpenStack deployment.",
+            "description": "This option will install the Red Hat OpenStack Grizzly packages using RHEL as a base operating system. With high availability features built in, you are getting a robust, enterprise-grade OpenStack deployment.",
             "available": false,
             "distribution_id": 2,
             "networks_metadata": [
