@@ -1,21 +1,21 @@
 [
     {
-        "pk": 1,
+        "pk": 2,
         "model": "nailgun.distribution",
         "fields": {
-            "name": "Vanilla OpenStack",
-            "operating_system": "CentOS 6.4"
+            "name": "RHOS",
+            "operating_system": "RHEL 6.4"
         }
     },
     {
-        "pk": 1,
+        "pk": 2,
         "model": "nailgun.release",
         "fields": {
             "name": "Grizzly",
             "version": "2013.1.2",
-            "description": "This option will install the OpenStack Grizzly packages using CentOS as a base operating system. With high availability features built in, you are getting a robust, enterprise-grade OpenStack deployment.",
-            "distribution_id": 1,
-            "available": true,
+            "description": "This option will install the Red Hat OpenStack Grizzly packages using RHEL as a base operating system. With high availability features built in, you are getting a robust, enterprise-grade OpenStack deployment.",
+            "available": false,
+            "distribution_id": 2,
             "networks_metadata": [
                 {"name": "floating", "access": "public"},
                 {"name": "public", "access": "public"},
