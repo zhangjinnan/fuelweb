@@ -32,7 +32,7 @@ IMG_PATH:=$(ISO_DIR)/$(ISO_NAME).img
 NO_UI_OPTIMIZE:=0
 
 # Do not copy RHEL repo to the iso
-NO_RHEL:=1
+CACHE_RHEL:=0
 
 LOCAL_MIRROR_SRC:=$(LOCAL_MIRROR)/src
 LOCAL_MIRROR_EGGS:=$(LOCAL_MIRROR)/eggs
@@ -84,8 +84,8 @@ MIRROR_GEMS?=http://rubygems.org
 REQUIRED_RPMS:=$(shell grep -v "^\\s*\#" $(SOURCE_DIR)/requirements-rpm.txt)
 REQUIRED_EGGS:=$(shell grep -v "^\\s*\#" $(SOURCE_DIR)/requirements-eggs.txt)
 REQUIRED_SRCS:=$(shell grep -v ^\\s*\# $(SOURCE_DIR)/requirements-src.txt)
-REQ_RHEL_RPMS:=$(shell grep -v "^\\s*\#" $(SOURCE_DIR)/req-rhel.txt)
-REQ_FUEL_RHEL_RPMS:=$(shell grep -v "^\\s&\#" $(SOURCE_DIR)/req-fuel-rhel.txt)
+REQ_RHEL_RPMS:=$(shell grep -v "^\\s*\#" $(SOURCE_DIR)/puppet/rpmcache/files/required-rpms.txt)
+REQ_FUEL_RHEL_RPMS:=$(shell grep -v "^\\s&\#" $(SOURCE_DIR)/puppet/rpmcache/files/req-fuel-rhel.txt)
 
 # Which repositories to use for making local centos mirror.
 # Possible values you can find out from mirror/centos/yum_repos.mk file.
@@ -93,7 +93,7 @@ REQ_FUEL_RHEL_RPMS:=$(shell grep -v "^\\s&\#" $(SOURCE_DIR)/req-fuel-rhel.txt)
 # Example: YUM_REPOS?=official epel => yum_repo_official and yum_repo_epel
 # will be used.
 YUM_REPOS?=official fuel
-ifeq ($(NO_RHEL),0)
+ifeq ($(CACHE_RHEL),1)
 YUM_REPOS:=$(YUM_REPOS) rhel subscr_manager
 endif
 

@@ -16,12 +16,12 @@ $(BUILD_DIR)/iso/isoroot-centos.done: \
 		-u media://`head -1 $(ISOROOT)/.discinfo` $(ISOROOT)
 	$(ACTION.TOUCH)
 
-$(BUILD_DIR)/iso/isoroot-rhel.done: $(call depv,NO_RHEL)
+$(BUILD_DIR)/iso/isoroot-rhel.done: $(call depv,CACHE_RHEL)
 $(BUILD_DIR)/iso/isoroot-rhel.done: \
 		$(BUILD_DIR)/mirror/build.done \
 		$(BUILD_DIR)/packages/build.done \
 		$(BUILD_DIR)/iso/isoroot-dotfiles.done
-ifeq ($(NO_RHEL),0)
+ifeq ($(CACHE_RHEL),1)
 	mkdir -p $(ISOROOT)/rhel
 	rsync -rp $(LOCAL_MIRROR_RHEL)/ $(ISOROOT)/rhel
 endif

@@ -113,10 +113,16 @@
                                 }
                             ],
                             "label": "Operation System",
-                            "weight": 5
+                            "weight": 10
                         },
-                        "rh_username": {},
-                        "rh_password": {}
+                        "rh_username": {
+                            "label": "Red Hat user",
+                            "weight": 20
+                        },
+                        "rh_password": {
+                            "label": "Red Hat password",
+                            "weight": 30
+                        }
                     },
                     "access": {
                         "user": {

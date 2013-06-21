@@ -1,12 +1,12 @@
-class rpmcache ( $releasever, $pkgdir, 
-$rh_username, $rh_password, $rh_base_channels, $rh_openstack_channel, 
+class rpmcache ( $releasever, $pkgdir,
+$rh_username, $rh_password, $rh_base_channels, $rh_openstack_channel,
 $use_satellite = false, $sat_hostname = false, $activation_key = false)  {
 
   Exec  {path => '/usr/bin:/bin:/usr/sbin:/sbin'}
-  package { "yum-utils": 
+  package { "yum-utils":
     ensure => "latest"
   } ->
-  package { "subscription-manager": 
+  package { "subscription-manager":
     ensure => "latest"
   } ->
 

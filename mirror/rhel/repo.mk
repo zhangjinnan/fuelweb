@@ -70,9 +70,9 @@ HACK_URLS:=$(addprefix http://mirror.yandex.ru/centos/6.4/os/x86_64/Packages/,$(
 
 $(BUILD_DIR)/mirror/rhel/fuel.done:
 	mkdir -p $(LOCAL_MIRROR)/mirror/rhel/fuel/Packages
-	-wget -c -i $(SOURCE_DIR)/req-fuel-rhel.txt -B http://download.mirantis.com/epel-fuel-grizzly/x86_64/ -P $(LOCAL_MIRROR)/rhel/fuel/Packages
-	-wget -c -i $(SOURCE_DIR)/req-fuel-rhel.txt -B http://download.mirantis.com/epel-fuel-grizzly/noarch/ -P $(LOCAL_MIRROR)/rhel/fuel/Packages
-	-wget -c -i $(SOURCE_DIR)/req-fuel-rhel.txt -B http://srv11-msk.msk.mirantis.net/rhel6/fuel-rpms/x86_64/ -P $(LOCAL_MIRROR)/rhel/fuel/Packages
+	-wget -c -i $(SOURCE_DIR)/puppet/rpmcache/files/req-fuel-rhel.txt -B http://download.mirantis.com/epel-fuel-grizzly/x86_64/ -P $(LOCAL_MIRROR)/rhel/fuel/Packages
+	-wget -c -i $(SOURCE_DIR)/puppet/rpmcache/files/req-fuel-rhel.txt -B http://download.mirantis.com/epel-fuel-grizzly/noarch/ -P $(LOCAL_MIRROR)/rhel/fuel/Packages
+	-wget -c -i $(SOURCE_DIR)/puppet/rpmcache/files/req-fuel-rhel.txt -B http://srv11-msk.msk.mirantis.net/rhel6/fuel-rpms/x86_64/ -P $(LOCAL_MIRROR)/rhel/fuel/Packages
 	-wget -c -P $(LOCAL_MIRROR)/rhel/fuel/Packages $(HACK_URLS)
 	$(ACTION.TOUCH)
 
