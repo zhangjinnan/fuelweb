@@ -34,8 +34,7 @@ class TestHandlers(BaseHandlers):
             reverse('ClusterCollectionHandler'),
             params=json.dumps({
                 'name': yet_another_cluster_name,
-                'release': release.id,
-                'distribution_id': release.distribution.id
+                'release': release.id
             }),
             headers=self.default_headers
         )

@@ -33,7 +33,6 @@ class Distribution(Base):
     operating_system = Column(Unicode(100), nullable=False)
     description = Column(Unicode)
     releases = relationship("Release", backref="distribution")
-    clusters = relationship("Cluster", backref="distribution")
 
 
 class Release(Base):
@@ -97,9 +96,9 @@ class Cluster(Base):
         default='FlatDHCPManager'
     )
     name = Column(Unicode(50), unique=True, nullable=False)
-    distribution_id = Column(Integer,
-                             ForeignKey('distributions.id'),
-                             nullable=False)
+    # distribution_id = Column(Integer,
+    #                          ForeignKey('distributions.id'),
+    #                          nullable=False)
     release_id = Column(Integer, ForeignKey('releases.id'), nullable=False)
     nodes = relationship("Node", backref="cluster", cascade="delete")
     tasks = relationship("Task", backref="cluster", cascade="delete")

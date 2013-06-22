@@ -23,13 +23,11 @@ class TestHandlers(BaseHandlers):
 
     def test_cluster_create(self):
         release = self.env.create_release(api=False)
-        distribution_id = release.distribution.id
         resp = self.app.post(
             reverse('ClusterCollectionHandler'),
             json.dumps({
                 'name': 'cluster-name',
-                'release': release.id,
-                'distribution_id': distribution_id,
+                'release': release.id
             }),
             headers=self.default_headers
         )
@@ -68,8 +66,7 @@ class TestHandlers(BaseHandlers):
             reverse('ClusterCollectionHandler'),
             json.dumps({
                 'name': 'cluster-name',
-                'release': release.id,
-                'distribution_id': release.distribution.id
+                'release': release.id
             }),
             headers=self.default_headers
         )
