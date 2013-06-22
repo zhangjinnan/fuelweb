@@ -18,26 +18,29 @@ class TestHandlers(BaseHandlers):
         self.assertEquals([], response)
 
     def test_release_creation(self):
+        distrib = self.env.create_distribution(api=False)
         resp = self.app.post(
             reverse('ReleaseCollectionHandler'),
             params=json.dumps({
                 'name': 'Another test release',
-                'versions': [{'version': '1.0'}]
+                'distribution_id': distrib.id,
+                'version': '1.0'
             }),
             headers=self.default_headers
         )
         self.assertEquals(resp.status, 201)
 
     def test_release_create(self):
+        distrib = self.env.create_distribution(api=False)
         release_name = "OpenStack"
-        release_version = {"version": "1.0.0"}
         release_description = "This is test release"
         resp = self.app.post(
             reverse('ReleaseCollectionHandler'),
             json.dumps({
                 'name': release_name,
-                'versions': [release_version],
+                "version": "1.0.0",
                 'description': release_description,
+                'distribution_id': distrib.id,
                 'networks_metadata': [
                     {"name": "floating", "access": "public"},
                     {"name": "fixed", "access": "private10"},
@@ -52,7 +55,8 @@ class TestHandlers(BaseHandlers):
             reverse('ReleaseCollectionHandler'),
             json.dumps({
                 'name': release_name,
-                'versions': [release_version],
+                "version": "1.0.0",
+                'distribution_id': distrib.id,
                 'description': release_description,
                 'networks_metadata': [
                     {"name": "fixed", "access": "private10"}
@@ -65,21 +69,22 @@ class TestHandlers(BaseHandlers):
 
         release_from_db = self.db.query(Release).filter_by(
             name=release_name,
-            versions=[release_version],
+            version="1.0.0",
             description=release_description
         ).all()
         self.assertEquals(len(release_from_db), 1)
 
     def test_release_create_already_exist(self):
+        distrib = self.env.create_distribution(api=False)
         release_name = "OpenStack"
-        release_version = "1.0.0"
         release_description = "This is test release"
         resp = self.app.post(
             reverse('ReleaseCollectionHandler'),
             json.dumps({
                 'name': release_name,
-                'versions': [release_version],
+                "version": "1.0.0",
                 'description': release_description,
+                'distribution_id': distrib.id,
                 'networks_metadata': [
                     {"name": "floating", "access": "public"},
                     {"name": "fixed", "access": "private10"},
@@ -94,8 +99,9 @@ class TestHandlers(BaseHandlers):
             reverse('ReleaseCollectionHandler'),
             json.dumps({
                 'name': release_name,
-                'versions': [release_version],
+                "version": "1.0.0",
                 'description': release_description,
+                'distribution_id': distrib.id,
                 'networks_metadata': [
                     {"name": "fixed", "access": "private10"}
                 ]
@@ -107,6 +113,6 @@ class TestHandlers(BaseHandlers):
 
         release_from_db = self.db.query(Release).filter(
             Release.name == release_name,
-            Release.versions == [release_version],
+            Release.version == "1.0.0",
             Release.description == release_description
         ).one()

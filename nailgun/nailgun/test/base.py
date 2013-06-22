@@ -23,6 +23,7 @@ from nailgun.api.models import Node
 from nailgun.api.models import NodeNICInterface
 from nailgun.api.models import Release
 from nailgun.api.models import Cluster
+from nailgun.api.models import Distribution
 from nailgun.api.models import Notification
 from nailgun.api.models import Attributes
 from nailgun.api.models import Network
@@ -77,15 +78,29 @@ class Environment(object):
                 **node_kwargs
             )
 
+    def create_distribution(self, api=False,):
+        distrib_data = {'name': 'distrib_' + str(randint(0, 100000000)),
+                        'operating_system': 'CentOS'}
+        if api:
+            pass
+        else:
+            distrib = Distribution()
+            for field, value in distrib_data.iteritems():
+                setattr(distrib, field, value)
+            self.db.add(distrib)
+            self.db.commit()
+            return distrib
+
     def create_release(self, api=False, **kwargs):
         ver = str(randint(0, 100000000))
+        distribution = self.create_distribution()
         version = {'name': 'ver_' + ver,
                    'version': ver,
                    'operating_system': 'OS'}
         release_data = {
             'name': u"release_name_" + ver,
-            'distribution': 1,
-            'release': 1,
+            'distribution_id': distribution.id,
+            'version': '0.1',
             'description': u"release_desc" + ver,
             'networks_metadata': self.get_default_networks_metadata(),
             'attributes_metadata': self.get_default_attributes_metadata(),
@@ -108,6 +123,7 @@ class Environment(object):
             release = Release()
             for field, value in release_data.iteritems():
                 setattr(release, field, value)
+            release.distribution = distribution
             self.db.add(release)
             self.db.commit()
             self.releases.append(release)
@@ -121,8 +137,11 @@ class Environment(object):
             cluster_data.update(kwargs)
         if api:
             cluster_data['release'] = self.create_release(api=False).id
+            cluster_data['distribution_id'] = \
+                self.create_distribution(api=False).id
         else:
             cluster_data['release'] = self.create_release(api=False)
+            cluster_data['distribution'] = self.create_distribution(api=False)
         if exclude and isinstance(exclude, list):
             for ex in exclude:
                 try:

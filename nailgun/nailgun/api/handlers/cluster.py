@@ -129,7 +129,8 @@ class ClusterCollectionHandler(JSONHandler, NICUtils):
 
         cluster = Cluster()
         cluster.release = self.db.query(Release).get(data["release"])
-        cluster.distribution = self.db.query(Distribution).get(data["release"])
+        cluster.distribution = \
+            self.db.query(Distribution).get(data["distribution_id"])
         # TODO: use fields
         for field in ('name', 'type', 'mode', 'net_manager'):
             if data.get(field):

@@ -6,7 +6,7 @@ from paste.fixture import TestApp
 from mock import patch
 from sqlalchemy.sql import not_
 
-from nailgun.api.models import Release, Network
+from nailgun.api.models import Distribution, Network, Release
 from nailgun.test.base import BaseHandlers
 from nailgun.test.base import reverse
 
@@ -22,23 +22,26 @@ class TestHandlers(BaseHandlers):
         self.assertEquals([], response)
 
     def test_cluster_create(self):
-        release_id = self.env.create_release(api=False).id
+        release = self.env.create_release(api=False)
+        distribution_id = release.distribution.id
         resp = self.app.post(
             reverse('ClusterCollectionHandler'),
             json.dumps({
                 'name': 'cluster-name',
-                'release': release_id,
+                'release': release.id,
+                'distribution_id': distribution_id,
             }),
             headers=self.default_headers
         )
         self.assertEquals(201, resp.status)
 
     def test_if_cluster_creates_correct_networks(self):
+        distribution = Distribution()
+        distribution.name = 'test_distrib'
+        distribution.operating_system = 'test_distrib_os'
         release = Release()
         release.name = u"release_name_" + "1.1.1"
-        release.versions = [{"version": "1.1.1",
-                             "name": "1.1.1",
-                             "operating_system": "OS"}]
+        release.version = "1.1.1"
         release.description = u"release_desc" + "1.1.1"
         release.networks_metadata = [
             {"name": "floating", "access": "public"},
@@ -58,6 +61,7 @@ class TestHandlers(BaseHandlers):
                 }
             }
         }
+        release.distribution = distribution
         self.db.add(release)
         self.db.commit()
         resp = self.app.post(
@@ -65,6 +69,7 @@ class TestHandlers(BaseHandlers):
             json.dumps({
                 'name': 'cluster-name',
                 'release': release.id,
+                'distribution_id': release.distribution.id
             }),
             headers=self.default_headers
         )

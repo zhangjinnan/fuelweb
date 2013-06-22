@@ -24,7 +24,7 @@ class TestFixture(BaseHandlers):
             "model": "nailgun.release",
             "fields": {
                 "name": "CustomFixtureRelease",
-                "versions": [{"version": "0.0.1"}],
+                "version": "0.0.1",
                 "description": "Sample release for testing",
                 "networks_metadata": [
                   {"name": "floating", "access": "public"},

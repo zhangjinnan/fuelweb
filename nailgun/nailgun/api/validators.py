@@ -85,7 +85,7 @@ class ReleaseValidator(BasicValidator):
             raise web.webapi.badrequest(
                 message="No release name specified"
             )
-        if not "versions" in d:
+        if not "version" in d:
             raise web.webapi.badrequest(
                 message="No release versions specified"
             )
