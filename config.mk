@@ -85,7 +85,7 @@ REQUIRED_RPMS:=$(shell grep -v "^\\s*\#" $(SOURCE_DIR)/requirements-rpm.txt)
 REQUIRED_EGGS:=$(shell grep -v "^\\s*\#" $(SOURCE_DIR)/requirements-eggs.txt)
 REQUIRED_SRCS:=$(shell grep -v ^\\s*\# $(SOURCE_DIR)/requirements-src.txt)
 REQ_RHEL_RPMS:=$(shell grep -v "^\\s*\#" $(SOURCE_DIR)/puppet/rpmcache/files/required-rpms.txt)
-REQ_FUEL_RHEL_RPMS:=$(shell grep -v "^\\s&\#" $(SOURCE_DIR)/puppet/rpmcache/files/req-fuel-rhel.txt)
+REQ_FUEL_RHEL_RPMS:=$(shell grep -v "^\\s*\#" $(SOURCE_DIR)/puppet/rpmcache/files/req-fuel-rhel.txt)
 
 # Which repositories to use for making local centos mirror.
 # Possible values you can find out from mirror/centos/yum_repos.mk file.

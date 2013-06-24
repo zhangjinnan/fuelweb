@@ -15,7 +15,7 @@ FORWARDING = {
 }
 
 DHCP = {
-    'public': True,
+    'public': False,
     'internal': False,
     'private': False,
 }

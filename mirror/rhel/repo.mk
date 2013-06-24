@@ -1,6 +1,6 @@
 include $(SOURCE_DIR)/mirror/rhel/yum_repos.mk
 
-.PHONY: show-yum-urls
+.PHONY: show-yum-urls-rhel
 
 $(BUILD_DIR)/mirror/rhel/etc/yum.conf: $(call depv,rhel_yum_conf)
 $(BUILD_DIR)/mirror/rhel/etc/yum.conf: export contents:=$(rhel_yum_conf)
