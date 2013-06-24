@@ -107,7 +107,7 @@ urls = (
     'LogSourceByNodeCollectionHandler',
     r'/version/?$',
     'VersionHandler',
-    r'redhat/account/?$',
+    r'/redhat/account/?$',
     'RedHatAccountHandler'
 )
 
