@@ -45,55 +45,103 @@ urls = (
         ReleaseCollectionHandler,
     ),
     (
-        '/api/releases/<int:item_id>/',
+        '/api/releases/<int:release_id>/',
         ReleaseHandler,
     ),
+    (
+        '/api/clusters/',
+        ClusterCollectionHandler
+    ),
+    (
+        '/api/clusters/<int:cluster_id>/',
+        ClusterHandler
+    ),
+    (
+        '/api/clusters/<int:cluster_id>/changes/',
+        ClusterChangesHandler
+    ),
+    (
+        '/api/clusters/<int:cluster_id>/attributes/',
+        ClusterAttributesHandler
+    ),
+    (
+        '/api/clusters/<int:cluster_id>/attributes/defaults/',
+        ClusterAttributesDefaultsHandler
+    ),
+    (
+        '/api/nodes/',
+        NodeCollectionHandler
+    ),
+    (
+        '/api/nodes/<int:node_id>/',
+        NodeHandler
+    ),
+    (
+        '/api/clusters/<int:cluster_id>/network_configuration/',
+        NetworkConfigurationHandler
+    ),
+    (
+        '/api/clusters/<int:cluster_id>/network_configuration/verify/',
+        NetworkConfigurationVerifyHandler
+    ),
+    (
+        '/api/nodes/<int:node_id>/attributes/',
+        NodeAttributesHandler
+    ),
+    (
+        '/api/nodes/<int:node_id>/attributes/defaults/',
+        NodeAttributesDefaultsHandler
+    ),
+    (
+        '/api/nodes/<int:node_id>/attributes/<attr_name>/',
+        NodeAttributesByNameHandler
+    ),
+    (
+        '/api/nodes/<int:node_id>/attributes/<attr_name>/defaults/',
+        NodeAttributesByNameDefaultsHandler
+    ),
+    (
+        '/api/nodes/interfaces/',
+        NodeCollectionNICsHandler
+    ),
+    (
+        '/api/nodes/interfaces/default_assignment',
+        NodeCollectionNICsDefaultHandler
+    ),
+    (
+        '/api/nodes/<int:node_id>/interfaces/',
+        NodeNICsHandler
+    ),
+    (
+        '/api/nodes/<int:node_id>/interfaces/default_assignment/',
+        NodeNICsDefaultHandler
+    ),
+    (
+        '/api/nodes/interfaces_verify/',
+        NodeNICsVerifyHandler
+    ),
+    (
+        '/api/tasks',
+        TaskCollectionHandler
+    ),
+    (
+        '/api/tasks/<int:task_id>',
+        TaskHandler
+    ),
+    (
+        '/api/notifications',
+        NotificationCollectionHandler
+    ),
+    (
+        '/api/notifications/<int:notification_id>',
+        NotificationHandler
+    ),
+    (
+        '/api/version',
+        VersionHandler
+    )
 )
 """
-    r'/clusters/?$',
-    'ClusterCollectionHandler',
-    r'/clusters/(?P<cluster_id>\d+)/?$',
-    'ClusterHandler',
-    r'/clusters/(?P<cluster_id>\d+)/changes/?$',
-    'ClusterChangesHandler',
-    r'/clusters/(?P<cluster_id>\d+)/attributes/?$',
-    'ClusterAttributesHandler',
-    r'/clusters/(?P<cluster_id>\d+)/attributes/defaults/?$',
-    'ClusterAttributesDefaultsHandler',
-    r'/clusters/(?P<cluster_id>\d+)/network_configuration/?$',
-    'NetworkConfigurationHandler',
-    r'/clusters/(?P<cluster_id>\d+)/network_configuration/verify/?$',
-    'NetworkConfigurationVerifyHandler',
-    r'/nodes/?$',
-    'NodeCollectionHandler',
-    r'/nodes/(?P<node_id>\d+)/?$',
-    'NodeHandler',
-    r'/nodes/(?P<node_id>\d+)/attributes/?$',
-    'NodeAttributesHandler',
-    r'/nodes/(?P<node_id>\d+)/attributes/defaults/?$',
-    'NodeAttributesDefaultsHandler',
-    r'/nodes/(?P<node_id>\d+)/attributes/(?P<attr_name>[-\w]+)/?$',
-    'NodeAttributesByNameHandler',
-    r'/nodes/(?P<node_id>\d+)/attributes/(?P<attr_name>[-\w]+)/defaults/?$',
-    'NodeAttributesByNameDefaultsHandler',
-    r'/nodes/interfaces/?$',
-    'NodeCollectionNICsHandler',
-    r'/nodes/interfaces/default_assignment?$',
-    'NodeCollectionNICsDefaultHandler',
-    r'/nodes/(?P<node_id>\d+)/interfaces/?$',
-    'NodeNICsHandler',
-    r'/nodes/(?P<node_id>\d+)/interfaces/default_assignment?$',
-    'NodeNICsDefaultHandler',
-    r'/nodes/interfaces_verify/?$',
-    'NodeNICsVerifyHandler',
-    r'/tasks/?$',
-    'TaskCollectionHandler',
-    r'/tasks/(?P<task_id>\d+)/?$',
-    'TaskHandler',
-    r'/notifications/?$',
-    'NotificationCollectionHandler',
-    r'/notifications/(?P<notification_id>\d+)/?$',
-    'NotificationHandler',
     r'/logs/?$',
     'LogEntryCollectionHandler',
     r'/logs/package/?$',
@@ -101,10 +149,7 @@ urls = (
     r'/logs/sources/?$',
     'LogSourceCollectionHandler',
     r'/logs/sources/nodes/(?P<node_id>\d+)/?$',
-    'LogSourceByNodeCollectionHandler',
-    r'/version/?$',
-    'VersionHandler'
+    'LogSourceByNodeCollectionHandler'
 )
 
-app = web.application(urls, locals())
 """

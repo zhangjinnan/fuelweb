@@ -3,13 +3,14 @@
 import traceback
 
 from sqlalchemy.orm import scoped_session, sessionmaker
-from sqlalchemy.orm.query import Query
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy import create_engine
+from flask.ext.sqlalchemy import SQLAlchemy
+from flask.ext.sqlalchemy import BaseQuery
 
 from nailgun.logger import logger
 from nailgun.settings import settings
-from nailgun.application import application, apps
+from nailgun.application import application
 
 
 if settings.DATABASE['engine'] == 'sqlite':
@@ -24,8 +25,11 @@ else:
 
 engine = create_engine(db_str, client_encoding='utf8')
 
+application.config['SQLALCHEMY_DATABASE_URI'] = db_str
+db = SQLAlchemy(application)
 
-class NoCacheQuery(Query):
+
+class NoCacheQuery(BaseQuery):
     """
     Override for common Query class.
     Needed for automatic refreshing objects
@@ -37,19 +41,12 @@ class NoCacheQuery(Query):
         super(NoCacheQuery, self).__init__(*args, **kwargs)
 
 
-def make_session():
-    return scoped_session(
-        sessionmaker(bind=engine, query_cls=NoCacheQuery)
-    )
-
-
 def syncdb():
-    from nailgun.api.models import db
+    import nailgun.api.models
     db.create_all()
 
 
 def dropdb():
-    from nailgun.api.models import db
     tables = [name for (name,) in db.session.execute(
         "SELECT tablename FROM pg_tables WHERE schemaname = 'public'")]
     for table in tables:
@@ -74,14 +71,20 @@ def dropdb():
     db.session.commit()
 
 
+def make_session():
+    return scoped_session(
+        sessionmaker(bind=engine, query_cls=NoCacheQuery)
+    )()
+
+
 def flush():
     import nailgun.api.models as models
     import sqlalchemy.ext.declarative as dec
-    session = scoped_session(sessionmaker(bind=engine))
+    session = db.session
     for attr in dir(models):
         attr_impl = getattr(models, attr)
         if isinstance(attr_impl, dec.DeclarativeMeta) \
-                and not attr_impl is models.Base:
+                and not attr_impl is models.db:
             map(session.delete, session.query(attr_impl).all())
     # for table in reversed(models.Base.metadata.sorted_tables):
     #     session.execute(table.delete())

@@ -49,7 +49,7 @@ def content_json(f):
         if isinstance(res, tuple):
             return Response(build_json_response(res[0]), status=res[1])
         else:
-            return Response(build_json_response(res))
+            return Response(build_json_response(res), status=200)
     return decorated_function
 
 
@@ -191,14 +191,14 @@ class JSONHandler(MethodView):
 
 
 class SingleHandler(JSONHandler):
-    
+
     model = None
     fields = ("id",)
 
     @content_json
-    def get(self, item_id):
+    def get(self, *args):
         return self.render(
-            self.get_object_or_404(self.model, item_id)
+            self.get_object_or_404(self.model, args[0])
         )
 
 

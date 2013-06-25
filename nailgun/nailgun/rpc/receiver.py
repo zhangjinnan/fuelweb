@@ -13,7 +13,7 @@ from sqlalchemy import or_
 
 import nailgun.rpc as rpc
 from nailgun.logger import logger
-from nailgun.db import make_session
+from nailgun.database import db
 from nailgun.network.manager import NetworkManager
 from nailgun.settings import settings
 from nailgun.task.helpers import TaskHelper
@@ -28,12 +28,13 @@ class TaskNotFound(Exception):
 
 class NailgunReceiver(object):
 
-    db = None
+    db = db.session
     network_manager = None
 
     @classmethod
     def initialize(cls, db=None):
-        cls.db = db or make_session()
+        if not cls.db:
+            cls.db = db or make_session()
         cls.network_manager = NetworkManager()
 
     @classmethod

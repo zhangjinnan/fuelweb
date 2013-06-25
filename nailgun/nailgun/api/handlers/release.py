@@ -2,11 +2,11 @@
 
 import json
 
-import web
+from flask import request
 
 from nailgun.api.models import Release
 from nailgun.api.validators import ReleaseValidator
-from nailgun.api.handlers.base import JSONHandler, content_json
+from nailgun.api.handlers.base import content_json
 from nailgun.api.handlers.base import SingleHandler, CollectionHandler
 
 
@@ -23,11 +23,11 @@ class ReleaseHandler(SingleHandler):
     @content_json
     def put(self, release_id):
         release = self.get_object_or_404(Release, release_id)
-        data = self.validator.validate_json(web.data())
+        data = self.validator.validate_json(request.data)
         for key, value in data.iteritems():
             setattr(release, key, value)
         db.session.commit()
-        return self.render(release), 200
+        return self.render(release)
 
     def delete(self, release_id):
         release = self.get_object_or_404(Release, release_id)
@@ -43,7 +43,7 @@ class ReleaseCollectionHandler(CollectionHandler):
 
     @content_json
     def post(self):
-        data = self.validator.validate(web.data())
+        data = self.validator.validate(request.data)
         release = Release()
         for key, value in data.iteritems():
             setattr(release, key, value)

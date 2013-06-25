@@ -4,10 +4,11 @@ import json
 import traceback
 from datetime import datetime
 
-import web
+from flask import request
 
 from nailgun.notifier import notifier
 from nailgun.logger import logger
+from nailgun.database import db
 from nailgun.api.models import Node
 from nailgun.api.models import Network
 from nailgun.api.models import NetworkAssignment
@@ -21,9 +22,10 @@ from nailgun.network.manager import NetworkManager
 from nailgun.volumes.manager import VolumeManager
 from nailgun.api.models import Node, NodeAttributes
 from nailgun.api.handlers.base import JSONHandler, content_json
+from nailgun.api.handlers.base import SingleHandler, CollectionHandler
 
 
-class NodeHandler(JSONHandler, NICUtils):
+class NodeHandler(SingleHandler, NICUtils):
     fields = ('id', 'name', 'meta', 'role', 'progress',
               'status', 'mac', 'fqdn', 'ip', 'manufacturer', 'platform_name',
               'pending_addition', 'pending_deletion', 'os_platform',
@@ -44,16 +46,16 @@ class NodeHandler(JSONHandler, NICUtils):
         return json_data
 
     @content_json
-    def GET(self, node_id):
+    def get(self, node_id):
         node = self.get_object_or_404(Node, node_id)
         return self.render(node)
 
     @content_json
-    def PUT(self, node_id):
+    def put(self, node_id):
         node = self.get_object_or_404(Node, node_id)
         if not node.attributes:
             node.attributes = NodeAttributes(node_id=node.id)
-        data = self.validator.validate_update(web.data())
+        data = self.validator.validate_update(request.data)
         for key, value in data.iteritems():
             setattr(node, key, value)
             if key == 'cluster_id':
@@ -78,46 +80,44 @@ class NodeHandler(JSONHandler, NICUtils):
                 )
                 logger.warning(traceback.format_exc())
                 notifier.notify("error", msg, node_id=node.id)
-        self.db.commit()
+        db.session.commit()
         return self.render(node)
 
-    def DELETE(self, node_id):
+    def delete(self, node_id):
         node = self.get_object_or_404(Node, node_id)
-        self.db.delete(node)
-        self.db.commit()
-        raise web.webapi.HTTPError(
-            status="204 No Content",
-            data=""
-        )
+        db.session.delete(node)
+        db.session.commit()
+        self.abort(204)
 
 
-class NodeCollectionHandler(JSONHandler, NICUtils):
+class NodeCollectionHandler(CollectionHandler, NICUtils):
 
     validator = NodeValidator
+    single = NodeHandler
 
     @content_json
-    def GET(self):
-        user_data = web.input(cluster_id=None)
-        if user_data.cluster_id == '':
-            nodes = self.db.query(Node).filter_by(
+    def get(self):
+        cluster_id = request.args.get('cluster_id')
+        if cluster_id == '':
+            nodes = Node.query.filter_by(
                 cluster_id=None).all()
-        elif user_data.cluster_id:
-            nodes = self.db.query(Node).filter_by(
-                cluster_id=user_data.cluster_id).all()
+        elif cluster_id:
+            nodes = Node.query.filter_by(
+                cluster_id=cluster_id).all()
         else:
-            nodes = self.db.query(Node).all()
+            nodes = Node.query.all()
         return map(NodeHandler.render, nodes)
 
     @content_json
-    def POST(self):
-        data = self.validator.validate(web.data())
+    def post(self):
+        data = self.validator.validate(request.data)
         node = Node()
         for key, value in data.iteritems():
             setattr(node, key, value)
         node.name = "Untitled (%s)" % data['mac'][-5:]
         node.timestamp = datetime.now()
-        self.db.add(node)
-        self.db.commit()
+        db.session.add(node)
+        db.session.commit()
         node.attributes = NodeAttributes()
 
         try:
@@ -137,8 +137,8 @@ class NodeCollectionHandler(JSONHandler, NICUtils):
             )
             logger.warning(traceback.format_exc())
             notifier.notify("error", msg, node_id=node.id)
-        self.db.add(node)
-        self.db.commit()
+        db.session.add(node)
+        db.session.commit()
 
         # Add interfaces for node from 'meta'.
         if node.meta and node.meta.get('interfaces'):
@@ -148,7 +148,7 @@ class NodeCollectionHandler(JSONHandler, NICUtils):
         if node.cluster_id:
             self.allow_network_assignment_to_all_interfaces(node)
             self.assign_networks_to_main_interface(node)
-            self.db.commit()
+            db.session.commit()
 
         try:
             ram = str(round(float(
@@ -161,15 +161,12 @@ class NodeCollectionHandler(JSONHandler, NICUtils):
                         "New node with %s CPU core(s) "
                         "and %s GB memory is discovered" %
                         (cores, ram), node_id=node.id)
-        raise web.webapi.created(json.dumps(
-            NodeHandler.render(node),
-            indent=4
-        ))
+        return self.render_one(node), 201
 
     @content_json
-    def PUT(self):
-        data = self.validator.validate_collection_update(web.data())
-        q = self.db.query(Node)
+    def put(self):
+        data = self.validator.validate_collection_update(request.data)
+        q = Node.query
         nodes_updated = []
         for nd in data:
             is_agent = nd.pop("is_agent") if "is_agent" in nd else False
@@ -187,7 +184,7 @@ class NodeCollectionHandler(JSONHandler, NICUtils):
                         node.human_readable_name)
                     logger.info(msg)
                     notifier.notify("discover", msg, node_id=node.id)
-                self.db.commit()
+                db.session.commit()
             if nd.get("cluster_id") is None and node.cluster:
                 node.cluster.clear_pending_changes(node_id=node.id)
             old_cluster_id = node.cluster_id
@@ -203,11 +200,11 @@ class NodeCollectionHandler(JSONHandler, NICUtils):
                 setattr(node, key, value)
             if not node.attributes:
                 node.attributes = NodeAttributes()
-                self.db.commit()
+                db.session.commit()
             if not node.attributes.volumes:
                 node.attributes.volumes = \
                     node.volume_manager.gen_volumes_info()
-                self.db.commit()
+                db.session.commit()
             if not node.status in ('provisioning', 'deploying'):
                 variants = (
                     "disks" in node.meta and
@@ -240,7 +237,7 @@ class NodeCollectionHandler(JSONHandler, NICUtils):
                         logger.warning(traceback.format_exc())
                         notifier.notify("error", msg, node_id=node.id)
 
-                self.db.commit()
+                db.session.commit()
             if is_agent:
                 # Update node's NICs.
                 if node.meta and 'interfaces' in node.meta:
@@ -248,7 +245,7 @@ class NodeCollectionHandler(JSONHandler, NICUtils):
                     network_manager.update_interfaces_info(node)
 
             nodes_updated.append(node)
-            self.db.commit()
+            db.session.commit()
             if 'cluster_id' in nd and nd['cluster_id'] != old_cluster_id:
                 if old_cluster_id:
                     self.clear_assigned_networks(node)
@@ -256,8 +253,8 @@ class NodeCollectionHandler(JSONHandler, NICUtils):
                 if nd['cluster_id']:
                     self.allow_network_assignment_to_all_interfaces(node)
                     self.assign_networks_to_main_interface(node)
-                self.db.commit()
-        return map(NodeHandler.render, nodes_updated)
+                db.session.commit()
+        return self.render(nodes_updated)
 
 
 class NodeAttributesHandler(JSONHandler):
@@ -266,7 +263,7 @@ class NodeAttributesHandler(JSONHandler):
     validator = NodeAttributesValidator
 
     @content_json
-    def GET(self, node_id):
+    def get(self, node_id):
         node = self.get_object_or_404(Node, node_id)
         node_attrs = node.attributes
         if not node_attrs:
@@ -274,10 +271,10 @@ class NodeAttributesHandler(JSONHandler):
         return self.render(node_attrs)
 
     @content_json
-    def PUT(self, node_id):
+    def put(self, node_id):
         node = self.get_object_or_404(Node, node_id)
         # NO serious data validation yet
-        data = self.validator.validate_json(web.data())
+        data = self.validator.validate_json(request.data)
         if "volumes" in data:
             if node.cluster:
                 node.cluster.add_pending_changes(
@@ -286,10 +283,10 @@ class NodeAttributesHandler(JSONHandler):
                 )
         node_attrs = node.attributes
         if not node_attrs:
-            return web.notfound()
+            self.abort(404)
         for key, value in data.iteritems():
             setattr(node_attrs, key, value)
-        self.db.commit()
+        db.session.commit()
         return self.render(node_attrs)
 
 
@@ -297,29 +294,29 @@ class NodeAttributesDefaultsHandler(JSONHandler):
     fields = ('node_id', 'volumes')
 
     @content_json
-    def GET(self, node_id):
+    def get(self, node_id):
         node = self.get_object_or_404(Node, node_id)
         if not node.attributes:
-            return web.notfound()
-        attr_params = web.input()
+            self.abort(404)
         json_data = NodeAttributesHandler.render(
             NodeAttributes(
                 node_id=node.id,
                 volumes=node.volume_manager.gen_volumes_info()
             )
         )
-        if hasattr(attr_params, "type"):
+        volume_type = request.args.get("type")
+        if volume_type:
             json_data["volumes"] = filter(
-                lambda a: a["type"] == attr_params.type,
+                lambda a: a["type"] == volume_type,
                 json_data["volumes"]
             )
         return json_data
 
     @content_json
-    def PUT(self, node_id):
+    def put(self, node_id):
         node = self.get_object_or_404(Node, node_id)
         if not node.attributes:
-            return web.notfound()
+            self.abort(404)
         node.attributes = NodeAttributes()
         node.attributes.volumes = node.volume_manager.gen_volumes_info()
         if node.cluster:
@@ -327,22 +324,22 @@ class NodeAttributesDefaultsHandler(JSONHandler):
                 "disks",
                 node_id=node.id
             )
-        self.db.commit()
+        db.session.commit()
         return self.render(node.attributes)
 
 
 class NodeAttributesByNameDefaultsHandler(JSONHandler):
 
     @content_json
-    def GET(self, node_id, attr_name):
-        attr_params = web.input()
+    def get(self, node_id, attr_name):
         node = self.get_object_or_404(Node, node_id)
         if attr_name == "volumes":
             attr = node.volume_manager.gen_volumes_info()
         else:
-            raise web.notfound()
-        if hasattr(attr_params, "type"):
-            attr = filter(lambda a: a["type"] == attr_params.type, attr)
+            self.abort(404)
+        volume_type = request.args.get("type")
+        if volume_type:
+            attr = filter(lambda a: a["type"] == volume_type, attr)
         return attr
 
 
@@ -351,28 +348,27 @@ class NodeAttributesByNameHandler(JSONHandler):
     validator = NodeAttributesValidator
 
     @content_json
-    def GET(self, node_id, attr_name):
-        attr_params = web.input()
+    def get(self, node_id, attr_name):
         node = self.get_object_or_404(Node, node_id)
         node_attrs = node.attributes
         if not node_attrs or not hasattr(node_attrs, attr_name):
-            raise web.notfound()
+            self.abort(404)
         attr = getattr(node_attrs, attr_name)
-        if hasattr(attr_params, "type"):
-            attr = filter(lambda a: a["type"] == attr_params.type, attr)
+        volume_type = request.args.get("type")
+        if volume_type:
+            attr = filter(lambda a: a["type"] == volume_type, attr)
         return attr
 
     @content_json
-    def PUT(self, node_id, attr_name):
+    def put(self, node_id, attr_name):
         node = self.get_object_or_404(Node, node_id)
         # NO serious data validation yet
-        data = NodeAttributesValidator.validate_json(web.data())
+        data = NodeAttributesValidator.validate_json(request.data)
         if attr_name == "volumes":
             data = NodeVolumesValidator.validate(data)
-        attr_params = web.input()
         node_attrs = node.attributes
         if not node_attrs or not hasattr(node_attrs, attr_name):
-            raise web.notfound()
+            self.abort(404)
 
         if node.cluster:
             node.cluster.add_pending_changes(
@@ -381,13 +377,14 @@ class NodeAttributesByNameHandler(JSONHandler):
             )
 
         attr = getattr(node_attrs, attr_name)
-        if hasattr(attr_params, "type"):
+        volume_type = request.args.get("type")
+        if volume_type:
             if isinstance(attr, list):
                 setattr(
                     node_attrs,
                     attr_name,
                     filter(
-                        lambda a: a["type"] != attr_params.type,
+                        lambda a: a["type"] != volume_type,
                         attr
                     )
                 )
@@ -406,7 +403,7 @@ class NodeAttributesByNameHandler(JSONHandler):
                         attr.append(a)
 
                 attr = filter(
-                    lambda a: a["type"] == attr_params.type,
+                    lambda a: a["type"] == volume_type,
                     getattr(node_attrs, attr_name)
                 )
         else:
@@ -433,13 +430,13 @@ class NodeNICsHandler(JSONHandler, NICUtils):
     validator = NetAssignmentValidator
 
     @content_json
-    def GET(self, node_id):
+    def get(self, node_id):
         node = self.get_object_or_404(Node, node_id)
         return self.render(node)['interfaces']
 
     # @content_json
     # def PUT(self, node_id):
-    #     data = self.validator.validate_json(web.data())
+    #     data = self.validator.validate_json(request.data)
     #     node = {'id': node_id, 'interfaces': data}
     #     data = self.validator.validate(node)
     #     self.update_attributes(node)
@@ -464,8 +461,8 @@ class NodeCollectionNICsHandler(NodeNICsHandler):
         #     return map(self.render, nodes)
 
     @content_json
-    def PUT(self):
-        data = self.validator.validate_collection_structure(web.data())
+    def put(self):
+        data = self.validator.validate_collection_structure(request.data)
         nodes = self.update_collection_attributes(data)
         return map(self.render, nodes)
 
@@ -473,7 +470,7 @@ class NodeCollectionNICsHandler(NodeNICsHandler):
 class NodeNICsDefaultHandler(JSONHandler, NICUtils):
 
     @content_json
-    def GET(self, node_id):
+    def get(self, node_id):
         node = self.get_object_or_404(Node, node_id)
         default_nets = self.get_default(node)
         return default_nets
@@ -514,7 +511,7 @@ class NodeCollectionNICsDefaultHandler(NodeNICsDefaultHandler):
     validator = NetAssignmentValidator
 
     @content_json
-    def GET(self):
+    def get(self):
         user_data = web.input(cluster_id=None)
         if user_data.cluster_id == '':
             nodes = self.get_object_or_404(Node, cluster_id=None)
@@ -533,7 +530,7 @@ class NodeCollectionNICsDefaultHandler(NodeNICsDefaultHandler):
 
     # @content_json
     # def PUT(self):
-    #     data = self.validator.validate_collection_structure(web.data())
+    #     data = self.validator.validate_collection_structure(request.data)
     #     self.update_collection_attributes(data)
 
 
@@ -552,12 +549,11 @@ class NodeNICsVerifyHandler(JSONHandler, NICUtils):
     validator = NetAssignmentValidator
 
     @content_json
-    def POST(self):
-        data = self.validator.validate_structure(web.data())
+    def post(self):
+        data = self.validator.validate_structure(request.data)
         for node in data:
             self.validator.verify_data_correctness(node)
         if TopoChecker.is_assignment_allowed(data):
             return map(self.render, nodes)
         topo = TopoChecker.resolve_topo_conflicts(data)
-        ret = map(self.render, topo, fields=fields_with_conflicts)
         return map(self.render, topo, fields=fields_with_conflicts)

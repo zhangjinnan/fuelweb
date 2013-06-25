@@ -7,7 +7,7 @@ import web
 from sqlalchemy.sql import not_
 from netaddr import IPSet, IPNetwork, IPRange, IPAddress
 
-from nailgun.db import orm
+from nailgun.database import db
 from nailgun.errors import errors
 from nailgun.logger import logger
 from nailgun.settings import settings
@@ -17,8 +17,8 @@ from nailgun.api.models import Network, NetworkGroup, IPAddrRange
 
 class NetworkManager(object):
 
-    def __init__(self, db=None):
-        self.db = db or orm()
+    def __init__(self):
+        self.db = db.session or orm()
 
     def update_ranges_from_cidr(self, network_group, cidr):
         """

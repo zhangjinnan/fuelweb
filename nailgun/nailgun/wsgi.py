@@ -1,14 +1,17 @@
 import os
 import sys
 
+from flask.ext.sqlalchemy import SQLAlchemy
+
 curdir = os.path.dirname(__file__)
 sys.path.insert(0, curdir)
 
+from nailgun.application import application
 from nailgun.settings import settings
-from nailgun.application import application, apps
 from nailgun.logger import logger, HTTPLoggerMiddleware
 
 
+# TODO: logging middleware
 def build_middleware(app):
     middleware_list = [
         HTTPLoggerMiddleware,
@@ -20,13 +23,23 @@ def build_middleware(app):
     return app(*middleware_list)
 
 
+def load_urls(app=None):
+    if not app:
+        app = application
+
+    from nailgun.urls import urls
+
+    app.url_map.strict_slashes = False
+    for url, handler in urls:
+        app.add_url_rule(
+            url,
+            view_func=handler.as_view(str(handler))
+        )
+    return app
+
+
 def run_server(debug=False, **kwargs):
-    for urls in apps:
-        for url, handler in urls.urls:
-            application.add_url_rule(
-                url,
-                view_func=handler.as_view(str(handler))
-            )
+    load_urls()
     application.run(
         debug=debug,
         host=kwargs.get("host") or settings.LISTEN_ADDRESS,

@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
 
 import os
-import web
 import json
+
+from flask.views import MethodView
 
 from nailgun.settings import settings
 from nailgun.api.handlers.base import JSONHandler, content_json
 
 
-class VersionHandler(JSONHandler):
+class VersionHandler(MethodView):
 
     @content_json
-    def GET(self):
+    def get(self):
         return {
             "sha": str(settings.COMMIT_SHA),
             "release": str(settings.PRODUCT_VERSION),

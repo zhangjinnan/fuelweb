@@ -52,7 +52,7 @@ def upload_fixture(fileobj):
         keys[obj['model'].__tablename__] = {}
 
         # Check if it's already uploaded
-        obj_from_db = obj['model'].query.get(pk)
+        obj_from_db = db.session.query(obj['model']).get(pk)
         if obj_from_db:
             logger.info("Fixture model '%s' with pk='%s' already"
                         " uploaded. Skipping", model_name, pk)
@@ -124,7 +124,7 @@ def upload_fixture(fileobj):
 
         for field, data in fk_fields.iteritems():
             if isinstance(data[0], int):
-                setattr(new_obj, field, db.query(data[1]).get(data[0]))
+                setattr(new_obj, field, db.session.query(data[1]).get(data[0]))
             elif isinstance(data[0], list):
                 for v in data[0]:
                     getattr(new_obj, field).append(

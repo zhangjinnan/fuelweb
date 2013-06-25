@@ -1,12 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import web
-
-from nailgun.webui.handlers import IndexHandler, StaticHandler
+from nailgun.webui.handlers import IndexHandler
 
 urls = (
-    r"/static/(.*)", 'StaticHandler',
-    r"/", 'IndexHandler',
+    ("/", IndexHandler),
 )
-
-app = web.application(urls, locals())

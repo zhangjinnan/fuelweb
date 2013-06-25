@@ -9,16 +9,12 @@ from random import choice
 from copy import deepcopy
 
 from netaddr import IPNetwork
-from flask.ext.sqlalchemy import SQLAlchemy
 
 from nailgun.logger import logger
 from nailgun.volumes.manager import VolumeManager
 from nailgun.api.fields import JSON
+from nailgun.database import db
 from nailgun.settings import settings
-from nailgun.application import application
-
-
-db = SQLAlchemy(application)
 
 
 class Release(db.Model):
@@ -45,7 +41,10 @@ class ClusterChanges(db.Model):
     )
     id = db.Column(db.Integer, primary_key=True)
     cluster_id = db.Column(db.Integer, db.ForeignKey('clusters.id'))
-    node_id = db.Column(db.Integer, db.ForeignKey('nodes.id', ondelete='CASCADE'))
+    node_id = db.Column(
+        db.Integer,
+        db.ForeignKey('nodes.id', ondelete='CASCADE')
+    )
     name = db.Column(
         db.Enum(*POSSIBLE_CHANGES, name='possible_changes'),
         nullable=False
@@ -80,13 +79,17 @@ class Cluster(db.Model):
         default='FlatDHCPManager'
     )
     name = db.Column(db.Unicode(50), unique=True, nullable=False)
-    release_id = db.Column(db.Integer, db.ForeignKey('releases.id'), nullable=False)
+    release_id = db.Column(
+        db.Integer,
+        db.ForeignKey('releases.id'),
+        nullable=False
+    )
     nodes = db.relationship("Node", backref="cluster", cascade="delete")
     tasks = db.relationship("Task", backref="cluster", cascade="delete")
     attributes = db.relationship("Attributes", uselist=False,
-                              backref="cluster", cascade="delete")
+                                 backref="cluster", cascade="delete")
     changes = db.relationship("ClusterChanges", backref="cluster",
-                           cascade="delete")
+                              cascade="delete")
     # We must keep all notifications even if cluster is removed.
     # It is because we want user to be able to see
     # the notification history so that is why we don't use
@@ -95,7 +98,7 @@ class Cluster(db.Model):
     # into cluster foreign key column of notification entity
     notifications = db.relationship("Notification", backref="cluster")
     network_groups = db.relationship("NetworkGroup", backref="cluster",
-                                  cascade="delete")
+                                     cascade="delete")
 
     @classmethod
     def validate(cls, data):
@@ -191,10 +194,10 @@ class Node(db.Model):
     timestamp = db.Column(db.DateTime, nullable=False)
     online = db.Column(db.Boolean, default=True)
     attributes = db.relationship("NodeAttributes",
-                              backref=db.backref("node"),
-                              uselist=False)
+                                 backref=db.backref("node"),
+                                 uselist=False)
     interfaces = db.relationship("NodeNICInterface", backref="node",
-                              cascade="delete")
+                                 cascade="delete")
 
     @property
     def network_data(self):
@@ -248,7 +251,10 @@ class NodeAttributes(db.Model):
 class IPAddr(db.Model):
     __tablename__ = 'ip_addrs'
     id = db.Column(db.Integer, primary_key=True)
-    network = db.Column(db.Integer, db.ForeignKey('networks.id', ondelete="CASCADE"))
+    network = db.Column(
+        db.Integer,
+        db.ForeignKey('networks.id', ondelete="CASCADE")
+    )
     node = db.Column(db.Integer, db.ForeignKey('nodes.id', ondelete="CASCADE"))
     ip_addr = db.Column(db.String(25), nullable=False)
 
@@ -256,7 +262,10 @@ class IPAddr(db.Model):
 class IPAddrRange(db.Model):
     __tablename__ = 'ip_addr_ranges'
     id = db.Column(db.Integer, primary_key=True)
-    network_group_id = db.Column(db.Integer, db.ForeignKey('network_groups.id'))
+    network_group_id = db.Column(
+        db.Integer,
+        db.ForeignKey('network_groups.id')
+    )
     first = db.Column(db.String(25), nullable=False)
     last = db.Column(db.String(25), nullable=False)
 
@@ -265,7 +274,7 @@ class Vlan(db.Model):
     __tablename__ = 'vlan'
     id = db.Column(db.Integer, primary_key=True)
     network = db.relationship("Network",
-                           backref=db.backref("vlan"))
+                              backref=db.backref("vlan"))
 
 
 class Network(db.Model):
@@ -276,7 +285,10 @@ class Network(db.Model):
     name = db.Column(db.Unicode(100), nullable=False)
     access = db.Column(db.String(20), nullable=False)
     vlan_id = db.Column(db.Integer, db.ForeignKey('vlan.id'))
-    network_group_id = db.Column(db.Integer, db.ForeignKey('network_groups.id'))
+    network_group_id = db.Column(
+        db.Integer,
+        db.ForeignKey('network_groups.id')
+    )
     cidr = db.Column(db.String(25), nullable=False)
     gateway = db.Column(db.String(25))
     nodes = db.relationship(
@@ -302,7 +314,10 @@ class NetworkGroup(db.Model):
     )
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.Enum(*NAMES, name='network_group_name'), nullable=False)
+    name = db.Column(
+        db.Enum(*NAMES, name='network_group_name'),
+        nullable=False
+    )
     access = db.Column(db.String(20), nullable=False)
     # can be nullable only for fuelweb admin net
     release = db.Column(db.Integer, db.ForeignKey('releases.id'))
@@ -312,7 +327,7 @@ class NetworkGroup(db.Model):
     amount = db.Column(db.Integer, default=1)
     vlan_start = db.Column(db.Integer, default=1)
     networks = db.relationship("Network", cascade="delete",
-                            backref="network_group")
+                               backref="network_group")
     cidr = db.Column(db.String(25))
     gateway = db.Column(db.String(25))
 
@@ -321,7 +336,6 @@ class NetworkGroup(db.Model):
         "IPAddrRange",
         backref="network_group"
     )
-
 
     @classmethod
     def generate_vlan_ids_list(cls, ng):
@@ -480,7 +494,7 @@ class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     cluster_id = db.Column(db.Integer, db.ForeignKey('clusters.id'))
     uuid = db.Column(db.String(36), nullable=False,
-                  default=lambda: str(uuid.uuid4()))
+                     default=lambda: str(uuid.uuid4()))
     name = db.Column(
         db.Enum(*TASK_NAMES, name='task_name'),
         nullable=False,
@@ -555,8 +569,14 @@ class Notification(db.Model):
         db.Integer,
         db.ForeignKey('clusters.id', ondelete='SET NULL')
     )
-    node_id = db.Column(db.Integer, db.ForeignKey('nodes.id', ondelete='SET NULL'))
-    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id', ondelete='SET NULL'))
+    node_id = db.Column(
+        db.Integer,
+        db.ForeignKey('nodes.id', ondelete='SET NULL')
+    )
+    task_id = db.Column(
+        db.Integer,
+        db.ForeignKey('tasks.id', ondelete='SET NULL')
+    )
     topic = db.Column(
         db.Enum(*NOTIFICATION_TOPICS, name='notif_topic'),
         nullable=False
