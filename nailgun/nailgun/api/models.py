@@ -486,10 +486,11 @@ class Task(Base):
         'node_deletion',
         'cluster_deletion',
         'check_networks',
-        'verify_networks'
+        'verify_networks',
+        'download_release'
     )
     id = Column(Integer, primary_key=True)
-    cluster_id = Column(Integer, ForeignKey('clusters.id'))
+    cluster_id = Column(Integer, ForeignKey('clusters.id'), nullable=True)
     uuid = Column(String(36), nullable=False,
                   default=lambda: str(uuid.uuid4()))
     name = Column(
