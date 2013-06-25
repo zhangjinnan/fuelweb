@@ -28,6 +28,7 @@ from nailgun.api.handlers.network_configuration \
 from nailgun.api.handlers.network_configuration \
     import NetworkConfigurationVerifyHandler
 
+from nailgun.api.handlers.redhat import RedHatAccountHandler
 from nailgun.api.handlers.release import ReleaseHandler
 from nailgun.api.handlers.release import ReleaseCollectionHandler
 
@@ -114,7 +115,9 @@ urls = (
     r'/logs/sources/nodes/(?P<node_id>\d+)/?$',
     'LogSourceByNodeCollectionHandler',
     r'/version/?$',
-    'VersionHandler'
+    'VersionHandler',
+    r'/redhat/account/?$',
+    'RedHatAccountHandler'
 )
 
 app = web.application(urls, locals())
