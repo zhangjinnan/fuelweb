@@ -14,7 +14,8 @@
 
 import web
 
-from nailgun.api.handlers.base import JSONHandler, content_json
+from nailgun.api.handlers.base \
+    import JSONHandler, content_json, build_json_response
 from nailgun.api.handlers.tasks import TaskHandler
 from nailgun.api.validators import RedHatAcountValidator
 from nailgun.task.helpers import TaskHelper
