@@ -502,6 +502,10 @@ class RedHatAcountValidator(BasicValidator):
                     message="Satellite hostname or activation key "
                             "not specified"
                 )
+        if not "release_id" in d:
+            raise web.webapi.badrequest(
+                message="No Release specified"
+            )
         if settings.FAKE_TASKS:
             if d["username"] == "rheltest":
                 raise web.webapi.badrequest(
