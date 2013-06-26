@@ -579,4 +579,4 @@ class NailgunReceiver(object):
         status = kwargs.get('status')
         progress = kwargs.get('progress')
         TaskHelper.update_task_status(task_uuid, status,
-                                      progress, error_msg, 'result')
+                                      progress, error_msg)

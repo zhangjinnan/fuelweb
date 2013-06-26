@@ -280,6 +280,9 @@ class ClusterDeletionManager(TaskManager):
 
 class DownloadReleaseTaskManager(TaskManager):
 
+    def __init__(self, release_id):
+        self.release_id = release_id
+
     def execute(self):
         logger.debug("Creating release dowload task")
         task = Task(name="download_release")
@@ -288,6 +291,6 @@ class DownloadReleaseTaskManager(TaskManager):
         self._call_silently(
             task,
             tasks.DownloadReleaseTask,
-            {}
+            {'release_id': self.release_id}
         )
         return task
