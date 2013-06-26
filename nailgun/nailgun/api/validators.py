@@ -503,7 +503,11 @@ class RedHatAcountValidator(BasicValidator):
                             "not specified"
                 )
         if settings.FAKE_TASKS:
-            pass
+            if d["username"] == "rheltest":
+                raise web.webapi.badrequest(
+                    message="Invalid username or password"
+                )
         else:
             # TODO: check Red Hat Account credentials
             pass
+        return d
