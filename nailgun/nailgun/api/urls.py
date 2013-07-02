@@ -49,6 +49,8 @@ from nailgun.api.handlers.tasks import TaskCollectionHandler
 from nailgun.api.handlers.notifications import NotificationHandler
 from nailgun.api.handlers.notifications import NotificationCollectionHandler
 
+from nailgun.api.handlers.license import LicenseHandler
+
 from nailgun.api.handlers.logs import LogEntryCollectionHandler
 from nailgun.api.handlers.logs import LogPackageHandler
 from nailgun.api.handlers.logs import LogSourceCollectionHandler
@@ -123,7 +125,9 @@ urls = (
     r'/plugins/(?P<plugin_id>\d+)/?$',
     'PluginHandler',
     r'/redhat/account/?$',
-    'RedHatAccountHandler'
+    'RedHatAccountHandler',
+    r'/license/?$',
+    'LicenseHandler'
 )
 
 app = web.application(urls, locals())

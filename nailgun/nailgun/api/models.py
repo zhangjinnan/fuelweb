@@ -721,3 +721,12 @@ class Plugin(Base):
     name = Column(String(128), nullable=False, unique=True)
     state = Column(String(128), nullable=False, default='registered')
     version = Column(String(128), nullable=False)
+
+
+class License(Base):
+    __tablename__ = 'licenses'
+    id = Column(Integer, primary_key=True)
+    owner = Column(Unicode(100), nullable=False)
+    created_at = Column(DateTime, nullable=False,
+                        default=datetime.now())
+    expires_at = Column(DateTime, nullable=True)
