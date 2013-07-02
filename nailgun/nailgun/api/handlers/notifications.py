@@ -41,16 +41,8 @@ class NotificationHandler(JSONHandler):
     @classmethod
     def render(cls, instance, fields=None):
         json_data = JSONHandler.render(instance, fields=cls.fields)
-        json_data["time"] = ":".join([
-            instance.datetime.strftime("%H"),
-            instance.datetime.strftime("%M"),
-            instance.datetime.strftime("%S")
-        ])
-        json_data["date"] = "-".join([
-            instance.datetime.strftime("%d"),
-            instance.datetime.strftime("%m"),
-            instance.datetime.strftime("%Y")
-        ])
+        json_data["time"] = instance.datetime.strftime("%H:%M:%S")
+        json_data["date"] = instance.datetime.strftime("%d-%m-%Y")
         return json_data
 
     @content_json
