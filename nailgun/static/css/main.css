@@ -3841,7 +3841,7 @@ hr.slim {
 }
 .volume-group-box {
   display: block;
-  height: 50px;
+  height: 65px;
   border: 1px solid #d0d0d0;
   background-color: #e5e5e5;
   margin-bottom: 10px;
@@ -3861,7 +3861,7 @@ hr.slim {
 
 .volume-group-box-flag-os {
   width: 6px;
-  height: 44px;
+  height: 59px;
   background: #1a7f47;
   margin: 2px 12px 2px 2px;
   float: left;
@@ -3879,7 +3879,7 @@ hr.slim {
 
 .volume-group-box-flag-cinder {
   width: 6px;
-  height: 44px;
+  height: 59px;
   background: #1a7f47;
   margin: 2px 12px 2px 2px;
   float: left;
@@ -3897,7 +3897,7 @@ hr.slim {
 
 .volume-group-box-flag-vm {
   width: 6px;
-  height: 44px;
+  height: 59px;
   background: #1a7f47;
   margin: 2px 12px 2px 2px;
   float: left;
@@ -3935,6 +3935,10 @@ hr.slim {
 }
 .volume-group-box-input > input {
   text-align: right;
+  margin-bottom: 0;
+}
+.volume-group-box-edit {
+  margin: 0 0 0 35px;
 }
 .volume-group-box-sizetype {
   display: inline-block;
