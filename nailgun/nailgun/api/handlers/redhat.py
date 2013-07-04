@@ -34,35 +34,31 @@ class RedHatAccountHandler(JSONHandler):
 
     def check_credentials(self, data):
         try:
-                logger.info("Testing RH credentials with user %s",
-                            data.username)
-                cmd = "subscription-manager orgs --username \"%s\" \
-                       --password \"%s\"" % (data.get("username"), data.get("password"))
-                proc = subprocess.Popen(
-                    shlex.split(cmd),
-                    shell=False,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE)
-                p_stdout, p_stderr = proc.communicate()
-                logger.info(
-                    "'{0}' executed, STDOUT: '{1}',"
-                    " STDERR: '{2}'".format(
-                        cmd,
-                        p_stdout,
-                        p_stderr
-                    )
-                )
+            logger.info("Testing RH credentials with user %s", data.username)
+
+            cmd = 'subscription-manager orgs --username "%s" --password "%s"' % \
+                  (data.get("username"), data.get("password"))
+
+            proc = subprocess.Popen(
+                shlex.split(cmd),
+                shell=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+
+            p_stdout, p_stderr = proc.communicate()
+            logger.info(
+                "'{0}' executed, STDOUT: '{1}',"
+                " STDERR: '{2}'".format(cmd, p_stdout, p_stderr))
 
         except OSError:
             logger.warning(
-            "'{0}' returned non-zero exit code".format(
-                cmd
-                )
-            )
+                "'{0}' returned non-zero exit code".format(cmd))
+
             raise web.badrequest(str(p_stderr))
-        return True
-
-
+        except ValueError:
+            error_msg = "Not valid parameters: '{0}'".format(cmd)
+            logger.warning(error_msg)
+            raise web.badrequest(error_msg)
 
     @content_json
     def POST(self):
