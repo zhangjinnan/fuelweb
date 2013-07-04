@@ -17,6 +17,8 @@ node default {
     activation_key => undef,
     sat_base_channels => $sat_base_channels,
     sat_openstack_channel => $sat_openstack_channel
+    run_reposync => true,
+    run_cobbler => true,
   }
 }
 
