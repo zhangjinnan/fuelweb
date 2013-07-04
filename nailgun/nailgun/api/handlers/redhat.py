@@ -32,16 +32,12 @@ class RedHatAccountHandler(JSONHandler):
 
     validator = RedHatAcountValidator
 
-    @content_json
-    def POST(self):
-        data = self.checked_data()
-        # TODO: activate and save status
-        task_manager = DownloadReleaseTaskManager(data['release_id'])
+    def check_credentials(self, data):
         try:
                 logger.info("Testing RH credentials with user %s",
                             data.username)
                 cmd = "subscription-manager orgs --username \"%s\" \
-                       --password \"%s\"" % (data.get("username"), data.ge("password"))
+                       --password \"%s\"" % (data.get("username"), data.get("password"))
                 proc = subprocess.Popen(
                     shlex.split(cmd),
                     shell=False,
@@ -64,7 +60,16 @@ class RedHatAccountHandler(JSONHandler):
                 )
             )
             raise web.badrequest(str(p_stderr))
+        return True
 
+
+
+    @content_json
+    def POST(self):
+        data = self.checked_data()
+        self.check_credentials(data)
+        # TODO: activate and save status
+        task_manager = DownloadReleaseTaskManager(data['release_id'])
         try:
             task = task_manager.execute()
         except Exception as exc:
