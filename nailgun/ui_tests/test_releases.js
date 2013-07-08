@@ -18,15 +18,15 @@ casper.then(function() {
         this.test.assertEvalEquals(function() {return $('.modal fieldset input').length}, 4, 'RHN license type credentials fields are presented');
         this.click('.modal .btn-os-download');
         this.test.assertEvalEquals(function() {return $('.modal .control-group.error').length}, 4, 'Empty fields validation has worked');
+    });
+    this.then(function() {
         this.click('.modal input[type=radio]:not(:checked)');
-        this.fill('.modal form.rhel-license', {'username': 'rheltest', 'password': 'password'});
-        this.click('.modal .btn-os-download');
-        this.test.assertExists('.modal .alert', 'Credentials validation works');
         this.fill('.modal form.rhel-license', {'username': 'username', 'password': 'password'});
         this.click('.modal .btn-os-download');
+        this.waitWhileSelector('.modal');
     });
-    this.test.assertSelectorDisappears('.modal', 'RHEL credentials popup was closed');
     this.then(function() {
+        this.test.assertSelectorDisappears('.modal', 'RHEL credentials popup was closed');
         this.test.assertSelectorAppears('.progress', 'RHEL downloading started');
         this.waitWhileSelector('.progress');
     });
