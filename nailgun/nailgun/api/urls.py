@@ -36,6 +36,7 @@ from nailgun.api.handlers.node import NodeCollectionHandler
 
 from nailgun.api.handlers.disks import NodeDisksHandler
 from nailgun.api.handlers.disks import NodeDefaultsDisksHandler
+from nailgun.api.handlers.disks import NodeVolumesInformationHandler
 
 from nailgun.api.handlers.node import NodeNICsHandler
 from nailgun.api.handlers.node import NodeNICsDefaultHandler
@@ -66,6 +67,7 @@ urls = (
     'ReleaseCollectionHandler',
     r'/releases/(?P<release_id>\d+)/?$',
     'ReleaseHandler',
+
     r'/clusters/?$',
     'ClusterCollectionHandler',
     r'/clusters/(?P<cluster_id>\d+)/?$',
@@ -80,6 +82,7 @@ urls = (
     'NetworkConfigurationHandler',
     r'/clusters/(?P<cluster_id>\d+)/network_configuration/verify/?$',
     'NetworkConfigurationVerifyHandler',
+
     r'/nodes/?$',
     'NodeCollectionHandler',
     r'/nodes/(?P<node_id>\d+)/?$',
@@ -88,6 +91,8 @@ urls = (
     'NodeDisksHandler',
     r'/nodes/(?P<node_id>\d+)/disks/defaults/?$',
     'NodeDefaultsDisksHandler',
+    r'/nodes/(?P<node_id>\d+)/volumes/?$',
+    r'NodeVolumesInformationHandler',
     r'/nodes/interfaces/?$',
     'NodeCollectionNICsHandler',
     r'/nodes/interfaces/default_assignment?$',
@@ -98,14 +103,17 @@ urls = (
     'NodeNICsDefaultHandler',
     r'/nodes/interfaces_verify/?$',
     'NodeNICsVerifyHandler',
+
     r'/tasks/?$',
     'TaskCollectionHandler',
     r'/tasks/(?P<task_id>\d+)/?$',
     'TaskHandler',
+
     r'/notifications/?$',
     'NotificationCollectionHandler',
     r'/notifications/(?P<notification_id>\d+)/?$',
     'NotificationHandler',
+
     r'/logs/?$',
     'LogEntryCollectionHandler',
     r'/logs/package/?$',
@@ -114,8 +122,10 @@ urls = (
     'LogSourceCollectionHandler',
     r'/logs/sources/nodes/(?P<node_id>\d+)/?$',
     'LogSourceByNodeCollectionHandler',
+
     r'/version/?$',
     'VersionHandler',
+
     r'/plugins/?$',
     'PluginCollectionHandler',
     r'/plugins/(?P<plugin_id>\d+)/?$',
