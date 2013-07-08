@@ -33,10 +33,10 @@ from nailgun.api.handlers.release import ReleaseCollectionHandler
 
 from nailgun.api.handlers.node import NodeHandler
 from nailgun.api.handlers.node import NodeCollectionHandler
-from nailgun.api.handlers.node import NodeAttributesHandler
-from nailgun.api.handlers.node import NodeAttributesDefaultsHandler
-from nailgun.api.handlers.node import NodeAttributesByNameHandler
-from nailgun.api.handlers.node import NodeAttributesByNameDefaultsHandler
+
+from nailgun.api.handlers.disks import NodeDisksHandler
+from nailgun.api.handlers.disks import NodeDefaultsDisksHandler
+
 from nailgun.api.handlers.node import NodeNICsHandler
 from nailgun.api.handlers.node import NodeNICsDefaultHandler
 from nailgun.api.handlers.node import NodeCollectionNICsHandler
@@ -82,14 +82,10 @@ urls = (
     'NodeCollectionHandler',
     r'/nodes/(?P<node_id>\d+)/?$',
     'NodeHandler',
-    r'/nodes/(?P<node_id>\d+)/attributes/?$',
-    'NodeAttributesHandler',
-    r'/nodes/(?P<node_id>\d+)/attributes/defaults/?$',
-    'NodeAttributesDefaultsHandler',
-    r'/nodes/(?P<node_id>\d+)/attributes/(?P<attr_name>[-\w]+)/?$',
-    'NodeAttributesByNameHandler',
-    r'/nodes/(?P<node_id>\d+)/attributes/(?P<attr_name>[-\w]+)/defaults/?$',
-    'NodeAttributesByNameDefaultsHandler',
+    r'/nodes/(?P<node_id>\d+)/disks/?$',
+    'NodeDisksHandler',
+    r'/nodes/(?P<node_id>\d+)/disks/defaults/?$',
+    'NodeDefaultsDisksHandler',
     r'/nodes/interfaces/?$',
     'NodeCollectionNICsHandler',
     r'/nodes/interfaces/default_assignment?$',
