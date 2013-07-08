@@ -12,17 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import traceback
-
 import web
+import subprocess
+import shlex
 
 from nailgun.api.handlers.base import JSONHandler, content_json
 from nailgun.api.handlers.tasks import TaskHandler
 from nailgun.api.validators.redhat import RedHatAcountValidator
-from nailgun.db import db
 from nailgun.task.helpers import TaskHelper
 from nailgun.task.manager import DownloadReleaseTaskManager
-from nailgun.api.models import RedHatAccount
 from nailgun.logger import logger
 
 
@@ -34,23 +32,47 @@ class RedHatAccountHandler(JSONHandler):
 
     validator = RedHatAcountValidator
 
+    def check_credentials(self, data):
+        try:
+                logger.info("Testing RH credentials with user %s",
+                            data.username)
+                cmd = "subscription-manager orgs --username \"%s\" \
+                       --password \"%s\"" % (data.get("username"), data.get("password"))
+                proc = subprocess.Popen(
+                    shlex.split(cmd),
+                    shell=False,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE)
+                p_stdout, p_stderr = proc.communicate()
+                logger.info(
+                    "'{0}' executed, STDOUT: '{1}',"
+                    " STDERR: '{2}'".format(
+                        cmd,
+                        p_stdout,
+                        p_stderr
+                    )
+                )
+
+        except OSError:
+            logger.warning(
+            "'{0}' returned non-zero exit code".format(
+                cmd
+                )
+            )
+            raise web.badrequest(str(p_stderr))
+        return True
+
+
+
     @content_json
     def POST(self):
         data = self.checked_data()
-        release_data = {'release_id': data['release_id']}
-        data.pop('release_id')
-        release_data['redhat'] = data
-
-        account = RedHatAccount(**data)
-        db().add(account)
-        db().commit()
-
-        task_manager = DownloadReleaseTaskManager(release_data)
+        self.check_credentials(data)
+        task_manager = DownloadReleaseTaskManager(data['release_id'])
         try:
             task = task_manager.execute()
         except Exception as exc:
-            logger.error(u'DownloadReleaseHandler: error while execution'
-                         ' deploy task: {0}'.format(str(exc)))
-            logger.error(traceback.format_exc())
+            logger.warn(u'DownloadReleaseHandler: error while execution'
+                        ' deploy task: {0}'.format(str(exc)))
             raise web.badrequest(str(exc))
         return TaskHandler.render(task)
