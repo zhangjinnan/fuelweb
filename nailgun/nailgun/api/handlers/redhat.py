@@ -37,7 +37,7 @@ class RedHatAccountHandler(JSONHandler):
     def check_credentials(self, data):
         if settings.FAKE_TASKS:
             if data["username"] != "rheltest":
-                raise errors.InvalidData("Invalid username or password")
+                raise web.badrequest("Invalid username or password")
         else:
             try:
                 logger.info("Testing RH credentials with user %s",
@@ -72,6 +72,7 @@ class RedHatAccountHandler(JSONHandler):
     def POST(self):
         data = self.checked_data()
         self.check_credentials(data)
+
         task_manager = DownloadReleaseTaskManager(data['release_id'])
         try:
             task = task_manager.execute()
