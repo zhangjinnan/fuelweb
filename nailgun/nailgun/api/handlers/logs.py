@@ -238,20 +238,32 @@ class LogEntryCollectionHandler(JSONHandler):
 class LogPackageHandler(object):
 
     def GET(self):
-        f = tempfile.TemporaryFile(mode='r+b')
-        tf = tarfile.open(fileobj=f, mode='w:gz')
-        for arcname, path in settings.LOGS_TO_PACK_FOR_SUPPORT.items():
-            tf.add(path, arcname)
-        tf.close()
-
         filename = 'fuelweb-logs-%s.tar.gz' % (
             time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime()))
-        web.header('Content-Type', 'application/octet-stream')
         web.header('Content-Disposition', 'attachment; filename="%s"' % (
             filename))
-        web.header('Content-Length', f.tell())
+        web.header('Content-Type', 'application/octet-stream')
+
+        f = tempfile.TemporaryFile(mode='r+b')
+        tf = tarfile.open(fileobj=f, mode='w:gz')
+
+        # 10-byte gzip header
         f.seek(0)
-        return f
+        yield f.read()
+
+        for arcname, path in settings.LOGS_TO_PACK_FOR_SUPPORT.items():
+            for dirpath, dirnames, filenames in os.walk(path):
+                for filename in filenames:
+                    start = f.tell()
+                    filepath = os.path.join(dirpath, filename)
+                    tf.add(filepath, filepath.replace(path, arcname))
+                    f.seek(start)
+                    yield f.read()
+
+        start = f.tell()
+        tf.close()
+        f.seek(start)
+        yield f.read()
 
 
 class LogSourceCollectionHandler(JSONHandler):
