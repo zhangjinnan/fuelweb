@@ -22,9 +22,11 @@ default_messages = {
     # common errors
     "InvalidData": "Invalid data received",
     "AlreadyExists": "Object already exists",
+
     # node discovering errors
     "InvalidInterfacesInfo": "Invalid interfaces info",
     "InvalidMetadata": "Invalid metadata specified for node",
+
     # deployment errors
     "DeploymentAlreadyStarted": "Deployment already started",
     "DeletionAlreadyStarted": "Environment removal already started",
@@ -32,8 +34,11 @@ default_messages = {
     "WrongNodeStatus": "Wrong node status",
     "NodeOffline": "Node is offline",
     "NotEnoughControllers": "Not enough controllers",
+
     # disk errors
     "NotEnoughFreeSpace": "Not enough free space",
+    "CannotFindVolumesInfoForRole": "Cannot fund volumes info for role",
+
     # network errors
     "AdminNetworkNotFound": "Admin network info not found",
     "InvalidNetworkAccess": "Invalid network access",
@@ -43,9 +48,11 @@ default_messages = {
     "OutOfIPs": "Not enough free IP addresses in pool",
     "NoSuitableCIDR": "Cannot find suitable CIDR",
     "CanNotFindInterface": "Cannot find interface",
+
     # plugin errors
     "PluginDownloading": "Cannot install plugin",
     "PluginInitialization": "Cannot initialize plugin",
+
     # unknown
     "UnknownError": "Unknown error"
 }
