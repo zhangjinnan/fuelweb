@@ -390,7 +390,8 @@ function(require, utils, models, simpleMessageTemplate, createClusterDialogTempl
         events: {
             'click .accordion-heading': 'toggle',
             'click .btn-edit-disks': 'goToDisksConfiguration',
-            'click .btn-edit-networks': 'goToInterfacesConfiguration'
+            'click .btn-edit-networks': 'goToInterfacesConfiguration',
+            'click .btn-node-console': 'goToSSHConsole'
         },
         toggle: function(e) {
             $(e.currentTarget).siblings('.accordion-body').collapse('toggle');
@@ -400,6 +401,9 @@ function(require, utils, models, simpleMessageTemplate, createClusterDialogTempl
         },
         goToInterfacesConfiguration: function() {
             app.navigate('#cluster/' + this.clusterId + '/nodes/interfaces/' + this.node.id, {trigger: true});
+        },
+        goToSSHConsole: function () {
+            this.$el.modal('hide');
         },
         render: function() {
             this.constructor.__super__.render.call(this, _.extend({
