@@ -277,6 +277,7 @@ function(utils, models, dialogViews, navbarTemplate, nodesStatsTemplate, notific
         initialize: function(options) {
             _.defaults(this, options);
             this.redHatAccount = new models.RedHatAccount();
+            $.when(this.redHatAccount.deffered = this.redHatAccount.fetch()).done(_.bind(this.render, this));
             this.redHatAccount.on('invalid', function(model, error) {
                 _.each(error, function(field) {
                     this.$('*[name=' + field + ']').closest('.control-group').addClass('error');
@@ -285,7 +286,7 @@ function(utils, models, dialogViews, navbarTemplate, nodesStatsTemplate, notific
             }, this);
         },
         render: function() {
-            this.$el.html(this.template());
+            this.$el.html(this.template({account: this.redHatAccount}));
             return this;
         }
     });
