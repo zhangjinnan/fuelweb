@@ -113,11 +113,11 @@ urls = (
         NodeAttributesDefaultsHandler
     ),
     (
-        '/api/nodes/<int:node_id>/attributes/<attr_name>/',
+        '/api/nodes/<int:node_id>/attributes/<string:attr_name>/',
         NodeAttributesByNameHandler
     ),
     (
-        '/api/nodes/<int:node_id>/attributes/<attr_name>/defaults/',
+        '/api/nodes/<int:node_id>/attributes/<string:attr_name>/defaults/',
         NodeAttributesByNameDefaultsHandler
     ),
     (
@@ -159,28 +159,38 @@ urls = (
     (
         '/api/version',
         VersionHandler
+    ),
+    (
+        '/logs',
+        LogEntryCollectionHandler
+    ),
+    (
+        '/logs/package',
+        LogPackageHandler
+    ),
+    (
+        '/logs/sources',
+        LogSourceCollectionHandler
+    ),
+    (
+        '/logs/sources/nodes/<int:node_id>',
+        LogSourceByNodeCollectionHandler
+    ),
+    (
+        '/plugins',
+        PluginCollectionHandler
+    ),
+    (
+        '/plugins/<int:plugin_id>',
+        PluginHandler
+    ),
+    (
+        '/redhat/account',
+        RedHatAccountHandler
+    ),
+    # Handlers for openstack testing framework
+    (
+        '/ostf/<int:cluster_id>',
+        OSTFHandler
     )
 )
-"""
-    r'/logs/?$',
-    'LogEntryCollectionHandler',
-    r'/logs/package/?$',
-    'LogPackageHandler',
-    r'/logs/sources/?$',
-    'LogSourceCollectionHandler',
-    r'/logs/sources/nodes/(?P<node_id>\d+)/?$',
-    'LogSourceByNodeCollectionHandler',
-    r'/version/?$',
-    'VersionHandler',
-    r'/plugins/?$',
-    'PluginCollectionHandler',
-    r'/plugins/(?P<plugin_id>\d+)/?$',
-    'PluginHandler',
-    r'/redhat/account/?$',
-    'RedHatAccountHandler',
-    # Handlers for openstack testing framework
-    r'/ostf/(?P<cluster_id>\d+)/?$',
-    'OSTFHandler',
-)
-
-"""

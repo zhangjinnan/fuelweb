@@ -80,9 +80,10 @@ class KeepAliveThread(threading.Thread):
                         timedelta))
                 if node_db.online:
                     node_db.online = False
-                    self.db.commit()
+                    self.db.flush()
                     notifier.notify(
                         "error",
                         u"Node '{0}' has gone away".format(
                             node_db.human_readable_name),
                         node_id=node_db.id)
+        self.db.commit()
