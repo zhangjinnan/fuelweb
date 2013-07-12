@@ -72,8 +72,11 @@ class RedHatAccountHandler(JSONHandler):
     def POST(self):
         data = self.checked_data()
         self.check_credentials(data)
+        release_data = {'release_id': data['release_id']}
+        data.pop('release_id')
+        release_data['redhat'] = data
 
-        task_manager = DownloadReleaseTaskManager(data['release_id'])
+        task_manager = DownloadReleaseTaskManager(release_data)
         try:
             task = task_manager.execute()
         except Exception as exc:
