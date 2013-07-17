@@ -6,7 +6,7 @@
             "name": "RHOS 3.0 for RHEL 6.4",
             "version": "2013.1.2",
             "operating_system": "RHEL",
-            "description": "This option will install the Red Hat OpenStack distribution using RHEL as a base operating system. With high availability features built in, you are getting a robust, enterprise-grade OpenStack deployment.",
+            "description": "这个选项基于RHEL安装OpenStack G版本. 你会得到一个内置高可用性且功能强大的企业级的OpenStack部署.",
             "state": "not_available",
             "networks_metadata": [
                 {"name": "floating", "access": "public"},
@@ -102,29 +102,29 @@
                     "access": {
                         "user": {
                             "value": "admin",
-                            "label": "username",
-                            "description": "Username for Administrator",
+                            "label": "用户名",
+                            "description": "系统管理员",
                             "weight": 10,
                             "type": "text"
                         },
                         "email": {
                             "value": "admin@example.org",
-                            "label": "email",
-                            "description": "Email address for Administrator",
+                            "label": "邮箱",
+                            "description": "管理员邮箱",
                             "weight": 40,
                             "type": "text"
                         },
                         "tenant": {
                             "value": "admin",
-                            "label": "tenant",
-                            "description": "Tenant (project) name for Administrator",
+                            "label": "租户",
+                            "description": "管理员租户（项目）名称",
                             "weight": 30,
                             "type": "text"
                         },
                         "password": {
                             "value": "admin",
-                            "label": "password",
-                            "description": "Password for Administrator",
+                            "label": "密码",
+                            "description": "管理员密码",
                             "weight": 20,
                             "type": "password"
                         }
@@ -132,8 +132,8 @@
                     "common": {
                         "auto_assign_floating_ip": {
                             "value": false,
-                            "label": "Auto assign floating IP",
-                            "description": "If true, OpenStack will automatically assign a floating IP to a new instance",
+                            "label": "自动分配浮动IP",
+                            "description": "如果选择true,OpenStack在创建新实例的时候自动分配浮动IP",
                             "weight": 40,
                             "type": "checkbox"
                         },
@@ -143,29 +143,29 @@
                                 {
                                     "data": "kvm",
                                     "display_name": "KVM",
-                                    "description": "Choose this type of hypervisor if you run OpenStack on hardware"
+                                    "description": "如果选择你在物理上运行OpenStack,选择这个类型的虚拟化."
                                 },
                                 {
                                     "data": "qemu",
                                     "display_name": "QEMU",
-                                    "description": "Choose this type of hypervisor if you run OpenStack on virtual hosts."
+                                    "description": "如果你在虚拟机上运行OpenStack, 选择这个类型的虚拟化."
                                 }
                             ],
-                            "label": "Hypervisor type",
+                            "label": "虚拟化类型",
                             "weight": 10,
                             "type": "radio"
                         },
                         "start_guests_on_host_boot": {
                             "value": true,
-                            "label": "Start guests on host boot",
-                            "description": "Whether to (re-)start guests when the host reboots. If enabled, this option causes guests assigned to the host to be unconditionally restarted when nova-compute starts. If the guest is found to be stopped, it starts. If it is found to be running, it reboots.",
+                            "label": "启动时启动客户机",
+							"description": "在重启时是否要启动(重新)客户机. 如果启用,  此选项会导致nova-compute启动是无条件的启动客户机. 如果客户机停止状态，则它启动客户机，如果发现是运行状态，则重启.",
                             "weight": 50,
                             "type": "checkbox"
                         },
                         "use_cow_images": {
                             "value": true,
-                            "label": "Use qcow format for images",
-                            "description": "For most cases you will want qcow format. If it's set to false, raw image format will be used to run VMs. OpenStack with raw format currently does not support snapshotting.",
+                            "label": "使用qcow2格式镜像",
+                            "description": "大多数情况下, 你会选择qcow格式. 如果你设置为false, 则以裸格式运行虚拟机. OpenStack目前不支持裸格式的快照.",
                             "weight": 30,
                             "type": "checkbox"
                         },
@@ -174,23 +174,23 @@
                             "values": [
                                 {
                                     "data": "nova.scheduler.filter_scheduler.FilterScheduler",
-                                    "display_name": "Filter scheduler",
-                                    "description": "Currently the most advanced OpenStack scheduler. See the OpenStack documentation for details."
+                                    "display_name": "过滤调度",
+                                    "description": "当前最先进的OpenStack的调度. 详细信息见OpenStack文档."
                                 },
                                 {
                                     "data": "nova.scheduler.simple.SimpleScheduler",
-                                    "display_name": "Simple scheduler",
-                                    "description": "This is 'naive' scheduler which tries to find the least loaded host"
+                                    "display_name": "简单调度",
+                                    "description": "这是个naive调度，试图找到负载最小的主机."
                                 }
                             ],
-                            "label": "Scheduler driver",
+                            "label": "调度驱动",
                             "weight": 20,
                             "type": "radio"
                         },
                         "auth_key": {
                             "value": "",
-                            "label": "Public Key",
-                            "description": "Public key(s) to include in authorized_keys on deployed nodes",
+                            "label": "公钥",
+                            "description": "部署节点authorized_keys的公钥",
                             "weight": 60,
                             "type": "text"
                         }
@@ -210,21 +210,21 @@
                                     "description": ""
                                 }
                             ],
-                            "label": "Syslog transport protocol",
+                            "label": "系统日志传输协议",
                             "weight": 30,
                             "type": "radio"
                         },
                         "syslog_server": {
                             "value": "",
-                            "label": "Hostname",
-                            "description": "Remote syslog hostname",
+                            "label": "主机",
+                            "description": "远程日志主机",
                             "weight": 10,
                             "type": "text"
                         },
                         "syslog_port": {
                             "value": "514",
-                            "label": "Port",
-                            "description": "Remote syslog port",
+                            "label": "端口",
+                            "description": "远程日志端口",
                             "weight": 20,
                             "type": "text"
                         }
