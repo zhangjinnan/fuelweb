@@ -9,11 +9,12 @@ fuelweb本地化的工作，目前初步完成web界面的汉化工作。
 安装配置Postgres:
 -----------------
 
-| sudo apt-get install postgresql
-| sudo -u postgres createuser -D -A -P nailgun (enter password nailgun)
-| sudo -u postgres createdb nailgun
-| sudo apt-get install postgresql-server-dev-9.1 python-dev
-| sudo pip install psycopg2
+` sudo apt-get install postgresql
+  sudo -u postgres createuser -D -A -P nailgun (enter password nailgun)
+  sudo -u postgres createdb nailgun
+  sudo apt-get install postgresql-server-dev-9.1 python-development 
+  sudo pip install psycopg2
+`
 
 安装依赖：
 ----------
