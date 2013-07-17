@@ -12,7 +12,7 @@
   <div class="span2">
     <% if (nodes.length && (!nodes.deferred || nodes.deferred && nodes.deferred.state() != 'pending') && (limit === null || nodes.length <= limit)) { %>
       <label class="checkbox pull-right">
-        <input type="checkbox" class="select-all-tumbler"> Select All
+        <input type="checkbox" class="select-all-tumbler"> 全选
       </label>
     <% } %>
   </div>
@@ -33,6 +33,6 @@
 
 <div class="roles-block-row">
   <div class="span10">&nbsp;</div>
-  <div class="span1 pull-right"><div class="btn btn-apply <%= {add: 'btn-success', delete: 'btn-danger'}[action] || '' %>" disabled>Apply</div></div>
-  <div class="span1 pull-right"><div class="btn btn-discard">Cancel</div></div>
+  <div class="span1 pull-right"><div class="btn btn-apply <%= {add: 'btn-success', delete: 'btn-danger'}[action] || '' %>" disabled>应用</div></div>
+  <div class="span1 pull-right"><div class="btn btn-discard">取消</div></div>
 </div>

@@ -2,28 +2,28 @@
 <div class="cluster-name"><%- cluster.get('name') %></div>
 <div class="cluster-hardware">
   <div class="row-fluid">
-    <div class="span6">Nodes:</div>
+    <div class="span6">节点:</div>
     <div class="span4"><%= nodes.length %></div>
     <% if (nodes.length) { %>
-      <div class="span6">CPU (cores):</div>
+      <div class="span6">处理器 (cores):</div>
       <div class="span4"><%= nodes.resources('cores') %></div>
-      <div class="span6">RAM (GB):</div>
+      <div class="span6">内存 (GB):</div>
       <div class="span4"><%= nodes.resources('ram').toFixed(1) %></div>
       <% var hdd = nodes.resources('hdd')/Math.pow(1000, 3) %>
-      <div class="span6">HDD (<%= hdd < 100 ? 'GB' : 'TB' %>):</div>
+      <div class="span6">硬盘 (<%= hdd < 100 ? 'GB' : 'TB' %>):</div>
       <div class="span4"><%= hdd < 100 ? hdd.toFixed(1) : (hdd/1000).toFixed(1) %></div>
     <% } %>
   </div>
 </div>
 <div class="cluster-status">
   <% if (cluster.task('cluster_deletion', 'running')) { %>
-    Removing
+    正在删除
   <% } else if (cluster.task('deploy', 'running')) { %>
     <div class="cluster-status-deploy">
       <div class="bar" style="width:0"></div>
     </div>
   <% } else { %>
-    <% var statuses = {'new': 'New', 'deployment': 'Deploying', 'operational': 'Operational', 'error': 'Error', 'remove': 'Removing'} %>
+    <% var statuses = {'new': '新的', 'deployment': '部署', 'operational': '操作', 'error': '错误', 'remove': '删除'} %>
     <%= statuses[cluster.get('status')] %>
   <% } %>
 </div>

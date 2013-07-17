@@ -7,8 +7,8 @@
     <div class="row-fluid">
       <div class="span5"><div class="node-image-outline"></div></div>
       <div class="span7">
-        <div><strong>Manufacturer: </strong><%- node.get('manufacturer') ? node.get('manufacturer') : 'N/A' %></div>
-        <div><strong>MAC Address: </strong><%- node.get('mac') ? node.get('mac') : 'N/A' %></div>
+        <div><strong>生产厂家: </strong><%- node.get('manufacturer') ? node.get('manufacturer') : 'N/A' %></div>
+        <div><strong>MAC地址: </strong><%- node.get('mac') ? node.get('mac') : 'N/A' %></div>
         <div><strong>FQDN: </strong><%- (node.get('meta').system || {}).fqdn || node.get('fqdn') || 'N/A' %></div>
       </div>
     </div>
@@ -71,8 +71,8 @@
 </div>
 <div class="modal-footer">
   <% if (configurationPossible) { %>
-    <button class="btn btn-edit-networks" data-dismiss="modal">Network Configuration</button>
-    <button class="btn btn-edit-disks" data-dismiss="modal">Disk Configuration</button>
+    <button class="btn btn-edit-networks" data-dismiss="modal">网络配置</button>
+    <button class="btn btn-edit-disks" data-dismiss="modal">磁盘配置</button>
   <% } %>
-  <button class="btn node-modal-close" data-dismiss="modal">Close</button>
+  <button class="btn node-modal-close" data-dismiss="modal">关闭</button>
 </div>

@@ -40,9 +40,9 @@ function(models, commonViews, ClusterPage, NodesTab, ClustersPage, ReleasesPage,
         initialize: function() {
             this.content = $('#content');
             this.navbar = new commonViews.Navbar({elements: [
-                ['Environments', '#clusters'],
-                ['Releases', '#releases'],
-                ['Support', '#support']
+                ['环境', '#clusters'],
+                ['版本', '#releases'],
+                ['支持', '#support']
             ]});
             this.content.before(this.navbar.render().el);
             this.breadcrumbs = new commonViews.Breadcrumbs();

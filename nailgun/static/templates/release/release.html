@@ -1,16 +1,16 @@
 <td><%- release.get('name') %></td>
 <td><%- release.get('version') %></td>
 <td class="release-status">
-  <span class="<%= release.get('state') == 'available' ? 'available"> Available' : 'not_available"> Not available' %></span>
+  <span class="<%= release.get('state') == 'available' ? 'available"> 可用的' : 'not_available"> 不可用' %></span>
 </td>
 <td>
   <% if (release.get('state') != 'available') { %>
-    <span class="btn-link btn-rhel-setup">Setup</span>
+    <span class="btn-link btn-rhel-setup">设置</span>
     <div class="download_progress hide">
       <div class="progress progress-success progress-striped active">
         <div class="bar" style="width: 0%;"></div>
       </div>
-      <div class="bar-title">Downloading RHEL</div>
+      <div class="bar-title">下载RHEL</div>
     </div>
   <% } %>
 </td>

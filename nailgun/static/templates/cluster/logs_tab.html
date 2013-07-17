@@ -1,10 +1,10 @@
 <div class="wrapper">
-  <h3 class="span12">Logs</h3>
+  <h3 class="span12">日志</h3>
 
   <div class="row">
     <div class="filter-bar">
       <div class="filter-bar-item log-type-filter">
-        <div class="filter-bar-label">Logs</div>
+        <div class="filter-bar-label">日志</div>
         <select name="type" class="filter-bar-dropdown input-medium">
           <% _.each(types, function(type) { %>
             <option value="<%= type[0] %>" <%= chosenType == type[0] ? 'selected' : '' %>><%- type[1] %></option>
@@ -13,7 +13,7 @@
       </div>
 
       <div class="filter-bar-item log-node-filter" style="display:none">
-        <div class="filter-bar-label">Node</div>
+        <div class="filter-bar-label">节点</div>
         <select name="node" class="filter-bar-dropdown input-large">
           <% cluster.get('nodes').each(function(node) { %>
             <option value="<%= node.id %>" <%= node.id == chosenNodeId ? 'selected' : '' %>><%- node.get('name') || node.get('mac') %></option>
@@ -22,17 +22,17 @@
       </div>
 
       <div class="filter-bar-item log-source-filter">
-        <div class="filter-bar-label">Source</div>
+        <div class="filter-bar-label">源码</div>
         <select name="source" class="filter-bar-dropdown input-medium" disabled></select>
       </div>
 
       <div class="filter-bar-item log-level-filter">
-        <div class="filter-bar-label">Min. level</div>
+        <div class="filter-bar-label">低</div>
         <select name="level" class="filter-bar-dropdown input-small" disabled></select>
       </div>
 
       <div class="filter-bar-item">
-        <button class="filter-bar-btn show-logs-btn btn disabled">Show</button>
+        <button class="filter-bar-btn show-logs-btn btn disabled">显示</button>
       </div>
     </div>
   </div>

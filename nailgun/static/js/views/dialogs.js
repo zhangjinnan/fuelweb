@@ -426,8 +426,8 @@ function(require, utils, models, simpleMessageTemplate, createClusterDialogTempl
 
     views.DiscardSettingsChangesDialog = views.Dialog.extend({
         template: _.template(discardSettingsChangesTemplate),
-        defaultMessage: 'Settings were modified but not saved. Do you want to discard your changes and leave the page?',
-        verificationMessage: 'Network verification is in progress. You should save changes or stay on the tab.',
+        defaultMessage: '设置将要被改变但是未被保存, 你想放弃你所做的修改并离开此页?',
+        verificationMessage: '网络验证正在验证. 你应该保存变更或则呆在这个页面.',
         events: {
             'click .proceed-btn': 'proceed'
         },

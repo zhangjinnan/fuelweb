@@ -4,14 +4,14 @@
 <% var disabled = locked ? 'disabled' : '' %>
 <% var vlanManager = net_manager == 'VlanManager' ? '' : 'hide' %>
 <% var labels = {
-  'ip_ranges': 'IP Range',
+  'ip_ranges': 'IP范围',
   'vlan_start': 'VLAN ID',
-  'netmask': 'Netmask',
-  'gateway': 'Gateway',
+  'netmask': '子网掩码',
+  'gateway': '网关',
   'cidr': 'CIDR',
-  'amount': 'Number of Networks',
-  'network_size': 'Size of Networks',
-  'vlan_range': 'VLAN ID range'
+  'amount': '网络数量',
+  'network_size': '网络大小',
+  'vlan_range': 'VLAN ID范围'
 } %>
 
 <div data-network-id="<%- network.id %>" class="<%- networkName %>">
@@ -22,7 +22,7 @@
     <% var hidden = _.contains(shownAttributes, attribute) ? '' : 'hide' %>
     <% if (attribute == 'ip_ranges') { %>
       <div class="range-row-header <%= hidden %>">
-        <div>Start</div><div>End</div>
+        <div>开始</div><div>结束</div>
       </div>
       <div class="networks-sub-title parameter-name range-name <%= hidden %>"><%= labels[attribute] %></div>
       <% _.each(network.get(attribute), function(ip_range) { %>
@@ -57,7 +57,7 @@
     <% } else if (attribute == 'vlan_start') { %>
       <% if (networkName == 'fixed' && !vlanManager) { %>
         <div class="range-row-header mini <%= hidden %>">
-          <div>Start</div><div>End</div>
+          <div>开始</div><div>结束</div>
         </div>
         <label class="parameter-box clearfix setting">
           <div class="networks-sub-title parameter-name"><%= labels.vlan_range %></div>
@@ -74,7 +74,7 @@
       <% } else { %>
         <% var vlan = network.get(attribute) %>
         <% var isFloating = networkName == 'floating' ? 'disabled' : '' %>
-        <div class="networks-sub-title parameter-name">Use VLAN Tagging</div>
+        <div class="networks-sub-title parameter-name">VLAN标签号</div>
         <div class="range-row clearfix" style="height: 40px">
           <label class="parameter-box clearfix setting">
             <div class="parameter-control" style="width: 106px">

@@ -1,20 +1,20 @@
 <div class="navbar summary">
   <div class="navbar-inner">
      <ul class="nav">
-      <% var modes = {'singlenode': 'Single-node', 'multinode': 'Multi-node', 'ha': 'Multi-node with HA'} %>
-      <% var types = {'both': 'Compute and Cinder', 'compute': 'Compute only', 'cinder': 'Cinder only'} %>
+      <% var modes = {'singlenode': '单节点', 'multinode': '多节点', 'ha': '多节点HA'} %>
+      <% var types = {'both': '计算和存储', 'compute': '只计算', 'cinder': '只存储'} %>
       <% var configurable = !cluster.task('deploy', 'running') && cluster.canChangeMode()  %>
       <li class="btn btn-link summary-settings-btn change-cluster-mode-btn <%= configurable ? '' : 'disabled' %>">
-        <b>Deployment Mode: </b><%- modes[cluster.get('mode')] %> <%- false && cluster.get('mode') != 'singlenode' ? '(' + types[cluster.get('type')] + ')' : '' %>
+        <b>部署模式: </b><%- modes[cluster.get('mode')] %> <%- false && cluster.get('mode') != 'singlenode' ? '(' + types[cluster.get('type')] + ')' : '' %>
       </li>
       <li class="btn btn-link summary-settings-btn disabled">
-        <b>OpenStack Release: </b>
+        <b>OpenStack版本: </b>
         <% release = cluster.get('release') %>
         <%- release.get('name') %> (<%- release.get('version') %>)
       </li>
       <li class="btn btn-link summary-settings-btn disabled">
-        <% var statuses = {'new': 'New', 'deployment': 'Deploying', 'operational': 'Operational', 'error': 'Error', 'remove': 'Removing'} %>
-        <b>Environment Status: </b><%= statuses[cluster.get('status')] %>
+        <% var statuses = {'new': '新的', 'deployment': '部署', 'operational': '操作', 'error': '错误', 'remove': '删除'} %>
+        <b>环境状态: </b><%= statuses[cluster.get('status')] %>
       </li>
     </ul>
   </div>

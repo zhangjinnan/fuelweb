@@ -1,8 +1,8 @@
 <div class="disk-box disk" data-disk="<%- disk.name %>">
 
-  <div class="disk-box-name pull-left"><%- disk.name %><span class="bootable-marker <%= partition ? '' : 'hide' %>">[Bootable]</span></div>
+  <div class="disk-box-name pull-left"><%- disk.name %><span class="bootable-marker <%= partition ? '' : 'hide' %>">[引导盘]</span></div>
   <% var diskSize = disk.size / Math.pow(1000, 3) %>
-  <div class="disk-box-size pull-right">Total Space: <%= diskSize < 100 ? diskSize.toFixed(2) + ' GB' : (diskSize / 1000).toFixed(2) + ' TB' %></div>
+  <div class="disk-box-size pull-right">全部空间: <%= diskSize < 100 ? diskSize.toFixed(2) + ' GB' : (diskSize / 1000).toFixed(2) + ' TB' %></div>
 
   <div class="disk-map-short disk-map-full">
     <div class="disk-map-image disk-visual">
@@ -18,7 +18,7 @@
       <% }) %>
       <div class="volume-group unallocated" style="width: 100%">
         <div class="toggle-volume">
-          <div class="volume-group-name">Unallocated</div>
+          <div class="volume-group-name">未分配</div>
           <div class="volume-group-size"><%= Math.round(diskSize) %> GB</div>
         </div>
       </div>
@@ -27,7 +27,7 @@
 
   <div class="disk-map-details disk-edit-volume-group-form collapse">
     <div class="disk-info-box">
-      <div class="disk-box-title">Disk Information</div>
+      <div class="disk-box-title">磁盘信息</div>
       <% _.each(sortEntryProperties(disk), function(propertyName) { %>
         <div class="disk-map-details-item">
           <div class="disk-map-details-name"><%- propertyName.replace(/_/g, ' ') %></div>
@@ -35,18 +35,18 @@
         </div>
       <% }) %>
       <div class="disk-map-details-item">
-        <button class="btn btn-danger btn-bootable" <%= partition ? 'disabled' : '' %>>Make Bootable</button>
+        <button class="btn btn-danger btn-bootable" <%= partition ? 'disabled' : '' %>>设置可启动</button>
       </div>
     </div>
 
     <div class="disk-utility-box">
-      <div class="disk-box-title">Volume Groups</div>
+      <div class="disk-box-title">卷组</div>
       <% _.each(volumes, function(volume) { %>
         <div class="volume-group-box volume-group" data-group="<%= volume.vg %>">
           <div class="volume-group-box-flag-<%= volume.vg %>"></div>
           <div class="volume-group-box-name"><%= volumeGroupsLabels[volume.vg] %></div>
           <div class="pull-right">
-            <div class="volume-group-box-edit"><span class="use-all-unallocated">Use All Unallocated Space</span></div>
+            <div class="volume-group-box-edit"><span class="use-all-unallocated">使用所以未分配的空间</span></div>
             <div class="volume-group-box-input"><input class="input-mini" type="text" name="<%= volume.vg %>" value="<%= volume.size.toFixed(2) %>" /></div>
             <div class="volume-group-box-sizetype">GB</div>
           </div>

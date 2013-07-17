@@ -1,14 +1,14 @@
 <div class="modal-header">
   <button type="button" class="close" data-dismiss="modal">×</button>
-  <h3>Change Environment Mode</h3>
+  <h3>更改环境模式</h3>
 </div>
 <div class="modal-body">
   <form class="form-horizontal" onsubmit="return false">
     <fieldset>
-      <h4>Deployment Mode:</h4>
+      <h4>部署模式:</h4>
       <div class="row-fluid control-group mode-control-group">
         <div class="span5">
-           <% var modes = {'singlenode': 'Single-node', 'multinode': 'Multi-node', 'ha': 'Multi-node with HA'} %>
+           <% var modes = {'singlenode': '单节点', 'multinode': '多节点', 'ha': '多节点HA'} %>
           <% _.each(cluster.availableModes(), function(mode) { %>
             <label class="parameter-box clearfix setting" >
               <div class="parameter-control">
@@ -23,13 +23,13 @@
         </div>
         <div class="span7">
           <p class="help-block hide mode-description help-mode-singlenode">
-            This simple configuration is for you if you want to give OpenStack a test drive. You will get a fully functional private cloud, with all OpenStack components installed on one node. The node will also act as a compute node.
+		    如果你想试用openstack，这个是一个简单的配置。你将获得一个安装openstack所有组件的功能齐全的私有云。这个节点同时也包含计算节点的角色。 
           </p>
           <p class="help-block hide mode-description help-mode-multinode">
-              In this configuration the OpenStack controller is deployed separately from the compute and cinder nodes. This mode assumes the presence of 1 controller node and 1 or more compute/cinder nodes. You can add more nodes to scale your cloud later.
+		  	在这个配置中，openstack控制节点部署从计算节点和存储节点分离出来。此模式假定有一个控制节点，一个或多个计算和存储节点存在。你可以添加更多的节点来扩展你的云。
           </p>
           <p class="help-block hide mode-description help-mode-ha">
-            This configuration requires multiple OpenStack controllers (3+) and provides high availability for all OpenStack components, including MySQL/Galera, RabbitMQ, and Cinder, as well as OpenStack API services. Select this configuration if you want to build a production-grade OpenStack cloud with 6 nodes or more.
+		    这个配置需要多个openstack控制节点(3+)和所有openstack高可用组件，包括MySQL/Galera,RabbitMQ,Cinder,以及OpenStack的API服务。如果想建立一个生产级或者更多节点的Openstack云，请选择这个配置。
           </p>
         </div>
       </div>
@@ -37,6 +37,6 @@
   </form>
 </div>
 <div class="modal-footer">
-  <button class="btn" data-dismiss="modal">Cancel</button>
-  <button class="btn btn-success apply-btn">Apply</button>
+  <button class="btn" data-dismiss="modal">取消</button>
+  <button class="btn btn-success apply-btn">应用</button>
 </div>

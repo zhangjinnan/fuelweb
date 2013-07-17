@@ -27,7 +27,7 @@ function(commonViews, dialogViews, releasesListTemplate, releaseTemplate) {
 
     ReleasesPage = commonViews.Page.extend({
         navbarActiveElement: 'releases',
-        breadcrumbsPath: [['Home', '#'], 'Releases'],
+        breadcrumbsPath: [['主页', '#'], '版本'],
         title: 'Releases',
         updateInterval: 3000,
         template: _.template(releasesListTemplate),

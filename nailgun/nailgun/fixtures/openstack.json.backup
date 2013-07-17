@@ -103,7 +103,7 @@
                         "user": {
                             "value": "admin",
                             "label": "username",
-                            "description": "测试",
+                            "description": "Username for Administrator",
                             "weight": 10,
                             "type": "text"
                         },

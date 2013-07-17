@@ -1,19 +1,19 @@
 <div class="modal-header">
   <button type="button" class="close" data-dismiss="modal">×</button>
-  <h3>Create a new OpenStack environment</h3>
+  <h3>创建一个openstack环境</h3>
 </div>
 <div class="modal-body create-cluster-form">
   <form class="form-horizontal create-cluster-form" onsubmit="return false">
     <fieldset>
       <div class="control-group">
-        <label class="control-label">Name</label>
+        <label class="control-label">名字</label>
         <div class="controls">
           <input type="text" class="input-large" name="name" maxlength="50" autofocus />
           <span class="help-inline"></span>
         </div>
       </div>
       <div class="control-group">
-        <label class="control-label">OpenStack Release</label>
+        <label class="control-label">OpenStack版本</label>
         <div class="controls">
           <select name="release"></select>
         </div>
@@ -24,11 +24,11 @@
 
   <div class="credentials rhel-license hide"></div>
   <div class="alert alert-info rhel-license hide">
-    To deploy Red Hat OpenStack, you must first download both RHOS and RHEL to be cached on the Fuel master node.  You can do this from the Releases page or just choose your subscription type and enter your credentials below.  RHEL and RHOS will be automatically downloaded and cached after you create the environment.
+    在部署红帽的openstack时，首先必须先下载RHOS和RHEL并缓存在Fuel的主节点上。你可以通过版本页面或则选择你的订阅类型并输入你的凭证。RHEL和RHOS将自动下载并缓存到你的创建的环境中。
   </div>
 
 </div>
 <div class="modal-footer">
-  <button class="btn" data-dismiss="modal">Cancel</button>
-  <button class="btn btn-success create-cluster-btn">Create</button>
+  <button class="btn" data-dismiss="modal">取消</button>
+  <button class="btn btn-success create-cluster-btn">创建</button>
 </div>

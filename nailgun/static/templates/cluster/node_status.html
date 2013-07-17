@@ -7,43 +7,43 @@
 %>
 <% if (!node.get('online')) { %>
   <div class="msg-offline">
-    <i class="icon-block"></i>Offline
+    <i class="icon-block"></i>离线
   </div>
 <% } else if (node.get('pending_addition')) { %>
   <div class="msg-warning">
-    <i class="icon-ok-circle-empty"></i>Pending Addition
+    <i class="icon-ok-circle-empty"></i>待添加
   </div>
 <% } else if (node.get('pending_deletion')) { %>
   <div class="msg-warning">
-    <i class="icon-cancel-circle"></i>Pending Deletion
+    <i class="icon-cancel-circle"></i>待删除
   </div>
 <% } else if (status == 'ready') { %>
   <div class="msg-ok">
-    <i class="icon-ok"></i>Ready
+    <i class="icon-ok"></i>预备
   </div>
 <% } else if (status == 'provisioning') { %>
   <div class="progress">
-    <div class="bar"><p>Installing <%- operatingSystem %></p></div>
+    <div class="bar"><p>安装中 <%- operatingSystem %></p></div>
   </div>
 <% } else if (status == 'provisioned') { %>
   <div class="msg-provisioned">
-    <i class="icon-install"></i><%- operatingSystem %> is installed
+    <i class="icon-install"></i><%- operatingSystem %> 安装了
   </div>
 <% } else if (status == 'deploying') { %>
   <div class="progress progress-success">
-    <div class="bar"><p>Installing OpenStack</p></div>
+    <div class="bar"><p>安装openstack</p></div>
   </div>
 <% } else if (status == 'error') { %>
   <div class="msg-error">
-    <i class="icon-attention"></i>Error
+    <i class="icon-attention"></i>错误
   </div>
 <% } else if (status == 'discover') { %>
   <div class="msg-discover">
-    <i class="icon-ok-circle-empty"></i>Discovered
+    <i class="icon-ok-circle-empty"></i>发现
   </div>
 <% } else { %>
   <div>
     <%= status %>
   </div>
 <% } %>
-<a href="<%- logsLink %>" class="logs-link"><i class="icon-logs"></i>View logs</a>
+<a href="<%- logsLink %>" class="logs-link"><i class="icon-logs"></i>查看日志</a>

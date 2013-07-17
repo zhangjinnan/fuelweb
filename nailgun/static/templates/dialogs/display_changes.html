@@ -1,6 +1,6 @@
 <div class="modal-header">
   <button type="button" class="close" data-dismiss="modal">×</button>
-  <h3>Deploy Changes</h3>
+  <h3>部署变化</h3>
 </div>
 <div class="modal-body display-changes-dialog">
   <!-- Nodes changes -->
@@ -12,28 +12,28 @@
 
   <% var nodesToAdd = cluster.get('nodes').where({pending_addition: true}) %>
   <% if (nodesToAdd.length) { %>
-    <div class="deploy-task-name">Added:</div>
+    <div class="deploy-task-name">增加:</div>
     <% _.each(roles, function(role) { %>
       <% var count = _.filter(nodesToAdd, function(node) {return node.get('role') == role}).length %>
       <% if (count) { %>
-        <div class="deploy-task-item"><%= count %> <%= role %> node<%= count != 1 ? 's' : '' %></div>
+        <div class="deploy-task-item"><%= count %> <%= role %> 节点<%= count != 1 ? 's' : '' %></div>
       <% } %>
     <% }) %>
   <% } %>
   <% var nodesToDelete = cluster.get('nodes').where({pending_deletion: true}) %>
   <% if (nodesToDelete.length) { %>
-    <div class="deploy-task-name">Deleted:</div>
+    <div class="deploy-task-name">删除:</div>
     <% _.each(roles, function(role) { %>
       <% var count = _.filter(nodesToDelete, function(node) {return node.get('role') == role}).length %>
       <% if (count) { %>
-        <div class="deploy-task-item"><%= count %> <%= role %> node<%= count != 1 ? 's' : '' %></div>
+        <div class="deploy-task-item"><%= count %> <%= role %> 节点<%= count != 1 ? 's' : '' %></div>
       <% } %>
     <% }) %>
   <% } %>
 
   <!-- Networks, OpenStack settings, nodes disks changes -->
   <% if (cluster.get('changes').length) { %>
-    <div class="deploy-task-name">Changed:</div>
+    <div class="deploy-task-name">改变:</div>
     <% var settingsChangesDescriptions = {
       'attributes': 'OpenStack settings',
       'networks': 'Network settings',
@@ -59,7 +59,7 @@
 
   <!-- Warnings -->
   <% if (cluster.needsRedeployment()) { %>
-    <div class="deploy-task-notice"><i class="icon-attention"></i> Some nodes have error status after deployment. Redeployment is needed.</div>
+    <div class="deploy-task-notice"><i class="icon-attention"></i>在部署后有些节点错误状态,需要重新部署.</div>
     <hr class="slim">
   <% } %>
   <%
@@ -80,6 +80,6 @@
 
 </div>
 <div class="modal-footer">
-  <button class="btn" data-dismiss="modal">Cancel</button>
-  <button class="btn btn-<%= warning ? 'danger' : 'success' %> start-deployment-btn<%= canDeploy ? '' : ' disabled' %>">Deploy</button>
+  <button class="btn" data-dismiss="modal">取消</button>
+  <button class="btn btn-<%= warning ? 'danger' : 'success' %> start-deployment-btn<%= canDeploy ? '' : ' disabled' %>">部署</button>
 </div>

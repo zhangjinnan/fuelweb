@@ -28,7 +28,7 @@ function(models, commonViews, dialogViews, clustersPageTemplate, clusterTemplate
 
     ClustersPage = commonViews.Page.extend({
         navbarActiveElement: 'clusters',
-        breadcrumbsPath: [['Home', '#'], 'Environments'],
+        breadcrumbsPath: [['主页', '#'], '环境'],
         title: 'Environments',
         template: _.template(clustersPageTemplate),
         render: function() {

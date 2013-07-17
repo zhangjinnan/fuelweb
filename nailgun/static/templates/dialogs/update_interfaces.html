@@ -1,6 +1,6 @@
 <div class="modal-header">
   <button type="button" class="close" data-dismiss="modal">×</button>
-  <h3>Update network interfaces</h3>
+  <h3>更新网络接口</h3>
 </div>
 
 <div class="modal-body display-changes-dialog">
@@ -12,12 +12,12 @@
             <!-- [if !IE |(gte IE 9)]> --><span>&nbsp;</span><!-- <![endif] -->
           </div>
         </div>
-        <div class="openstack-sub-title parameter-name">Chanded nodes: </div>
+        <div class="openstack-sub-title parameter-name">改变节点: </div>
       </label>
 
       <div class="network-interfaces-modal-info">
         <% _.each(topology.nodes, function(node) { %>
-        <p>Node '<%= node.node_id %>' Interfaces</p>
+        <p>节点 '<%= node.node_id %>' 接口</p>
         <ul>
           <% _.each(node.interfaces, function(interface) { %>
           <li><%= interface.name %>: <% _.each(interface.networks, function(network) {%>
@@ -34,13 +34,13 @@
 
     <hr class="slim">
     <div class="deploy-task-notice">
-      <i class="icon-attention"></i> Your congiguration could not work with current network topology.<br> You could select one from the proposed or force apply yours.
+      <i class="icon-attention"></i> 你的配置在当前网络拓扑无法工作.<br> 你可以选择一个建议或则强制应用你的配置.
     </div>
 
 </div>  
 <div class="modal-footer">
-  <button class="btn" data-dismiss="modal">Cancel</button>
-  <button class="btn btn-success change-interfaces-btn" disabled>Apply</button>
-  <button class="btn btn-danger force-apply-btn">Force Apply</button>
+  <button class="btn" data-dismiss="modal">取消</button>
+  <button class="btn btn-success change-interfaces-btn" disabled>应用</button>
+  <button class="btn btn-danger force-apply-btn">强制应用</button>
 </div>
 

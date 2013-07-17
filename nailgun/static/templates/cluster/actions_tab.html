@@ -1,12 +1,12 @@
 <div class="wrapper">
-  <h3 class="span12">Actions</h3>
+  <h3 class="span12">动作</h3>
   <div class="row-fluid">
     <div class="span6 action-item-placeholder">
       <form class="rename-cluster-form" onsubmit="return false">
-        <h4>Rename Environment</h4>
+        <h4>重命名环境</h4>
         <div class="action-item-controls">
           <input type="text" class="input-xlarge" maxlength="50" value="<%- cluster.get('name') %>">
-          <button class="btn btn-success apply-name-btn" style="margin-top: -10px;">Rename</button>
+          <button class="btn btn-success apply-name-btn" style="margin-top: -10px;">重命名</button>
         </div>
         <div class="action-item-description">
           <div class="alert alert-error hide"></div>
@@ -15,12 +15,12 @@
     </div>
     <div class="span6 action-item-placeholder">
       <form class="delete-cluster-form" onsubmit="return false">
-        <h4>Delete Environment</h4>
+        <h4>删除环境</h4>
         <div class="action-item-description important">
-            Clean up each node and return it to the pool of unallocated nodes.
+			清除每个节点并把放回到为分配的池中。
         </div>
         <div class="action-item-controls">
-          <button class="btn btn-danger delete-cluster-btn">Delete</button>
+          <button class="btn btn-danger delete-cluster-btn">删除</button>
         </div>
       </form>
     </div>

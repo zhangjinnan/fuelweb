@@ -1,18 +1,18 @@
 <div class="modal-header">
   <button type="button" class="close" data-dismiss="modal">×</button>
-  <h3>Delete Environment</h3>
+  <h3>删除环境</h3>
 </div>
 <div class="modal-body">
   <div class="msg-error">
-    <span class="label label-important">Important</span>
+    <span class="label label-important">重要</span>
     <% if (cluster.get('tasks').where({status: 'running'}).length) { %>
-      There are incompleted actions. Removing of the environment may fail and lead to inconsistent state.
+	  有未完成的动作。删除环境可能会失败并导致不一致的状态。
     <% } else { %>
-      Each node will be cleaned up and returned to the pool of unallocated nodes.
+	  每个节点将被清楚并返回到未分配的节点池中。
     <% } %>
   </div>
 </div>
 <div class="modal-footer">
-  <button class="btn" data-dismiss="modal">Cancel</button>
-  <button class="btn btn-danger remove-cluster-btn">Delete</button>
+  <button class="btn" data-dismiss="modal">取消</button>
+  <button class="btn btn-danger remove-cluster-btn">删除</button>
 </div>

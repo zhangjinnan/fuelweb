@@ -26,7 +26,7 @@ function(utils, models, commonViews, dialogViews, notificationsListTemplate) {
 
     var NotificationsPage = commonViews.Page.extend({
         navbarActiveElement: null,
-        breadcrumbsPath: [['Home', '#'], 'Notifications'],
+        breadcrumbsPath: [['主页', '#'], '通知'],
         title: 'Notifications',
         template: _.template(notificationsListTemplate),
         templateHelpers: _.pick(utils, 'urlify'),

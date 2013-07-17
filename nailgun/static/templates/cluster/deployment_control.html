@@ -9,7 +9,7 @@
   </li>
 <% } else { %>
   <li class="pull-right deployment-control-box">
-    <div class="deployment-control-item-box"><button class="deploy-btn <%= cluster.hasChanges() || cluster.needsRedeployment() ? '' : 'disabled' %>"><i class="icon-upload-cloud"></i> Deploy Changes</button></div>
+    <div class="deployment-control-item-box"><button class="deploy-btn <%= cluster.hasChanges() || cluster.needsRedeployment() ? '' : 'disabled' %>"><i class="icon-upload-cloud"></i> 部署变化</button></div>
     <div class="deployment-control-item-box">
       <% var nodesToAdd = cluster.get('nodes').where({pending_addition: true}) %>
       <% var nodesToDelete = cluster.get('nodes').where({pending_deletion: true}) %>
