@@ -41,7 +41,7 @@ def capitalize_model_name(model_name):
 def template_fixture(fileobj, config=None):
     if not config:
         config = settings
-    t = jinja2.Template(fileobj.read())
+    t = jinja2.Template(fileobj.read().decode("utf-8"))
     return StringIO.StringIO(t.render(settings=config))
 
 
