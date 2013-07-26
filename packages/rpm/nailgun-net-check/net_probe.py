@@ -26,17 +26,19 @@ import socket
 import time
 import re
 import logging
+import logging.handlers
 import argparse
 import functools
 import threading
 import traceback
 from subprocess import Popen, PIPE
 
-
+import pcap
 import scapy.config as scapy
 scapy.conf.logLevel = 40
 scapy.conf.use_pcap = True
 import scapy.all as scapy
+
 
 class ActorFabric(object):
     @classmethod
@@ -74,14 +76,30 @@ class Actor(object):
         self.iface_down_after = {}
         self.viface_remove_after = {}
 
-    def _define_logger(self, filename, level=logging.DEBUG):
-        f = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
-        l = logging.getLogger()
-        h = logging.FileHandler(filename)
-        h.setFormatter(f)
-        l.addHandler(h)
-        l.setLevel(level)
-        return l
+    def _define_logger(self, filename=None,
+                       appname='netprobe', level=logging.DEBUG):
+        logger = logging.getLogger()
+        logger.setLevel(level)
+
+        syslog_formatter = logging.Formatter(
+            '{appname}: %(message)s'.format(appname=appname)
+        )
+        syslog_handler = logging.handlers.SysLogHandler('/dev/log')
+        syslog_handler.setFormatter(syslog_formatter)
+        logger.addHandler(syslog_handler)
+
+        # A syslog handler should be always. But a file handler is the option.
+        # If you don't want it you can keep 'filename' variable as None to skip
+        # this handler.
+        if filename:
+            file_formatter = logging.Formatter(
+                '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
+            )
+            file_handler = logging.FileHandler(filename)
+            file_handler.setFormatter(file_formatter)
+            logger.addHandler(file_handler)
+
+        return logger
 
     def _execute(self, command, expected_exit_codes=(0,)):
         self.logger.debug("Running command: %s" % " ".join(command))
@@ -92,7 +110,8 @@ class Actor(object):
         if p.returncode not in expected_exit_codes:
             raise ActorException(
                 self.logger,
-                "Command exited with error: %s: %s" % (" ".join(command), p.returncode)
+                "Command exited with error: %s: %s" % (" ".join(command),
+                                                       p.returncode)
             )
         return p.stdout
 
@@ -110,15 +129,16 @@ class Actor(object):
             viface = self._viface_by_iface_vid(iface, vid)
 
         command = ['ip', 'link']
-        r = re.compile(ur"(\d+?):\s+((?P<viface>[^:@]+)@)?(?P<iface>[^:]+?):.+?(?P<state>UP|DOWN|UNKNOWN).*$")
+        r = re.compile(ur"(\d+?):\s+((?P<viface>[^:@]+)@)?(?P<iface>[^:]+?):"
+                       ".+?(?P<state>UP|DOWN|UNKNOWN).*$")
         for line in self._execute(command):
             m = r.search(line)
             if m:
                 md = m.groupdict()
                 if (iface == md.get('iface') and
-                    viface == md.get('viface') and md.get('state')):
+                        viface == md.get('viface') and md.get('state')):
                     return (iface, viface, md.get('state'))
-        # if we are here that means we are not able to say if iface with vid is up
+        # If we are here we aren't able to say if iface with vid is up
         raise ActorException(
             self.logger,
             "Cannot find interface %s with vid=%s" % (iface, vid)
@@ -173,7 +193,8 @@ class Actor(object):
                 # if viface is still down we raise exception
                 raise ActorException(
                     self.logger,
-                    "Can not bring interface %s with vid %s up" % (iface, str(vid))
+                    "Can not bring interface %s with vid %s up" % (iface,
+                                                                   str(vid))
                 )
 
     def _ensure_iface_down(self, iface, vid=None):
@@ -181,7 +202,8 @@ class Actor(object):
         if self.iface_down_after.get(set_iface, False):
             # if iface with vid have been marked to be brought down
             # after probing we try to bring it down
-            self.logger.debug("Brining down interface %s with vid %s", iface, str(vid))
+            self.logger.debug("Brining down interface %s with vid %s",
+                              iface, str(vid))
             self._execute([
                 "ip",
                 "link", "set",
@@ -230,7 +252,9 @@ class Actor(object):
             if self._try_viface_create(iface, vid):
                 # if viface had not existed and have been created
                 # we mark it to be removed after probing procedure
-                self.viface_remove_after[self._viface_by_iface_vid(iface, vid)] = True
+                self.viface_remove_after[
+                    self._viface_by_iface_vid(iface, vid)
+                ] = True
             else:
                 # if viface had not existed and still does not
                 # we raise exception
@@ -244,7 +268,8 @@ class Actor(object):
         if self.viface_remove_after.get(viface, False):
             # if viface have been marked to be removed after probing
             # we try to remove it
-            self.logger.debug("Removing vlan %s on interface %s", str(vid), iface)
+            self.logger.debug("Removing vlan %s on interface %s",
+                              str(vid), iface)
             self._execute([
                 "ip",
                 "link", "del",
@@ -259,11 +284,11 @@ class Actor(object):
         for chunk in chunks:
             delim = chunk.find("-")
             try:
-                if delim > 0 :
+                if delim > 0:
                     left = int(chunk[:delim])
-                    right = int(chunk[delim+1:])
+                    right = int(chunk[delim + 1:])
                     if validate(left) and validate(right):
-                        vlan_list.extend(xrange(left, right+1))
+                        vlan_list.extend(xrange(left, right + 1))
                     else:
                         raise ValueError
                 else:
@@ -287,19 +312,34 @@ class Actor(object):
 
     def _iface_vlan_iterator(self):
         for iface, vlan_list in self.config['interfaces'].iteritems():
-            for vlan in self._parse_vlan_list(vlan_list):
-                yield (iface, vlan)
+            # Variables iface and vlan_list are getted from decoded JSON
+            # and json.dump convert all string data to Python unicode string.
+            # We use these variables in logging messages later.
+            # CentOS 6.4 uses Python 2.6 and logging module 0.5.0.5 which has
+            # a bug with converting unicode strings to message in
+            # SysLogHandler. So we need to convert all unicode to plain
+            # strings to avoid syslog message corruption.
+            for vlan in self._parse_vlan_list(str(vlan_list)):
+                yield (str(iface), vlan)
 
     def _iface_iterator(self):
         for iface in self.config['interfaces']:
             yield iface
 
+    def _log_ifaces(self, prefix="Current interfaces"):
+        self.logger.debug("%s: ", prefix)
+        for line in self._execute(['ip', 'address']):
+            self.logger.debug(line.rstrip())
+
+
 class Sender(Actor):
 
     def __init__(self, config=None):
-        self.logger = self._define_logger('/root/netprobe_sender.log')
+        self.logger = self._define_logger('/root/netprobe_sender.log',
+                                          'netprobe_sender')
         super(Sender, self).__init__(config)
         self.logger.info("=== Starting Sender ===")
+        self._log_ifaces("Interfaces just before sending probing packages")
 
     def run(self):
         try:
@@ -311,8 +351,10 @@ class Sender(Actor):
     def _run(self):
         for iface, vlan in self._iface_vlan_iterator():
             self._ensure_iface_up(iface)
-            data = str(''.join((self.config['cookie'], iface, ' ', self.config['uid'])))
-            self.logger.debug("Sending packets: iface=%s vlan=%s", iface, str(vlan))
+            data = str(''.join((self.config['cookie'], iface, ' ',
+                       self.config['uid'])))
+            self.logger.debug("Sending packets: iface=%s vlan=%s",
+                              iface, str(vlan))
 
             if vlan > 0:
                 self.logger.debug("Ensure up: %s, %s", iface, str(vlan))
@@ -321,13 +363,16 @@ class Sender(Actor):
             else:
                 viface = iface
 
-            p = scapy.Ether(src=self.config['src_mac'], dst="ff:ff:ff:ff:ff:ff")
-            p = p/scapy.IP(src=self.config['src'], dst=self.config['dst'])
-            p = p/scapy.UDP(sport=self.config['sport'], dport=self.config['dport'])/data
+            p = scapy.Ether(src=self.config['src_mac'],
+                            dst="ff:ff:ff:ff:ff:ff")
+            p = p / scapy.IP(src=self.config['src'], dst=self.config['dst'])
+            p = p / scapy.UDP(sport=self.config['sport'],
+                              dport=self.config['dport']) / data
 
             try:
                 for i in xrange(5):
-                    self.logger.debug("Sending packet: iface=%s data=%s", viface, data)
+                    self.logger.debug("Sending packet: iface=%s data=%s",
+                                      viface, data)
                     scapy.sendp(p, iface=viface)
             except socket.error as e:
                 self.logger.error("Socket error: %s, %s", e, viface)
@@ -336,16 +381,22 @@ class Sender(Actor):
                 self.logger.debug("Ensure down: %s, %s", iface, str(vlan))
                 self._ensure_viface_down_and_remove(iface, vlan)
 
+        self._log_ifaces("Interfaces just after sending probing packages")
         for iface in self._iface_iterator():
             self._ensure_iface_down(iface)
+        self._log_ifaces("Interfaces just after ensuring them down in sender")
         self.logger.info("=== Sender Finished ===")
 
 
 class Listener(Actor):
     def __init__(self, config=None):
-        self.logger = self._define_logger('/root/netprobe_listener.log')
+        self.logger = self._define_logger('/root/netprobe_listener.log',
+                                          'netprobe_listener')
         super(Listener, self).__init__(config)
         self.logger.info("=== Starting Listener ===")
+        self._log_ifaces("Interfaces just before starting listerning "
+                         "for probing packages")
+
         self.pidfile = self.addpid('/var/run/net_probe')
 
         self.neighbours = {}
@@ -367,7 +418,15 @@ class Listener(Actor):
                               traceback.format_exc())
 
     def _run(self):
-        sniffers = {}
+        sniffers = set()
+        def run_listener_thread(iface, vlan=False):
+            t = threading.Thread(
+                target=self.get_probe_frames,
+                args=(iface, vlan)
+            )
+            t.daemon = True
+            t.start()
+            return t
 
         for iface, vlan in self._iface_vlan_iterator():
             self._ensure_iface_up(iface)
@@ -376,13 +435,9 @@ class Listener(Actor):
                 self._ensure_viface_create_and_up(iface, vlan)
                 viface = self._viface_by_iface_vid(iface, vlan)
             if not iface in sniffers:
-                t = threading.Thread(
-                    target=self.get_probe_frames,
-                    args=(iface,)
-                )
-                t.daemon = True
-                t.start()
-                sniffers[iface] = t
+                run_listener_thread(iface)
+                run_listener_thread(iface, vlan=True)
+                sniffers.add(iface)
 
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -391,6 +446,8 @@ class Listener(Actor):
         except socket.error as e:
             self.logger.error("Socket error: %s", e)
         else:
+            self.logger.debug("Listener threads have been launched. "
+                              "Reporting READY.")
             msg = "READY"
             total_sent = 0
             while total_sent < len(msg):
@@ -412,6 +469,8 @@ class Listener(Actor):
         except SystemExit:
             self.logger.debug("TERM signal catched")
 
+        self._log_ifaces("Interfaces just before ensuring interfaces down")
+
         for iface, vlan in self._iface_vlan_iterator():
             if vlan > 0:
                 self.logger.debug("Ensure down: %s, %s", iface, str(vlan))
@@ -419,6 +478,7 @@ class Listener(Actor):
 
         for iface in self._iface_iterator():
             self._ensure_iface_down(iface)
+        self._log_ifaces("Interfaces just after ensuring them down in listener")
 
         with open(self.config['dump_file'], 'w') as fo:
             fo.write(json.dumps(self.neighbours))
@@ -445,15 +505,22 @@ class Listener(Actor):
         if riface not in self.neighbours[iface][vlan].setdefault(uid, []):
             self.neighbours[iface][vlan][uid].append(riface)
 
-    def get_probe_frames(self, iface):
+    def get_probe_frames(self, iface, vlan=False):
         if not iface in self.neighbours:
             self.neighbours[iface] = {}
+        """
+        We do not use scapy filtering because it is slow. Instead we use
+        python binding to extreamely fast libpcap library to filter out
+        probing packages.
+        """
+        pc = pcap.pcap(iface)
+        filter_string = 'udp and dst port {0}'.format(self.config['dport'])
+        if vlan:
+            filter_string = 'vlan and {0}'.format(filter_string)
+        pc.setfilter(filter_string)
 
         def fltr(p):
             try:
-                if scapy.UDP not in p or\
-                        p[scapy.UDP].dport != self.config['dport']:
-                    return False
                 received_msg = str(p[scapy.UDP].payload)[:p[scapy.UDP].len]
                 decoded_msg = received_msg.decode()
                 return decoded_msg.startswith(self.config["cookie"])
@@ -462,8 +529,14 @@ class Listener(Actor):
                 return False
 
         pprn = functools.partial(self.fprn, iface=iface)
-        packets = scapy.sniff(iface=iface, lfilter=fltr, prn=pprn)
-
+        try:
+            while True:
+                ts, pkt = pc.next()
+                p = scapy.Ether(pkt)
+                if fltr(p):
+                    pprn(p)
+        except (KeyboardInterrupt, SystemExit):
+            pass
 
 # -------------- main ---------------
 
@@ -500,6 +573,7 @@ Full frame generation config file example is:
     )
     return parser
 
+
 def define_subparsers(parser):
     subparsers = parser.add_subparsers(
         dest="action", help='actions'
@@ -517,7 +591,8 @@ def define_subparsers(parser):
     )
     listen_parser.add_argument(
         '-k', '--cookie', dest='cookie', action='store', type=str,
-        help='cookie string to insert into probe packets payload', default='Nailgun:'
+        help='cookie string to insert into probe packets payload',
+        default='Nailgun:'
     )
     listen_parser.add_argument(
         '-o', '--file', dest='dump_file', action='store', type=str,
@@ -544,12 +619,14 @@ def define_subparsers(parser):
     )
     generate_parser.add_argument(
         '-k', '--cookie', dest='cookie', action='store', type=str,
-        help='cookie string to insert into probe packets payload', default='Nailgun:'
+        help='cookie string to insert into probe packets payload',
+        default='Nailgun:'
     )
     generate_parser.add_argument(
         '-u', '--uid', dest='uid', action='store', type=str,
         help='uid to insert into probe packets payload', default='1'
     )
+
 
 def term_handler(signum, sigframe):
     sys.exit()
@@ -592,7 +669,8 @@ if __name__ == "__main__":
             if params.dump_file:
                 config['dump_file'] = params.dump_file
             else:
-                config['dump_file'] = "/var/tmp/net-probe-dump-%s" % config['interface']
+                config['dump_file'] = "/var/tmp/net-probe-dump-%s" %\
+                    config['interface']
 
         elif params.action == 'generate':
             config['action'] = 'generate'

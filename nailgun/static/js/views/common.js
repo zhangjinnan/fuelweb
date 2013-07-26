@@ -43,7 +43,7 @@ function(utils, models, dialogViews, navbarTemplate, nodesStatsTemplate, notific
             app.breadcrumbs.setPath(_.result(this, 'breadcrumbsPath'));
         },
         updateTitle: function() {
-            var defaultTitle = 'FuelWeb Dashboard';
+            var defaultTitle = 'Fuel Dashboard';
             var title = _.result(this, 'title');
             document.title = title ? defaultTitle + ' - ' + title : defaultTitle;
         }
@@ -59,6 +59,7 @@ function(utils, models, dialogViews, navbarTemplate, nodesStatsTemplate, notific
         className: 'container',
         template: _.template(navbarTemplate),
         updateInterval: 20000,
+        notificationsDisplayCount: 5,
         setActive: function(element) {
             this.$('a.active').removeClass('active');
             this.$('a[href="#' + element + '"]').addClass('active');
@@ -70,13 +71,13 @@ function(utils, models, dialogViews, navbarTemplate, nodesStatsTemplate, notific
             this.refresh().always(_.bind(this.scheduleUpdate, this));
         },
         refresh: function() {
-            return $.when(this.statistics.fetch(), this.notifications.fetch());
+            return $.when(this.statistics.fetch(), this.notifications.fetch({limit: this.notificationsDisplayCount}));
         },
         initialize: function(options) {
             this.elements = _.isArray(options.elements) ? options.elements : [];
             this.statistics = new models.NodesStatistics();
             this.notifications = new models.Notifications();
-            $.when(this.statistics.deferred = this.statistics.fetch(), this.notifications.deferred = this.notifications.fetch()).done(_.bind(this.scheduleUpdate, this));
+            $.when(this.statistics.deferred = this.statistics.fetch(), this.notifications.deferred = this.notifications.fetch({limit: this.notificationsDisplayCount})).done(_.bind(this.scheduleUpdate, this));
         },
         render: function() {
             this.tearDownRegisteredSubViews();
@@ -191,7 +192,7 @@ function(utils, models, dialogViews, navbarTemplate, nodesStatsTemplate, notific
             if (this.visible) {
                 this.$el.html(this.template(_.extend({
                     notifications: this.collection,
-                    displayCount: 5,
+                    displayCount: this.navbar.notificationsDisplayCount,
                     showMore: (Backbone.history.getHash() != 'notifications') && this.collection.length
                 }, this.templateHelpers)));
                 this.markAsRead();
@@ -272,6 +273,14 @@ function(utils, models, dialogViews, navbarTemplate, nodesStatsTemplate, notific
         initialize: function(options) {
             _.defaults(this, options);
             this.redHatAccount = new models.RedHatAccount();
+            this.redHatAccount.on('sync', this.render, this);
+            this.redHatAccount.deferred = this.redHatAccount.fetch().fail(_.bind(function(response){
+                if (response.status == 404){
+                    this.render();
+                } else {
+                    this.dialog.displayErrorMessage();
+                }
+            }, this));
             this.redHatAccount.on('invalid', function(model, error) {
                 _.each(error, function(field) {
                     this.$('*[name=' + field + ']').closest('.control-group').addClass('error');
@@ -280,7 +289,7 @@ function(utils, models, dialogViews, navbarTemplate, nodesStatsTemplate, notific
             }, this);
         },
         render: function() {
-            this.$el.html(this.template());
+            this.$el.html(this.template({account: this.redHatAccount}));
             return this;
         }
     });

@@ -29,11 +29,9 @@ STATIC_DIR: "/var/tmp/nailgun_static"
 TEMPLATE_DIR: "/var/tmp/nailgun_static"
 NETWORK_POOLS:
   public:
-    - "240.0.0.0/16"
+    - "172.16.0.0/12"
   private10:
     - "10.0.0.0/8"
-  private172:
-    - "172.16.0.0/12"
   private192:
     - "192.168.0.0/16"
 
@@ -123,12 +121,12 @@ LOG_GROUPS:
 LOGS:
 # Master node logs.
   - id: app
-    name: "FuelWeb"
+    name: "Web backend"
     <<: *local_log_type
     <<: *python_log_format
     path: *nailgun_log
   - id: api
-    name: "FuelWeb API"
+    name: "REST API"
     <<: *local_log_type
     <<: *python_log_format
     path: *api_log
@@ -233,3 +231,5 @@ DNS_SEARCH: "example.com"
 
 FAKE_TASKS_TICK_INTERVAL: "1"
 FAKE_TASKS_TICK_COUNT: "30"
+
+MAX_ITEMS_PER_PAGE: 500

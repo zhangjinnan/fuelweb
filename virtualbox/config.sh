@@ -14,7 +14,7 @@ vm_name_prefix=fuel-web-
 
 # Host interfaces to bridge VMs interfaces with
 idx=0
-for ip in 10.20.0.1 240.0.1.1 172.16.0.1; do
+for ip in 10.20.0.1 172.16.1.1 172.16.0.1; do
   host_nic_name[$idx]=vboxnet$idx
   host_nic_ip[$idx]=$ip
   host_nic_mask[$idx]=255.255.255.0
@@ -33,7 +33,7 @@ vm_master_disk_mb=16384
 vm_master_ip=10.20.0.2
 vm_master_username=root
 vm_master_password=r00tme
-vm_master_prompt='root@fuelweb ~]#'
+vm_master_prompt='root@fuel ~]#'
 
 # Slave node settings
 vm_slave_cpu_cores=1

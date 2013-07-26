@@ -19,6 +19,7 @@ import itertools
 
 from mock import Mock, patch
 from netaddr import IPNetwork, IPAddress, IPRange
+from sqlalchemy import not_
 
 import nailgun
 from nailgun.test.base import BaseHandlers
@@ -26,6 +27,7 @@ from nailgun.test.base import reverse
 from nailgun.errors import errors
 from nailgun.api.models import Node, IPAddr, Vlan, IPAddrRange
 from nailgun.api.models import Network, NetworkGroup
+from nailgun.api.models import NodeNICInterface
 from nailgun.settings import settings
 from nailgun.test.base import fake_tasks
 
@@ -83,6 +85,44 @@ class TestNetworkManager(BaseHandlers):
         self.assertEquals(False, net_ip in assigned_ips)
         self.assertEquals(False, gateway in assigned_ips)
         self.assertEquals(False, broadcast in assigned_ips)
+
+    def test_get_default_nic_networkgroups(self):
+        cluster = self.env.create_cluster(api=True)
+        node = self.env.create_node(api=True)
+        node_db = self.env.nodes[0]
+
+        main_nic_id = self.env.network_manager.get_main_nic(node_db.id)
+        other_iface = self.db.query(NodeNICInterface).filter_by(
+            node_id=node['id']
+        ).filter(
+            not_(NodeNICInterface.mac == node_db.mac)
+        ).first()
+
+        resp = self.app.put(
+            reverse('NodeCollectionHandler'),
+            json.dumps([{
+                'mac': other_iface.mac,
+                'meta': node_db.meta,
+                'is_agent': True,
+                'cluster_id': cluster["id"]
+            }]),
+            headers=self.default_headers,
+            expect_errors=True
+        )
+
+        new_main_nic_id = self.env.network_manager.get_main_nic(node_db.id)
+        self.assertEquals(new_main_nic_id, other_iface.id)
+        self.assertEquals(
+            [n.id for n in other_iface.assigned_networks],
+            self.env.network_manager.get_default_nic_networkgroups(
+                node_db.id,
+                other_iface.id
+            )
+        )
+        self.assertEquals(
+            self.db.query(NodeNICInterface).get(main_nic_id).assigned_networks,
+            []
+        )
 
     def test_assign_vip(self):
         cluster = self.env.create_cluster(api=True)

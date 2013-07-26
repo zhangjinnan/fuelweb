@@ -564,9 +564,26 @@ class NailgunReceiver(object):
         error_msg = kwargs.get('error')
         status = kwargs.get('status')
         progress = kwargs.get('progress')
-        release_info = kwargs.get('release_info')
-        if progress == 100:
-            cls._download_release_completed(release_info['release_id'])
+
+        task = db().query(Task).filter_by(uuid=task_uuid).first()
+        if not task:
+            logger.error("download_release_resp: task"
+                         " with UUID %s not found", task_uuid)
+            return
+
+        release_info = task.cache['args']['release_info']
+        release_id = release_info['release_id']
+        release = db().query(Release).get(release_id)
+        if not release:
+            logger.error("download_release_resp: Release"
+                         " with ID %s not found", release_id)
+            return
+
+        if error_msg:
+            status = 'error'
+            cls._download_release_error(release_id, error_msg)
+        elif progress == 100:
+            cls._download_release_completed(release_id)
         TaskHelper.update_task_status(task_uuid, status,
                                       progress, error_msg)
 
@@ -579,3 +596,13 @@ class NailgunReceiver(object):
             release.name
         )
         notifier.notify("done", success_msg)
+
+    @classmethod
+    def _download_release_error(cls, release_id, error_message):
+        release = db().query(Release).get(release_id)
+        release.state = 'error'
+        db().commit()
+        error_msg = u"{0}' downloading error: {0}".format(
+            release.name, error_message
+        )
+        notifier.notify('error', error_msg)

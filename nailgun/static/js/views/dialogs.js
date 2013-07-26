@@ -54,6 +54,9 @@ function(require, utils, models, simpleMessageTemplate, createClusterDialogTempl
         displayInfoMessage: function(options) {
             this.template = _.template(simpleMessageTemplate);
             this.render(options);
+            if (options.error) {
+                this.displayErrorMessage();
+            }
         },
         initialize: function(options) {
             _.defaults(this, options);
@@ -76,7 +79,7 @@ function(require, utils, models, simpleMessageTemplate, createClusterDialogTempl
     views.DialogWithRhelCredentials = views.Dialog.extend({
         displayRhelCredentialsForm: function() {
             this.$('.credentials').html('');
-            if (this.release.get('state') == 'not_available') {
+            if (this.release.get('state') == 'not_available' || this.release.get('state') == 'error') {
                 var commonViews = require('views/common'); // avoid circular dependencies
                 this.rhelCredentialsForm = new commonViews.RhelCredentialsForm({dialog: this});
                 this.registerSubView(this.rhelCredentialsForm);
@@ -390,7 +393,8 @@ function(require, utils, models, simpleMessageTemplate, createClusterDialogTempl
         events: {
             'click .accordion-heading': 'toggle',
             'click .btn-edit-disks': 'goToDisksConfiguration',
-            'click .btn-edit-networks': 'goToInterfacesConfiguration'
+            'click .btn-edit-networks': 'goToInterfacesConfiguration',
+            'click .btn-node-console': 'goToSSHConsole'
         },
         toggle: function(e) {
             $(e.currentTarget).siblings('.accordion-body').collapse('toggle');
@@ -404,6 +408,12 @@ function(require, utils, models, simpleMessageTemplate, createClusterDialogTempl
         initialize: function(options) {
             _.defaults(this, options);
             this.node.on('sync', this.render, this);
+        },
+        goToSSHConsole: function () {
+            window.open('http://' + window.location.hostname + ':2443/?' + $.param({
+                ssh: 'ssh://root@' + this.node.get('ip'),
+                location: this.node.get('ip').replace(/\./g, '')
+            }), '_blank');
         },
         render: function() {
             this.constructor.__super__.render.call(this, _.extend({

@@ -85,6 +85,13 @@ class NailgunClient(object):
 
     @logwrap
     @json_parse
+    def delete_cluster(self, cluster_id):
+        return self.client.delete(
+            "/api/clusters/%s/" % cluster_id
+        )
+
+    @logwrap
+    @json_parse
     def update_node(self, node_id, data):
         return self.client.put(
             "/api/nodes/%s/" % node_id, data
@@ -92,7 +99,14 @@ class NailgunClient(object):
 
     @logwrap
     @json_parse
-    def update_cluster_changes(self, cluster_id):
+    def update_nodes(self, data):
+        return self.client.put(
+            "/api/nodes", data
+        )
+
+    @logwrap
+    @json_parse
+    def deploy_cluster_changes(self, cluster_id):
         return self.client.put(
             "/api/clusters/%d/changes/" % cluster_id
         )
@@ -128,10 +142,10 @@ class NailgunClient(object):
 
     @logwrap
     @json_parse
-    def update_network(self, cluster_id, flat_net=None, net_manager=None):
+    def update_network(self, cluster_id, networks=None, net_manager=None):
         data = {}
-        if flat_net is not None:
-            data.update({'networks': flat_net})
+        if networks is not None:
+            data.update({'networks': networks})
         if net_manager is not None:
             data.update({'net_manager': net_manager})
         return self.client.put(
@@ -156,9 +170,7 @@ class NailgunClient(object):
     @logwrap
     def clean_clusters(self):
         for cluster in self.list_clusters():
-            self.update_cluster(
-                cluster["id"], {"nodes": []}
-            )
+            self.delete_cluster(cluster["id"])
 
     @logwrap
     def _get_cluster_vlans(self, cluster_id):

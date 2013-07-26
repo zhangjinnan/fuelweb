@@ -60,8 +60,8 @@ $(BUILD_DIR)/iso/isoroot-files.done: \
 		$(ISOROOT)/ks.cfg \
 		$(ISOROOT)/bootstrap_admin_node.sh \
 		$(ISOROOT)/bootstrap_admin_node.conf \
+		$(ISOROOT)/send2syslog.py \
 		$(ISOROOT)/version.yaml \
-		$(ISOROOT)/puppet-nailgun.tgz \
 		$(ISOROOT)/puppet-slave.tgz
 	$(ACTION.TOUCH)
 
@@ -74,6 +74,7 @@ $(ISOROOT)/ks.cfg: $(SOURCE_DIR)/iso/ks.template $(SOURCE_DIR)/iso/ks.py $(KSYAM
 	python $(SOURCE_DIR)/iso/ks.py -t $(SOURCE_DIR)/iso/ks.template -c $(KSYAML) -o $@
 $(ISOROOT)/bootstrap_admin_node.sh: $(SOURCE_DIR)/iso/bootstrap_admin_node.sh ; $(ACTION.COPY)
 $(ISOROOT)/bootstrap_admin_node.conf: $(SOURCE_DIR)/iso/bootstrap_admin_node.conf ; $(ACTION.COPY)
+$(ISOROOT)/send2syslog.py: $(SOURCE_DIR)/bin/send2syslog.py ; $(ACTION.COPY)
 $(ISOROOT)/version.yaml: $(call depv,COMMIT_SHA)
 $(ISOROOT)/version.yaml: $(call depv,PRODUCT_VERSION)
 $(ISOROOT)/version.yaml: $(call depv,FUEL_COMMIT_SHA)
@@ -82,15 +83,9 @@ $(ISOROOT)/version.yaml:
 	echo "PRODUCT_VERSION: $(PRODUCT_VERSION)" >> $@
 	echo "FUEL_COMMIT_SHA: $(FUEL_COMMIT_SHA)" >> $@
 
-$(ISOROOT)/puppet-nailgun.tgz: \
-		$(call find-files,$(SOURCE_DIR)/puppet) \
-		$(SOURCE_DIR)/bin/send2syslog.py
-	(cd $(SOURCE_DIR)/puppet && tar chzf $@ *)
+
 $(ISOROOT)/puppet-slave.tgz: \
-		$(call find-files,$(SOURCE_DIR)/puppet/nailytest) \
-		$(call find-files,$(SOURCE_DIR)/puppet/osnailyfacter) \
 		$(call find-files,$(SOURCE_DIR)/fuel/deployment/puppet)
-	(cd $(SOURCE_DIR)/puppet && tar cf $(ISOROOT)/puppet-slave.tar nailytest osnailyfacter rpmcache)
 	(cd $(SOURCE_DIR)/fuel/deployment/puppet && tar rf $(ISOROOT)/puppet-slave.tar ./*)
 	gzip -c -9 $(ISOROOT)/puppet-slave.tar > $@ && \
 		rm $(ISOROOT)/puppet-slave.tar
@@ -143,7 +138,7 @@ $(BUILD_DIR)/iso/iso.done: $(BUILD_DIR)/iso/isoroot.done
 	rm -f $(ISO_PATH)
 	mkdir -p $(BUILD_DIR)/iso/isoroot-mkisofs
 	rsync -a --delete $(ISOROOT)/ $(BUILD_DIR)/iso/isoroot-mkisofs
-	mkisofs -r -V "Mirantis FuelWeb" -p "Mirantis Inc." \
+	mkisofs -r -V "Mirantis Fuel" -p "Mirantis Inc." \
 		-J -T -R -b isolinux/isolinux.bin \
 		-no-emul-boot \
 		-boot-load-size 4 -boot-info-table \

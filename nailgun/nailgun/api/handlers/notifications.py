@@ -23,6 +23,7 @@ from nailgun.db import db
 from nailgun.api.models import Notification
 from nailgun.api.validators.notification import NotificationValidator
 from nailgun.api.handlers.base import JSONHandler, content_json
+from nailgun.settings import settings
 
 
 class NotificationHandler(JSONHandler):
@@ -75,15 +76,9 @@ class NotificationCollectionHandler(JSONHandler):
 
     @content_json
     def GET(self):
-        user_data = web.input(cluster_id=None)
-        query = db().query(Notification)
-        if user_data.cluster_id:
-            query = query.filter_by(cluster_id=user_data.cluster_id)
-        # Temporarly limit notifications number to prevent bloating UI by
-        # lots of old notifications. Normally, this should be done by querying
-        # separately unread notifications for notifier and use pagination for
-        # list of all notifications
-        query = query.limit(1000)
+        user_data = web.input(limit=settings.MAX_ITEMS_PER_PAGE)
+        limit = user_data.limit
+        query = db().query(Notification).limit(limit)
         notifications = query.all()
         return map(
             NotificationHandler.render,

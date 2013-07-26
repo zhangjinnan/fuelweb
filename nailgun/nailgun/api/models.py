@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 
 #    Copyright 2013 Mirantis, Inc.
@@ -49,6 +48,7 @@ class Release(Base):
     STATES = (
         'not_available',
         'downloading',
+        'error',
         'available'
     )
     id = Column(Integer, primary_key=True)
@@ -260,6 +260,11 @@ class Node(Base):
     @property
     def human_readable_name(self):
         return self.name or self.mac
+
+    @property
+    def full_name(self):
+        return u'%s (id=%s, mac=%s, role=%s)' % (
+            self.name, self.id, self.mac, self.role)
 
     def _check_interface_has_required_params(self, iface):
         return bool(iface.get('name') and iface.get('mac'))

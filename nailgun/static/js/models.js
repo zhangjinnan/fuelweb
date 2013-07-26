@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
 **/
-define(function() {
+define(['utils'], function(utils) {
     'use strict';
 
     var models = {};
@@ -127,14 +127,6 @@ define(function() {
     models.Node = Backbone.Model.extend({
         constructorName: 'Node',
         urlRoot: '/api/nodes',
-        volumeGroupsByRoles: function(role) {
-            var volumeGroups =  {
-                controller: ['os'],
-                compute: ['os', 'vm'],
-                cinder: ['os', 'cinder']
-            };
-            return volumeGroups[role];
-        },
         resource: function(resourceName) {
             var resource = 0;
             try {
@@ -252,17 +244,27 @@ define(function() {
     models.Disk = Backbone.Model.extend({
         constructorName: 'Disk',
         urlRoot: '/api/nodes/',
-        validate: function(attrs, options) {
-            var errors = {};
-            var volume = _.find(attrs.volumes, {vg: options.group});
-            if (_.isNaN(volume.size) || volume.size < 0) {
-                errors[volume.vg] = 'Invalid size';
-            } else if (volume.size > options.unallocated) {
-                errors[volume.vg] = 'Maximal size is ' + options.unallocated + ' GB';
-            } else if (volume.size < options.min) {
-                errors[volume.vg] = 'Minimal size is ' + options.min.toFixed(2) + ' GB';
+        parse: function(response) {
+            response.volumes = new models.Volumes(response.volumes);
+            response.volumes.disk = this;
+            return response;
+        },
+        toJSON: function(options) {
+            return _.extend(this.constructor.__super__.toJSON.call(this, options), {volumes: this.get('volumes').toJSON()});
+        },
+        getUnallocatedSpace: function(options) {
+            options = options || {};
+            var volumes = options.volumes || this.get('volumes');
+            var allocatedSpace = volumes.reduce(function(sum, volume) {return volume.get('name') == options.skip ? sum : sum + volume.get('size');}, 0);
+            return this.get('size') - allocatedSpace;
+        },
+        validate: function(attrs) {
+            var error;
+            var unallocatedSpace = this.getUnallocatedSpace({volumes: attrs.volumes});
+            if (unallocatedSpace < 0) {
+                error = 'Volume groups total size exceeds available space of ' + utils.formatNumber(unallocatedSpace * -1) + ' MB';
             }
-            return _.isEmpty(errors) ? null : errors;
+            return error;
         }
     });
 
@@ -273,6 +275,33 @@ define(function() {
         comparator: function(disk) {
             return disk.id;
         }
+    });
+
+    models.Volume = Backbone.Model.extend({
+        constructorName: 'Volume',
+        urlRoot: '/api/volumes/',
+        getMinimalSize: function(minimum) {
+            var currentDisk = this.collection.disk;
+            var groupAllocatedSpace = currentDisk.collection.reduce(function(sum, disk) {return disk.id == currentDisk.id ? sum : sum + disk.get('volumes').findWhere({name: this.get('name')}).get('size');}, 0, this);
+            return minimum - groupAllocatedSpace;
+        },
+        validate: function(attrs, options) {
+            var error;
+            var minimumOnDisk = attrs.size ? 65 : 0; // FIXME: revert it
+            var min = _.max([minimumOnDisk, this.getMinimalSize(options.minimum)]);
+            if (_.isNaN(attrs.size)) {
+                error = 'Invalid size';
+            } else if (attrs.size < min) {
+                error = 'The value is too low. You must allocate at least ' + utils.formatNumber(min) + ' MB';
+            }
+            return error;
+        }
+    });
+
+    models.Volumes = Backbone.Collection.extend({
+        constructorName: 'Volumes',
+        model: models.Volume,
+        url: '/api/volumes/'
     });
 
     models.Interface = Backbone.Model.extend({
@@ -333,6 +362,16 @@ define(function() {
             var ipRegexp = /^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$/;
             return _.isString(value) && !value.match(ipRegexp);
         },
+        validateIPrange: function(startIP, endIP) {
+            var start = startIP.split('.'), end = endIP.split('.');
+            var valid = true;
+            _.each(start, function(el, index) {
+                if (parseInt(el, 10) > parseInt(end[index], 10)) {
+                    valid = false;
+                }
+            });
+            return valid;
+        },
         validateNetmask: function(value) {
             var valid_values = {0:1, 128:1, 192:1, 224:1, 240:1, 248:1, 252:1, 254:1, 255:1};
             var m = value.split('.');
@@ -356,20 +395,18 @@ define(function() {
                                 var rangeErrors = {index: index};
                                 var start = _.first(range);
                                 var end = _.last(range);
-                                if (start && this.validateIP(start)) {
-                                    rangeErrors.start = 'Invalid IP range start';
-                                }
-                                if (end && this.validateIP(end)) {
-                                    rangeErrors.end = 'Invalid IP range end';
-                                }
                                 if (start == '') {
                                     rangeErrors.start = 'Empty IP range start';
+                                } else if (this.validateIP(start)) {
+                                    rangeErrors.start = 'Invalid IP range start';
                                 }
                                 if (end == '') {
                                     rangeErrors.end = 'Empty IP range end';
+                                } else if (this.validateIP(end)) {
+                                    rangeErrors.end = 'Invalid IP range end';
                                 }
-                                if (start == '' && end == '') {
-                                    rangeErrors.start = rangeErrors.end = 'Empty IP range';
+                                if (start != '' && end != '' && !this.validateIPrange(start, end)) {
+                                    rangeErrors.start = rangeErrors.end = 'Lower IP range bound is greater than upper bound';
                                 }
                                 if (rangeErrors.start || rangeErrors.end) {
                                     errors.ip_ranges = _.compact(_.union([rangeErrors], errors.ip_ranges));
@@ -476,6 +513,44 @@ define(function() {
             });
             return errors.length ? errors : null;
         }
+    });
+
+    models.TestSet = Backbone.Model.extend({
+        constructorName: 'TestSet',
+        urlRoot: '/ostf/testsets'
+    });
+
+    models.TestSets = Backbone.Collection.extend({
+        constructorName: 'TestSets',
+        model: models.TestSet,
+        url: '/ostf/testsets'
+    });
+
+    models.Test = Backbone.Model.extend({
+        constructorName: 'Test',
+        urlRoot: '/ostf/tests'
+    });
+
+    models.Tests = Backbone.Collection.extend({
+        constructorName: 'Tests',
+        model: models.Test,
+        url: '/ostf/tests'
+    });
+
+    models.TestRun = Backbone.Model.extend({
+        constructorName: 'TestRun',
+        urlRoot: '/ostf/testruns'
+    });
+
+    models.TestRuns = Backbone.Collection.extend({
+        constructorName: 'TestRuns',
+        model: models.TestRun,
+        url: '/ostf/testruns'
+    });
+
+    models.OSTFClusterMetadata = Backbone.Model.extend({
+        constructorName: 'TestRun',
+        urlRoot: '/api/ostf'
     });
 
     return models;

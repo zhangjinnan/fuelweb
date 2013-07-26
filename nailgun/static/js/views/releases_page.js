@@ -32,12 +32,12 @@ function(commonViews, dialogViews, releasesListTemplate, releaseTemplate) {
         updateInterval: 3000,
         template: _.template(releasesListTemplate),
         scheduleUpdate: function() {
-            if (this.tasks.filterTasks({name: 'download_release', status: 'running'}).length) {
+            if (this.tasks.filterTasks({name: 'download_release'}).length) {
                 this.registerDeferred($.timeout(this.updateInterval).done(_.bind(this.update, this)));
             }
         },
         update: function() {
-            if (this.tasks.filterTasks({name: 'download_release', status: 'running'}).length) {
+            if (this.tasks.filterTasks({name: 'download_release'}).length) {
                 this.registerDeferred(this.tasks.fetch().always(_.bind(this.scheduleUpdate, this)));
             }
         },
@@ -69,8 +69,14 @@ function(commonViews, dialogViews, releasesListTemplate, releaseTemplate) {
             dialog.render();
         },
         downloadFinished: function() {
-            this.$('.release-status').removeClass('not-available').html('Available');
-            this.$('.btn-rhel-setup, .download_progress').html('');
+            this.$('.download_progress').html('');
+            var task = app.page.tasks.filterTasks({name: 'download_release', release: this.release.id})[0];
+            if (task.get('status') == 'error'){
+                this.$('.release-status span').html('Error');
+                this.$('.btn-rhel-setup').show();
+            } else {
+                this.$('.release-status').removeClass('not-available').html('Available');
+            }
         },
         updateProgress: function(){
             var task = app.page.tasks.getDownloadTask(this.release.id);
@@ -78,6 +84,9 @@ function(commonViews, dialogViews, releasesListTemplate, releaseTemplate) {
                 this.$('.btn-rhel-setup').hide();
                 this.$('.download_progress').show();
                 this.$('.bar').css('width', task.get('progress')+'%');
+                if (task.get('status') == 'running') {
+                    this.$('.release-status span').html('Downloading');
+                }
             }
         },
         initialize: function(options) {

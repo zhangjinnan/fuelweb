@@ -335,10 +335,10 @@ class Environment(object):
             "fixed"
         )
         net_cidrs = (
-            "240.0.0.0/24",
-            "240.0.1.0/24",
-            "192.168.0.0/24",
             "172.16.0.0/24",
+            "172.16.1.0/24",
+            "192.168.0.0/24",
+            "192.168.0.0/24",
             "10.0.0.0/24"
         )
         nets = {'networks': [{
@@ -359,103 +359,16 @@ class Environment(object):
         return nets
 
     def get_default_volumes_metadata(self):
-        return {
-            "controller": [
-                {
-                    "type": "vg",
-                    "id": "os",
-                    "volumes": [
-                        {
-                            "mount": "/",
-                            "type": "lv",
-                            "name": "root",
-                            "size": {"generator": "calc_root_size"}
-                        },
-                        {
-                            "mount": "swap",
-                            "type": "lv",
-                            "name": "swap",
-                            "size": {"generator": "calc_swap_size"}
-                        }
-                    ]
-                },
-                {
-                    "type": "vg",
-                    "id": "cinder",
-                    "volumes": []
-                }
-            ],
-            "compute": [
-                {
-                    "type": "vg",
-                    "id": "os",
-                    "volumes": [
-                        {
-                            "mount": "/",
-                            "type": "lv",
-                            "name": "root",
-                            "size": {"generator": "calc_root_size"}
-                        },
-                        {
-                            "mount": "swap",
-                            "type": "lv",
-                            "name": "swap",
-                            "size": {"generator": "calc_swap_size"}
-                        }
-                    ]
-                },
-                {
-                    "type": "vg",
-                    "id": "vm",
-                    "volumes": [
-                        {
-                            "mount": "/var/lib/nova",
-                            "type": "lv",
-                            "name": "vm",
-                            "size": {"generator": "calc_all_free"}
-                        }
-                    ]
-                },
-                {
-                    "type": "vg",
-                    "id": "cinder",
-                    "volumes": []
-                }
-            ],
-            "cinder": [
-                {
-                    "type": "vg",
-                    "id": "os",
-                    "volumes": [
-                        {
-                            "mount": "/",
-                            "type": "lv",
-                            "name": "root",
-                            "size": {"generator": "calc_root_size"}
-                        },
-                        {
-                            "mount": "swap",
-                            "type": "lv",
-                            "name": "swap",
-                            "size": {"generator": "calc_swap_size"}
-                        }
-                    ]
-                },
-                {
-                    "type": "vg",
-                    "id": "cinder",
-                    "volumes": []
-                }
-            ]
-        }
+        return self.read_fixtures(
+            ('openstack',))[0]['fields']['volumes_metadata']
 
     def get_default_networks_metadata(self):
         return [
             {"name": "floating", "access": "public"},
-            {"name": "fixed", "access": "private10"},
-            {"name": "storage", "access": "private172"},
+            {"name": "public", "access": "public"},
             {"name": "management", "access": "private192"},
-            {"name": "public", "access": "public"}
+            {"name": "storage", "access": "private192"},
+            {"name": "fixed", "access": "private10"}
         ]
 
     def get_default_attributes_metadata(self):

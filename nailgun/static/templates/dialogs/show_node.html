@@ -14,7 +14,10 @@
     </div>
     <div class="accordion" id="nodeDetailsAccordion">
       <% var meta = node.get('meta') %>
-      <% _.each(meta, function(groupEntries, group) { %>
+      <% var groupOrder = ['system', 'cpu', 'memory', 'disks', 'interfaces'] %>
+      <% var groups = _.sortBy(_.keys(meta), function(group) {return _.indexOf(groupOrder, group)}) %>
+      <% _.each(groups, function(group) { %>
+        <% var groupEntries = meta[group] %>
         <div class="accordion-group">
           <div class="accordion-heading">
             <div class="accordion-toggle" data-group="<%- group %>">
@@ -70,6 +73,9 @@
   <% } %>
 </div>
 <div class="modal-footer">
+  <% if (node.get('ip')) { %>
+    <button class="btn btn-node-console">SSH Console</button>
+  <% } %>
   <% if (configurationPossible) { %>
     <button class="btn btn-edit-networks" data-dismiss="modal">网络配置</button>
     <button class="btn btn-edit-disks" data-dismiss="modal">磁盘配置</button>

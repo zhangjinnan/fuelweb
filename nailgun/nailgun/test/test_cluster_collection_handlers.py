@@ -29,6 +29,14 @@ from nailgun.test.base import reverse
 
 
 class TestHandlers(BaseHandlers):
+
+    def _get_cluster_networks(self, cluster_id):
+        return json.loads(self.app.get(
+            reverse('NetworkConfigurationHandler',
+                    {"cluster_id": cluster_id}),
+            headers=self.default_headers,
+        ).body)["networks"]
+
     def test_cluster_list_empty(self):
         resp = self.app.get(
             reverse('ClusterCollectionHandler'),
@@ -51,44 +59,69 @@ class TestHandlers(BaseHandlers):
         self.assertEquals(201, resp.status)
 
     def test_cluster_create_no_ip_addresses(self):
+        """
+        In this test we check that no error is occured
+        if two clusters will have same networks updated to use
+        full CIDR
+        """
         cluster = self.env.create_cluster(api=True)
         cluster_db = self.db.query(Cluster).get(cluster["id"])
-        management_net = self.db.query(NetworkGroup).filter_by(
-            name="management",
-            cluster_id=cluster["id"]
-        ).first()
-        NetworkConfiguration.update(
-            cluster_db,
-            {
-                "networks": [
-                    {
-                        "network_size": 65536,
-                        "name": "management",
-                        "ip_ranges": [
-                            ["192.168.0.2", "192.168.255.254"]
-                        ],
-                        "amount": 1,
-                        "id": management_net.id,
-                        "netmask": "255.255.255.0",
-                        "cluster_id": cluster["id"],
-                        "vlan_start": 101,
-                        "cidr": "192.168.0.0/16",
-                        "gateway": "192.168.0.1"
-                    }
-                ]
-            }
-        )
+        cluster2 = self.env.create_cluster(api=True,
+                                           release=cluster_db.release.id)
+        cluster2_db = self.db.query(Cluster).get(cluster2["id"])
 
-        resp = self.app.post(
-            reverse('ClusterCollectionHandler'),
-            json.dumps({
-                'name': 'cluster-name',
-                'release': cluster_db.release.id,
-            }),
-            headers=self.default_headers,
-            expect_errors=True
-        )
-        self.assertEquals(400, resp.status)
+        for clstr in (cluster_db, cluster2_db):
+            management_net = self.db.query(NetworkGroup).filter_by(
+                name="management",
+                cluster_id=clstr.id
+            ).first()
+            NetworkConfiguration.update(
+                clstr,
+                {
+                    "networks": [
+                        {
+                            "network_size": 65536,
+                            "name": "management",
+                            "ip_ranges": [
+                                ["192.168.0.2", "192.168.255.254"]
+                            ],
+                            "amount": 1,
+                            "id": management_net.id,
+                            "netmask": "255.255.255.0",
+                            "cluster_id": clstr.id,
+                            "vlan_start": 101,
+                            "cidr": "192.168.0.0/16",
+                            "gateway": "192.168.0.1"
+                        }
+                    ]
+                }
+            )
+
+        cluster1_nets = self._get_cluster_networks(cluster["id"])
+        cluster2_nets = self._get_cluster_networks(cluster2["id"])
+
+        for net1, net2 in zip(cluster1_nets, cluster2_nets):
+            for f in ('cluster_id', 'id'):
+                del net1[f]
+                del net2[f]
+
+        cluster1_nets = sorted(cluster1_nets, key=lambda n: n['vlan_start'])
+        cluster2_nets = sorted(cluster2_nets, key=lambda n: n['vlan_start'])
+
+        self.assertEquals(cluster1_nets, cluster2_nets)
+
+    def test_cluster_creation_same_networks(self):
+        cluster1_id = self.env.create_cluster(api=True)["id"]
+        cluster2_id = self.env.create_cluster(api=True)["id"]
+        cluster1_nets = self._get_cluster_networks(cluster1_id)
+        cluster2_nets = self._get_cluster_networks(cluster2_id)
+
+        for net1, net2 in zip(cluster1_nets, cluster2_nets):
+            for f in ('cluster_id', 'id'):
+                del net1[f]
+                del net2[f]
+
+        self.assertEquals(cluster1_nets, cluster2_nets)
 
     def test_if_cluster_creates_correct_networks(self):
         release = Release()
@@ -98,9 +131,9 @@ class TestHandlers(BaseHandlers):
         release.operating_system = "CentOS"
         release.networks_metadata = [
             {"name": "floating", "access": "public"},
-            {"name": "fixed", "access": "private10"},
+            {"name": "management", "access": "private192"},
             {"name": "storage", "access": "private192"},
-            {"name": "management", "access": "private172"},
+            {"name": "fixed", "access": "private10"}
         ]
         release.attributes_metadata = {
             "editable": {
@@ -144,14 +177,14 @@ class TestHandlers(BaseHandlers):
                 'name': u'floating',
                 'access': 'public',
                 'vlan_id': 100,
-                'cidr': '240.0.0.0/24',
-                'gateway': '240.0.0.1'
+                'cidr': '172.16.0.0/24',
+                'gateway': '172.16.0.1'
             },
             {
                 'release': release.id,
                 'name': u'fixed',
                 'access': 'private10',
-                'vlan_id': 101,
+                'vlan_id': 103,
                 'cidr': '10.0.0.0/24',
                 'gateway': '10.0.0.1'
             },
@@ -160,16 +193,16 @@ class TestHandlers(BaseHandlers):
                 'name': u'storage',
                 'access': 'private192',
                 'vlan_id': 102,
-                'cidr': '192.168.0.0/24',
-                'gateway': '192.168.0.1'
+                'cidr': '192.168.1.0/24',
+                'gateway': '192.168.1.1'
             },
             {
                 'release': release.id,
                 'name': u'management',
-                'access': 'private172',
-                'vlan_id': 103,
-                'cidr': '172.16.0.0/24',
-                'gateway': '172.16.0.1'
+                'access': 'private192',
+                'vlan_id': 101,
+                'cidr': '192.168.0.0/24',
+                'gateway': '192.168.0.1'
             },
         ]
         self.assertItemsEqual(expected, obtained)
