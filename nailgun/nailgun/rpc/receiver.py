@@ -324,9 +324,9 @@ class NailgunReceiver(object):
     @classmethod
     def _error_action(cls, task, status, progress, message=None):
         if message:
-            message = u"部署失败. {0}".format(message)
+            message = u"Deployment has failed. {0}".format(message)
         else:
-            message = u"部署失败. 检查这些节点:\n{0}".format(
+            message = u"Deployment has failed. Check these nodes:\n{0}".format(
                 cls._generate_error_message(
                     task,
                     error_types=('deploy', 'provision'),
@@ -369,9 +369,9 @@ class NailgunReceiver(object):
                 if public_net:
                     horizon_ip = public_net[0]['ip'].split('/')[0]
                     message = (
-                        u"部署环境 '{0}' 成功. "
-                        "访问OpenStack控制面板 (Horizon) 地址 "
-                        "http://{1}/ or 或则通过内部网络访问 at http://{2}/"
+                        u"Deployment of environment '{0}' is done. "
+                        "Access the OpenStack dashboard (Horizon) at "
+                        "http://{1}/ or via internal network at http://{2}/"
                     ).format(
                         task.cluster.name,
                         horizon_ip,
@@ -379,7 +379,7 @@ class NailgunReceiver(object):
                     )
                 else:
                     message = (
-                        u"部署环境 '{0}' 成功"
+                        u"Deployment of environment '{0}' is done"
                     ).format(task.cluster.name)
                     logger.warning(
                         u"Public ip for controller node "
@@ -387,8 +387,8 @@ class NailgunReceiver(object):
                     )
             else:
                 message = (
-                    u"部署环境"
-                    " '{0}' 成功"
+                    u"Deployment of environment"
+                    " '{0}' is done"
                 ).format(task.cluster.name)
                 logger.warning("Controller node not found in '{0}'".format(
                     task.cluster.name
@@ -400,8 +400,8 @@ class NailgunReceiver(object):
             try:
                 vip = args['attributes']['public_vip']
                 message = (
-                    u"部署环境 '{0}' 成功. "
-                    "访问OpenStack控制面板 (Horizon) 地址 http://{1}/"
+                    u"Deployment of environment '{0}' is done. "
+                    "Access the OpenStack dashboard (Horizon) at http://{1}/"
                 ).format(
                     task.cluster.name,
                     vip
@@ -412,8 +412,8 @@ class NailgunReceiver(object):
                     traceback.format_exc()
                 ]))
                 message = (
-                    u"部署环境"
-                    " '{0}' 成功"
+                    u"Deployment of environment"
+                    " '{0}' is done"
                 ).format(task.cluster.name)
                 logger.warning(
                     u"Cannot find virtual IP for '{0}'".format(
