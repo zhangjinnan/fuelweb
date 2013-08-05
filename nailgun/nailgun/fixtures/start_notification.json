@@ -5,7 +5,7 @@
 		"fields": {
 			"topic": "done",
 			"datetime": "",
-			"message": "以成功完成主节点安装. 你可以通过PXE移动"
+			"message": "以成功完成主节点安装. 你可以通过PXE启动"
 		}
 	}
 ]
