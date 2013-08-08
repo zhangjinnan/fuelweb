@@ -235,23 +235,12 @@ class Node(Base):
 
     @property
     def needs_reprovision(self):
-        return self.status == 'error' and self.error_type == 'provision'
+        return self.status == 'error' and self.error_type == 'provision' and \
+            not self.pending_deletion
 
     @property
     def needs_redeploy(self):
-        changes = []
-        if self.cluster is not None:
-            def check_change(change):
-                return change.name != 'disks' or change.node_id == self.id
-            changes = filter(check_change, self.cluster.changes)
-        cases = [
-            self.status == 'error' and self.error_type == 'deploy',
-            changes != []
-        ]
-        and_cases = [
-            not self.pending_deletion
-        ]
-        return any(cases) and all(and_cases)
+        return self.status == 'error' and not self.pending_deletion
 
     @property
     def needs_redeletion(self):
@@ -491,7 +480,9 @@ class Attributes(Base):
         new_dict = {}
         if cdict:
             for i, val in cdict.iteritems():
-                if isinstance(val, dict) and "generator" in val:
+                if isinstance(val, (str, unicode, int, float)):
+                    new_dict[i] = val
+                elif isinstance(val, dict) and "generator" in val:
                     try:
                         generator = getattr(
                             AttributesGenerators,
@@ -561,8 +552,12 @@ class Task(Base):
         'update_plugin',
         'delete_plugin',
 
-        # releases
-        'download_release'
+        # red hat
+        'redhat_setup',
+        'redhat_check_credentials',
+        'redhat_check_licenses',
+        'redhat_download_release',
+        'redhat_update_cobbler_profile'
     )
     id = Column(Integer, primary_key=True)
     cluster_id = Column(Integer, ForeignKey('clusters.id'))
@@ -627,6 +622,7 @@ class Notification(Base):
         'discover',
         'done',
         'error',
+        'warning',
     )
 
     id = Column(Integer, primary_key=True)

@@ -234,6 +234,7 @@ function(utils, models, dialogViews, navbarTemplate, nodesStatsTemplate, notific
     });
 
     views.RhelCredentialsForm = Backbone.View.extend({
+        visible: true,
         template: _.template(rhelCredentialsTemplate),
         events: {
             'change input[name=license-type]': 'toggle',
@@ -241,55 +242,50 @@ function(utils, models, dialogViews, navbarTemplate, nodesStatsTemplate, notific
         },
         toggle: function() {
             this.$('.control-group.error').removeClass('error').find('.help-inline').html('');
-            this.$('.control-group.rhn').toggleClass('hide');
-            this.$('.alert').hide().html('');
+            this.$('.control-group.rhn').toggle();
         },
         onInputKeydown: function(e) {
             this.$(e.currentTarget).parents('.control-group').removeClass('error').find('.help-inline').html('');
-            this.$('.alert').hide().html('');
         },
-        applyCredentials: function() {
-            var options = {
-                release_id: this.dialog.release.id,
+        showValidationError: function(errors) {
+            _.each(errors, function(message, field) {
+                this.$('*[name=' + field + ']').closest('.control-group').addClass('error').find('.help-inline').text(message);
+            }, this);
+        },
+        setCredentials: function() {
+            var accountData = {
                 license_type: this.$('input[name=license-type]:checked').val(),
                 username: this.$('input[name=username]').val(),
                 password: this.$('input[name=password]').val(),
                 satellite: this.$('input[name=satellite]').val(),
                 activation_key: this.$('input[name=activation_key]').val()
             };
-            var deferred = this.redHatAccount.save(options);
-            if (deferred) {
-                deferred.fail(_.bind(function(response) {
-                    if (response.status == 400) {
-                        this.$('*[name=username], *[name=password]').closest('.control-group').addClass('error');
-                        this.$('.alert').text(response.responseText).show();
-                    } else {
-                        this.dialog.displayErrorMessage();
-                    }
-                }, this));
-            }
-            return deferred;
+            return this.redHatAccount.set(accountData, {validate: true});
+        },
+        saveCredentials: function() {
+            var task = new models.Task();
+            var options = {
+                method: 'POST',
+                url: '/api/redhat/setup',
+                data: JSON.stringify(_.extend({release_id: this.dialog.release.id}, this.redHatAccount.attributes))
+            };
+            task.deferred = task.save({}, options);
+            return task;
         },
         initialize: function(options) {
             _.defaults(this, options);
-            this.redHatAccount = new models.RedHatAccount();
+            if (!this.redHatAccount) {
+                this.redHatAccount = new models.RedHatAccount();
+                this.redHatAccount.deferred = this.redHatAccount.fetch();
+            }
             this.redHatAccount.on('sync', this.render, this);
-            this.redHatAccount.deferred = this.redHatAccount.fetch().fail(_.bind(function(response){
-                if (response.status == 404){
-                    this.render();
-                } else {
-                    this.dialog.displayErrorMessage();
-                }
-            }, this));
-            this.redHatAccount.on('invalid', function(model, error) {
-                _.each(error, function(field) {
-                    this.$('*[name=' + field + ']').closest('.control-group').addClass('error');
-                }, this);
-                this.$('.alert').text('All fields are required').show();
+            this.redHatAccount.on('invalid', function(model, errors) {
+                this.showValidationError(errors);
             }, this);
         },
         render: function() {
-            this.$el.html(this.template({account: this.redHatAccount}));
+            this.$el.html(_.result(this, 'visible') ? this.template({account: this.redHatAccount}) : '');
+            this.$('.control-group.rhn').toggle(this.redHatAccount.get('license_type') == 'rhn');
             return this;
         }
     });

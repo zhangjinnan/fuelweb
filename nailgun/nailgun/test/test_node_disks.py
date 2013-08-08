@@ -121,7 +121,7 @@ class TestNodeDisksHandlers(BaseHandlers):
             if disk['size'] > 0:
                 for volume in disk['volumes']:
                     volume['size'] = new_volume_size
-                    updated_disks_count += 1
+                updated_disks_count += 1
 
         self.put(node_db.id, disks)
 
@@ -275,7 +275,7 @@ class TestNodeVolumesInformationHandler(BaseHandlers):
     def test_volumes_information_for_controller_role(self):
         node_db = self.create_node('controller')
         response = self.get(node_db.id)
-        self.check_volumes(response, ['os'])
+        self.check_volumes(response, ['os', 'image'])
 
 
 class TestVolumeManager(BaseHandlers):
@@ -304,6 +304,17 @@ class TestVolumeManager(BaseHandlers):
 
         self.non_zero_size(os_sum_size)
         return os_sum_size
+
+    def glance_size(self, disks):
+        glance_sum_size = 0
+        for disk in only_disks(disks):
+            glance_volume = filter(
+                lambda volume: volume.get('vg') == 'image', disk['volumes']
+            )[0]
+            glance_sum_size += glance_volume['size']
+
+        self.non_zero_size(glance_sum_size)
+        return glance_sum_size
 
     def reserved_size(self, spaces):
         reserved_size = 0
@@ -371,9 +382,11 @@ class TestVolumeManager(BaseHandlers):
         disks = only_disks(node.volume_manager.volumes)
         disks_size_sum = sum([disk['size'] for disk in disks])
         os_sum_size = self.os_size(disks)
+        glance_sum_size = self.glance_size(disks)
         reserved_size = self.reserved_size(disks)
 
-        self.assertEquals(disks_size_sum - reserved_size, os_sum_size)
+        self.assertEquals(disks_size_sum - reserved_size,
+                          os_sum_size + glance_sum_size)
         self.logical_volume_sizes_should_equal_all_phisical_volumes(
             node.attributes.volumes)
         self.check_disk_size_equal_sum_of_all_volumes(node.attributes.volumes)
@@ -455,7 +468,7 @@ class TestDisks(BaseHandlers):
             volumes)[0]
 
     def create_disk(self, boot_is_raid=False):
-        return Disk(lambda name: 100, 'sda', 10000, boot_is_raid)
+        return Disk(lambda name: 100, 'sda', 'sda', 10000, boot_is_raid)
 
     def test_create_mbr_as_raid_if_disks_count_greater_than_zero(self):
         disk = self.create_disk(boot_is_raid=True)

@@ -15,6 +15,7 @@
 #    under the License.
 
 import json
+import unittest
 
 from paste.fixture import TestApp
 from mock import Mock, patch
@@ -30,6 +31,7 @@ from nailgun.test.base import fake_tasks
 from nailgun.test.base import reverse
 from nailgun.api.models import Cluster, Attributes, IPAddr, Task
 from nailgun.api.models import Network, NetworkGroup, IPAddrRange
+from nailgun.api.models import NodeNICInterface
 from nailgun.network.manager import NetworkManager
 from nailgun.task import task as tasks
 
@@ -100,14 +102,10 @@ class TestHandlers(BaseHandlers):
                 cluster_attrs[net.name + '_network_range'] = net.cidr
 
         cluster_attrs['floating_network_range'] = [
-            '172.16.0.10',
-            '172.16.0.11',
-            '172.16.0.12',
-
-            '172.16.0.2',
-            '172.16.0.3',
-            '172.16.0.4',
-            '172.16.0.5']
+            '172.16.0.2-172.16.0.4',
+            '172.16.0.3-172.16.0.5',
+            '172.16.0.10-172.16.0.12'
+        ]
 
         management_vip = self.env.network_manager.assign_vip(
             cluster_db.id,
@@ -118,13 +116,17 @@ class TestHandlers(BaseHandlers):
             'public'
         )
 
+        net_params = {}
+        net_params['network_manager'] = "FlatDHCPManager"
+        net_params['network_size'] = 256
+
+        cluster_attrs['novanetwork_parameters'] = net_params
+
         cluster_attrs['management_vip'] = management_vip
         cluster_attrs['public_vip'] = public_vip
         cluster_attrs['master_ip'] = '127.0.0.1'
         cluster_attrs['deployment_mode'] = cluster_depl_mode
         cluster_attrs['deployment_id'] = cluster_db.id
-        cluster_attrs['network_manager'] = "FlatDHCPManager"
-        cluster_attrs['network_size'] = 256
 
         msg['args']['attributes'] = cluster_attrs
         msg['args']['task_uuid'] = deploy_task_uuid
@@ -271,8 +273,12 @@ class TestHandlers(BaseHandlers):
             }
         }
 
-        nailgun.task.manager.rpc.cast.assert_called_once_with(
-            'naily', [provision_msg, msg])
+        args, kwargs = nailgun.task.manager.rpc.cast.call_args
+        self.assertEquals(len(args), 2)
+        self.assertEquals(len(args[1]), 2)
+
+        self.datadiff(args[1][0], provision_msg)
+        self.datadiff(args[1][1], msg)
 
     @fake_tasks(fake_rpc=False, mock_rpc=False)
     @patch('nailgun.rpc.cast')
@@ -291,20 +297,23 @@ class TestHandlers(BaseHandlers):
 
         args, kwargs = nailgun.task.manager.rpc.cast.call_args
         message = args[1][1]
+
+        nova_attrs = message['args']['attributes']['novanetwork_parameters']
+
         self.assertEquals(
-            message['args']['attributes']['network_manager'],
+            nova_attrs['network_manager'],
             'VlanManager'
         )
         self.assertEquals(
-            message['args']['attributes']['network_size'],
+            nova_attrs['network_size'],
             256
         )
         self.assertEquals(
-            message['args']['attributes']['num_networks'],
+            nova_attrs['num_networks'],
             1
         )
         self.assertEquals(
-            message['args']['attributes']['vlan_start'],
+            nova_attrs['vlan_start'],
             103
         )
         for node in message['args']['nodes']:
@@ -371,8 +380,7 @@ class TestHandlers(BaseHandlers):
         self.assertEquals(len(n_rpc_deploy), 1)
         self.assertEquals(n_rpc_deploy[0]['uid'], self.env.nodes[0].id)
 
-    @fake_tasks(fake_rpc=False, mock_rpc=False)
-    @patch('nailgun.rpc.cast')
+    @unittest.skip("this logic is not implemented for now")
     def test_deploy_reruns_after_network_changes(self, mocked_rpc):
         self.env.create(
             cluster_kwargs={},
@@ -440,15 +448,20 @@ class TestHandlers(BaseHandlers):
             # 8GB
             "size": 8000000}]
 
-        node = self.env.create_node(meta=meta)
-        cluster = self.env.create_cluster(nodes=[node.id])
+        self.env.create(
+            nodes_kwargs=[
+                {"meta": meta, "pending_addition": True}
+            ]
+        )
+        node_db = self.env.nodes[0]
+
         task = self.env.launch_deployment()
 
         self.assertEquals(task.status, 'error')
         self.assertEquals(
             task.message,
             "Node '%s' has insufficient disk space" %
-            node.human_readable_name)
+            node_db.human_readable_name)
 
     def test_occurs_error_not_enough_controllers_for_multinode(self):
         self.env.create(
@@ -478,3 +491,98 @@ class TestHandlers(BaseHandlers):
         self.assertEquals(
             task.message,
             "Not enough controllers, ha mode requires at least 3 controllers")
+
+    @fake_tasks()
+    def test_admin_untagged_intersection(self):
+        meta = self.env.default_metadata()
+        meta["interfaces"] = [{
+            "mac": "00:00:00:00:00:66",
+            "max_speed": 1000,
+            "name": "eth0",
+            "current_speed": 1000
+        }, {
+            "mac": "00:00:00:00:00:77",
+            "max_speed": 1000,
+            "name": "eth1",
+            "current_speed": None
+        }]
+
+        self.env.create(
+            nodes_kwargs=[
+                {
+                    'api': True,
+                    'role': 'controller',
+                    'pending_addition': True,
+                    'meta': meta,
+                    'mac': "00:00:00:00:00:66"
+                }
+            ]
+        )
+
+        cluster_id = self.env.clusters[0].id
+        node_db = self.env.nodes[0]
+
+        nets = self.env.generate_ui_networks(cluster_id)
+        for net in nets["networks"]:
+            if net["name"] in ["public", "floating"]:
+                net["vlan_start"] = None
+
+        resp = self.app.put(
+            reverse('NetworkConfigurationHandler', kwargs={
+                'cluster_id': cluster_id
+            }),
+            json.dumps(nets),
+            headers=self.default_headers
+        )
+
+        main_iface_id = self.env.network_manager.get_main_nic(
+            node_db.id
+        )
+        main_iface_db = self.db.query(NodeNICInterface).get(
+            main_iface_id
+        )
+
+        assigned_net_names = [
+            n.name
+            for n in main_iface_db.assigned_networks
+        ]
+        self.assertIn("public", assigned_net_names)
+        self.assertIn("floating", assigned_net_names)
+
+        supertask = self.env.launch_deployment()
+        self.env.wait_error(supertask)
+
+        resp = self.app.get(
+            reverse('NodeNICsHandler', kwargs={
+                'node_id': node_db.id
+            }),
+            headers=self.default_headers
+        )
+
+        ifaces = json.loads(resp.body)
+
+        wrong_nets = filter(
+            lambda nic: (nic["name"] in ["public", "floating"]),
+            ifaces[0]["assigned_networks"]
+        )
+
+        map(
+            ifaces[0]["assigned_networks"].remove,
+            wrong_nets
+        )
+
+        map(
+            ifaces[1]["assigned_networks"].append,
+            wrong_nets
+        )
+
+        resp = self.app.put(
+            reverse('NodeCollectionNICsHandler', kwargs={
+                'node_id': node_db.id
+            }),
+            json.dumps([{"interfaces": ifaces, "id": node_db.id}]),
+            headers=self.default_headers
+        )
+
+        supertask = self.env.launch_deployment()
+        self.env.wait_ready(supertask)

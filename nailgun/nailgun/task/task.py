@@ -14,9 +14,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
 import uuid
 import itertools
+import os
+import time
 import traceback
+import signal
 import subprocess
 import shlex
 import json
@@ -36,6 +40,7 @@ from nailgun.api.models import Base
 from nailgun.api.models import Network
 from nailgun.api.models import NetworkGroup
 from nailgun.api.models import Node
+from nailgun.api.models import NodeNICInterface
 from nailgun.api.models import Cluster
 from nailgun.api.models import IPAddr
 from nailgun.api.models import Release
@@ -123,13 +128,21 @@ class DeploymentTask(object):
             netmanager.assign_ips(nodes_ids, "storage")
 
         nodes_with_attrs = []
-        for n in nodes:
-            n.pending_addition = False
-            if n.status in ('ready', 'deploying'):
-                n.status = 'provisioned'
-            n.progress = 0
-            db().add(n)
-            db().commit()
+        # FIXME(mihgen): We need to pass all other nodes, so astute
+        #  can know about all the env, not only about added nodes.
+        for n in db().query(Node).filter_by(
+            cluster=task.cluster
+        ).order_by(Node.id):
+            # However, we must not pass nodes which are set to be deleted.
+            if n.pending_deletion:
+                continue
+            if n.id in nodes_ids:  # It's node which we need to redeploy
+                n.pending_addition = False
+                if n.status in ('deploying'):
+                    n.status = 'provisioned'
+                n.progress = 0
+                db().add(n)
+                db().commit()
             nodes_with_attrs.append(cls.__format_node_for_naily(n))
 
         cluster_attrs = task.cluster.attributes.merged_attrs_values()
@@ -145,24 +158,27 @@ class DeploymentTask(object):
             net_name = net.name + '_network_range'
             if net.name == 'floating':
                 cluster_attrs[net_name] = \
-                    cls.__get_ip_addresses_in_ranges(net)
+                    cls.__get_ip_ranges_first_last(net)
             elif net.name == 'public':
                 # We shouldn't pass public_network_range attribute
                 continue
             else:
                 cluster_attrs[net_name] = net.cidr
 
-        cluster_attrs['network_manager'] = task.cluster.net_manager
+        net_params = {}
+        net_params['network_manager'] = task.cluster.net_manager
 
         fixed_net = db().query(NetworkGroup).filter_by(
             cluster_id=cluster_id).filter_by(name='fixed').first()
         # network_size is required for all managers, otherwise
         #  puppet will use default (255)
-        cluster_attrs['network_size'] = fixed_net.network_size
-        if cluster_attrs['network_manager'] == 'VlanManager':
-            cluster_attrs['num_networks'] = fixed_net.amount
-            cluster_attrs['vlan_start'] = fixed_net.vlan_start
+        net_params['network_size'] = fixed_net.network_size
+        if net_params['network_manager'] == 'VlanManager':
+            net_params['num_networks'] = fixed_net.amount
+            net_params['vlan_start'] = fixed_net.vlan_start
             cls.__add_vlan_interfaces(nodes_with_attrs)
+
+        cluster_attrs['novanetwork_parameters'] = net_params
 
         if task.cluster.mode == 'ha':
             logger.info("HA mode chosen, creating VIP addresses for it..")
@@ -231,6 +247,16 @@ class DeploymentTask(object):
             pending_deletion=False).order_by(Node.id)
 
         return map(cls.__format_node_for_naily, nodes)
+
+    @classmethod
+    def __get_ip_ranges_first_last(cls, network_group):
+        """
+        Get all ip ranges in "10.0.0.0-10.0.0.255" format
+        """
+        return [
+            "{0}-{1}".format(ip_range.first, ip_range.last)
+            for ip_range in network_group.ip_ranges
+        ]
 
     @classmethod
     def __get_ip_addresses_in_ranges(cls, network_group):
@@ -589,7 +615,7 @@ class VerifyNetworksTask(object):
 class CheckNetworksTask(object):
 
     @classmethod
-    def execute(self, task, data):
+    def execute(self, task, data, check_admin_untagged=False):
         # If not set in data then fetch from db
         if 'net_manager' in data:
             netmanager = data['net_manager']
@@ -603,6 +629,61 @@ class CheckNetworksTask(object):
 
         result = []
         err_msgs = []
+
+        if check_admin_untagged:
+            # checking if there are untagged networks on the same interface
+            # (main) as admin network
+            untagged_nets = set(
+                n["id"] for n in filter(
+                    lambda n: (n["vlan_start"] is None),
+                    networks
+                )
+            )
+            if untagged_nets:
+                logger.info(
+                    "Untagged networks found, "
+                    "checking admin network intersection..."
+                )
+                main_ifaces = (
+                    db().query(NodeNICInterface).get(
+                        NetworkManager().get_main_nic(n.id)
+                    )
+                    for n in task.cluster.nodes
+                )
+
+                found_intersection = []
+
+                for iface in main_ifaces:
+                    nets = dict(
+                        (n.id, n.name)
+                        for n in iface.assigned_networks
+                    )
+                    err_nets = set(nets.keys()) & untagged_nets
+                    if err_nets:
+                        err_net_names = [
+                            '"{0}"'.format(nets[i]) for i in err_nets
+                        ]
+                        found_intersection.append(
+                            [iface.node.name, err_net_names]
+                        )
+
+                if found_intersection:
+                    nodes_with_errors = [
+                        u'Node "{0}": {1}'.format(
+                            name,
+                            ", ".join(networks)
+                        ) for name, networks in found_intersection
+                    ]
+                    err_msg = u"Some untagged networks are " \
+                              "assigned to the same physical interface as " \
+                              "admin (PXE) network. You can whether turn " \
+                              "on tagging for these OpenStack " \
+                              "networks or move them to another physical " \
+                              "interface:\n{0}".format("\n".join(
+                                  nodes_with_errors
+                              ))
+                    raise errors.NetworkCheckError(err_msg, add_client=False)
+
         admin_range = netaddr.IPSet([settings.ADMIN_NETWORK['cidr']])
         for ng in networks:
             net_errors = []
@@ -729,33 +810,37 @@ class CheckBeforeDeploymentTask(object):
             'for the current environment.'
 
 
-class DownloadReleaseTask(object):
+# Red Hat related tasks
+
+class RedHatTask(object):
+
+    @classmethod
+    def message(cls, task, data):
+        raise NotImplementedError()
 
     @classmethod
     def execute(cls, task, data):
-        """ Executes DownloadReleaseTask and passed it to the orchestrator
+        logger.debug(
+            "%s(uuid=%s) is running" %
+            (cls.__name__, task.uuid)
+        )
+        message = cls.message(task, data)
+        task.cache = message
+        task.result = {'release_info': data}
+        db().add(task)
+        db().commit()
+        rpc.cast('naily', message)
 
-        :param taks: task isinstance
-        :parap data -- taks data dictionary like this
-            {'method': 'task name',
-            'respond_to': 'method to recieve RPC message',
-            'args':{
-                'task_uuid': 'task UUID',
-                'release_info':{
-                    'release_id': 'release ID',
-                    'redhat':{
-                        'license_type' :"rhn" or "rhsm",
-                        'username': 'username',
-                        'password': 'password',
-                        'satellite': 'satellite host (for RHN license)'
-                        'activation_key': 'activation key (for RHN license)'
-                    }
-                }
-            }}
-        """
-        logger.debug("Download release task(uuid=%s) is running" % task.uuid)
 
-        message = {
+class RedHatDownloadReleaseTask(RedHatTask):
+
+    @classmethod
+    def message(cls, task, data):
+        # TODO: fix this ugly code
+        cls.__update_release_state(
+            data["release_id"]
+        )
+        return {
             'method': 'download_release',
             'respond_to': 'download_release_resp',
             'args': {
@@ -764,15 +849,39 @@ class DownloadReleaseTask(object):
             }
         }
 
-        task.cache = message
-        task.result = {'release_info': data}
-        db().add(task)
-        db().commit()
-        cls.__update_release_state(data['release_id'])
-        rpc.cast('naily', message)
-
     @classmethod
     def __update_release_state(cls, release_id):
         release = db().query(Release).get(release_id)
         release.state = 'downloading'
         db().commit()
+
+
+class RedHatCheckCredentialsTask(RedHatTask):
+
+    @classmethod
+    def message(cls, task, data):
+        return {
+            "method": "check_redhat_credentials",
+            "respond_to": "check_redhat_credentials_resp",
+            "args": {
+                "task_uuid": task.uuid,
+                "release_info": data
+            }
+        }
+
+
+class RedHatCheckLicensesTask(RedHatTask):
+
+    @classmethod
+    def message(cls, task, data, nodes=None):
+        msg = {
+            'method': 'check_redhat_licenses',
+            'respond_to': 'redhat_check_licenses_resp',
+            'args': {
+                'task_uuid': task.uuid,
+                'release_info': data
+            }
+        }
+        if nodes:
+            msg['args']['nodes'] = nodes
+        return msg

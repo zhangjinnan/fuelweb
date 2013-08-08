@@ -86,6 +86,45 @@ class TestNetworkManager(BaseHandlers):
         self.assertEquals(False, gateway in assigned_ips)
         self.assertEquals(False, broadcast in assigned_ips)
 
+    @fake_tasks(fake_rpc=False, mock_rpc=False)
+    @patch('nailgun.rpc.cast')
+    def test_assign_ips_idempotent(self, mocked_rpc):
+        self.env.create(
+            cluster_kwargs={},
+            nodes_kwargs=[
+                {
+                    "pending_addition": True,
+                    "api": True,
+                    "status": "error"
+                }
+            ]
+        )
+
+        node_db = self.env.nodes[0]
+
+        self.env.network_manager.assign_ips(
+            [node_db.id],
+            "management"
+        )
+        self.env.network_manager.assign_ips(
+            [node_db.id],
+            "management"
+        )
+
+        self.db.refresh(node_db)
+
+        self.assertEquals(
+            len(
+                filter(
+                    lambda n: n['name'] == 'management',
+                    self.env.network_manager.get_node_networks(
+                        node_db.id
+                    )
+                )
+            ),
+            1
+        )
+
     def test_get_default_nic_networkgroups(self):
         cluster = self.env.create_cluster(api=True)
         node = self.env.create_node(api=True)
@@ -303,6 +342,7 @@ class TestNetworkManager(BaseHandlers):
             cluster_kwargs={},
             nodes_kwargs=[
                 {
+                    "api": True,
                     "pending_addition": True,
                     "mac": "00:00:00:00:00:00",
                     "meta": {
@@ -319,6 +359,7 @@ class TestNetworkManager(BaseHandlers):
                     }
                 },
                 {
+                    "api": True,
                     "pending_addition": True,
                     "mac": "00:00:00:00:00:02",
                     "meta": {
@@ -337,7 +378,7 @@ class TestNetworkManager(BaseHandlers):
             ]
         )
 
-        self.env.launch_deployment()
+        supertask = self.env.launch_deployment()
         rpc_nodes_provision = nailgun.task.manager.rpc.cast. \
             call_args_list[0][0][1][0]['args']['nodes']
 

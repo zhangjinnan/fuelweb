@@ -1,4 +1,18 @@
-#!/bin/bash 
+#!/bin/bash
+
+#    Copyright 2013 Mirantis, Inc.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
 
 # This file contains the functions to manage VMs in through VirtualBox CLI
 
@@ -37,28 +51,42 @@ create_vm() {
     VBoxManage createvm --name $name --ostype RedHat_64 --register
 
     # Set the real-time clock (RTC) operate in UTC time
-    VBoxManage modifyvm $name --rtcuseutc on --memory $memory_mb --cpus $cpu_cores
+    # Set memory and CPU parameters
+    # Set video memory to 16MB, so VirtualBox does not complain about "non-optimal" settings in the UI
+    VBoxManage modifyvm $name --rtcuseutc on --memory $memory_mb --cpus $cpu_cores --vram 16
 
-    # Configure main network interface
-    add_nic_to_vm $name 1 $nic
+    # Configure main network interface for management/PXE network
+    add_hostonly_adapter_to_vm $name 1 $nic
 
     # Configure storage controllers
-    VBoxManage storagectl $name --name 'IDE' --add ide
-    VBoxManage storagectl $name --name 'SATA' --add sata
+    VBoxManage storagectl $name --name 'IDE' --add ide --hostiocache on
+    VBoxManage storagectl $name --name 'SATA' --add sata --hostiocache on
 
     # Create and attach the main hard drive
     add_disk_to_vm $name 0 $disk_mb
 }
 
-add_nic_to_vm() {
+add_hostonly_adapter_to_vm() {
     name=$1
     id=$2
     nic=$3
-    echo "Adding NIC to $name and bridging with host NIC $nic..."
+    echo "Adding hostonly adapter to $name and bridging with host NIC $nic..."
 
-    # Configure network interfaces
-    VBoxManage modifyvm $name --nic${id} hostonly --hostonlyadapter${id} $nic --nictype${id} Am79C973 \
+    # Add Intel PRO/1000 MT Desktop (82540EM) card to VM. The card is 1Gbps.
+    VBoxManage modifyvm $name --nic${id} hostonly --hostonlyadapter${id} $nic --nictype${id} 82540EM \
                         --cableconnected${id} on --macaddress${id} auto
+    VBoxManage controlvm $name setlinkstate${id} on
+}
+
+add_nat_adapter_to_vm() {
+    name=$1
+    id=$2
+    nat_network=$3
+    echo "Adding NAT adapter to $name for outbound network access through the host system..."
+
+    # Add Intel PRO/1000 MT Desktop (82540EM) card to VM. The card is 1Gbps.
+    VBoxManage modifyvm $name --nic${id} nat --nictype${id} 82540EM \
+                        --cableconnected${id} on --macaddress${id} auto --natnet${id} "${nat_network}"
     VBoxManage controlvm $name setlinkstate${id} on
 }
 

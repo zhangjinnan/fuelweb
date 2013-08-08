@@ -13,6 +13,11 @@ BUILD_DIR:=$(abspath $(BUILD_DIR))
 LOCAL_MIRROR?=$(TOP_DIR)/local_mirror
 LOCAL_MIRROR:=$(abspath $(LOCAL_MIRROR))
 
+MASTER_IP?=10.20.0.2
+MASTER_DNS?=10.20.0.1
+MASTER_NETMASK?=255.255.255.0
+MASTER_GW?=10.20.0.1
+
 COMMIT_SHA:=$(shell git rev-parse --verify HEAD)
 PRODUCT_VERSION:=3.1
 FUEL_COMMIT_SHA:=$(shell cd fuel && git rev-parse --verify HEAD)
@@ -81,10 +86,32 @@ MIRROR_GEMS?=$(MIRROR_BASE)/gems
 MIRROR_SRC?=$(MIRROR_BASE)/src
 endif
 
+#
+# OSCI team requirement: build an iso with our srv08 mirror,
+# but use their repo for fuel packages. This section is quick
+# way to implement it.
+# Limitation of the solution: osci repo will be mixed with srv08 mirror.
+# If package is missed in osci repo - it will be taken from srv08.
+# If package have the same version in osci and in srv08 repos - any copy
+# of it will be taken randomly.
+#
+ifeq ($(USE_MIRROR),osci)
+YUM_REPOS?=proprietary fuel
+MIRROR_FUEL?=http://download.mirantis.com/epel-fuel-grizzly-3.1/
+MIRROR_BASE?=http://srv08-srt.srt.mirantis.net/fwm/$(PRODUCT_VERSION)
+MIRROR_CENTOS?=$(MIRROR_BASE)/centos
+MIRROR_EGGS?=$(MIRROR_BASE)/eggs
+MIRROR_GEMS?=$(MIRROR_BASE)/gems
+MIRROR_SRC?=$(MIRROR_BASE)/src
+endif
+
 MIRROR_CENTOS?=http://mirror.yandex.ru/centos/$(CENTOS_RELEASE)
 MIRROR_CENTOS_OS_BASEURL:=$(MIRROR_CENTOS)/os/$(CENTOS_ARCH)
 MIRROR_RHEL?=http://srv11-msk.msk.mirantis.net/rhel6/rhel-6-server-rpms
 MIRROR_RHEL_BOOT?=http://srv11-msk.msk.mirantis.net/rhel6/rhel-server-6.4-x86_64
+# MIRROR_FUEL option is valid only for 'fuel' YUM_REPOS section
+# and ignored in other cases
+MIRROR_FUEL?=http://download.mirantis.com/epel-fuel-grizzly-3.1/
 # It can be any a list of links (--find-links) or a pip index (--index-url).
 MIRROR_EGGS?=http://pypi.python.org/simple
 # NOTE(mihgen): removed gemcutter - it redirects to rubygems.org and has issues w/certificate now
@@ -96,6 +123,11 @@ OSTF_EGGS:=$(shell grep -v "^\\s*\#" $(SOURCE_DIR)/fuel/deployment/puppet/nailgu
 REQUIRED_SRCS:=$(shell grep -v ^\\s*\# $(SOURCE_DIR)/requirements-src.txt)
 REQ_RHEL_RPMS:=$(shell grep -v "^\\s*\#" $(SOURCE_DIR)/fuel/deployment/puppet/rpmcache/files/required-rpms.txt)
 REQ_FUEL_RHEL_RPMS:=$(shell grep -v "^\\s*\#" $(SOURCE_DIR)/fuel/deployment/puppet/rpmcache/files/req-fuel-rhel.txt)
+
+OSTF_PLUGIN_SHA?=f1c7870793a3aa724673c30391d3255a0d9465d5
+OSTF_PLUGIN_VER?=0.2
+OSTF_TESTS_SHA?=1cac0902c3dd4e98a470e4d4326777a1da8834eb
+OSTF_TESTS_VER?=0.1
 
 # Which repositories to use for making local centos mirror.
 # Possible values you can find out from mirror/centos/yum_repos.mk file.
